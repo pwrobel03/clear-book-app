@@ -6,7 +6,8 @@
 * Piotr Wróbel
 * Bartosz Kozyra
 
-Poniedziałek, 16:45 gr. 1, tygodnie parzyste
+Poniedziałek, 16:45, tygodnie parzyste
+Gr. 21
 ---
 ## 📖 Cel projektu
 Celem projektu jest stworzenie aplikacji bazodanowej umożliwiającej pacjentom wyszukiwanie lekarzy, rezerwację wizyt oraz wystawianie opinii. Aplikacja demonstruje zaawansowane operacje bazodanowe, w tym kontrolę współbieżności, zarządzanie transakcjami oraz złożone zapytania raportujące.
