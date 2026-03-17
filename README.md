@@ -1,6 +1,6 @@
-# System Rezerwacji Wizyt Lekarskich (Klon "ZnanyLekarz")
+# System Rezerwacji Wizyt Lekarskich
 ---
-# Autorzy
+# 👷🏻 Autorzy
 
 * Piotr Wróbel
 * Bartosz Kozyra
