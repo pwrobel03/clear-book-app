@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ClearBook — Design System CSS Variables
+   Kompatybilne z shadcn/ui (format HSL bez funkcji hsl())
+   ============================================================ */
+
+@layer base {
+  /* ── TRYB JASNY ──────────────────────────────────────────── */
+  :root {
+    /* Tła */
+    --background: 217 50% 98%;        /* #F8FAFD — delikatny błękit */
+    --foreground: 222 47% 11%;        /* #111827 */
+
+    /* Karty i popovers */
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 222 47% 11%;   /* #111827 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Kolor marki — Primary Blue */
+    --primary: 221 83% 53%;           /* #2563EB */
+    --primary-foreground: 0 0% 100%;  /* #FFFFFF */
+    --primary-dark: 224 76% 48%;      /* #1D4ED8 */
+    --primary-light: 213 93% 67%;     /* #60A5FA */
+
+    /* Secondary */
+    --secondary: 214 100% 97%;        /* #EFF6FF */
+    --secondary-foreground: 224 76% 48%; /* #1D4ED8 */
+
+    /* Muted */
+    --muted: 210 40% 96%;             /* #F1F5F9 */
+    --muted-foreground: 215 16% 47%;  /* #64748B */
+
+    /* Accent */
+    --accent: 214 95% 93%;            /* #DBEAFE */
+    --accent-foreground: 224 76% 48%; /* #1D4ED8 */
+
+    /* Semantyczne */
+    --destructive: 0 84% 60%;         /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;           /* #22C55E */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;            /* #F59E0B */
+    --warning-foreground: 0 0% 100%;
+
+    /* UI */
+    --border: 214 32% 91%;            /* #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;              /* #2563EB */
+
+    /* Radius */
+    --radius: 0.5rem;
+  }
+
+  /* ── TRYB CIEMNY ─────────────────────────────────────────── */
+  .dark {
+    /* Tła */
+    --background: 217 34% 7%;         /* #0D1117 */
+    --foreground: 210 40% 96%;        /* #F1F5F9 */
+
+    /* Karty i popovers */
+    --card: 217 26% 11%;              /* #161B22 */
+    --card-foreground: 210 40% 96%;
+    --popover: 217 26% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    /* Kolor marki — jaśniejszy na ciemnym tle */
+    --primary: 213 93% 60%;           /* #3B82F6 */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 221 83% 53%;      /* #2563EB */
+    --primary-light: 199 89% 48%;     /* #0EA5E9 */
+
+    /* Secondary */
+    --secondary: 214 37% 18%;         /* #1E2D40 */
+    --secondary-foreground: 213 93% 79%; /* #93C5FD */
+
+    /* Muted */
+    --muted: 217 33% 17%;             /* #1E293B */
+    --muted-foreground: 215 20% 65%;  /* #94A3B8 */
+
+    /* Accent */
+    --accent: 214 53% 24%;            /* #1E3A5F */
+    --accent-foreground: 213 93% 67%; /* #60A5FA */
+
+    /* Semantyczne — identyczne jak w jasnym */
+    --destructive: 0 84% 60%;         /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;           /* #22C55E */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;            /* #F59E0B */
+    --warning-foreground: 0 0% 100%;
+
+    /* UI */
+    --border: 215 14% 21%;            /* #30363D */
+    --input: 215 14% 21%;
+    --ring: 213 93% 67%;              /* #60A5FA */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
