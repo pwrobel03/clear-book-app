@@ -4,52 +4,55 @@
 
 /* ============================================================
    ClearBook — Design System CSS Variables
+   Paleta: Granat (#102240) · Krem (#F0EBE9) · Zieleń (#36A372)
    Kompatybilne z shadcn/ui (format HSL bez funkcji hsl())
    ============================================================ */
 
 @layer base {
   /* ── TRYB JASNY ──────────────────────────────────────────── */
   :root {
-    /* Tła */
-    --background: 217 50% 98%;        /* #F8FAFD — delikatny błękit */
-    --foreground: 222 47% 11%;        /* #111827 */
+    /* Tła — ciepły krem jako baza */
+    --background: 17 19% 93%;         /* #F0EBE9 */
+    --foreground: 218 60% 16%;        /* #102240 */
 
-    /* Karty i popovers */
+    /* Karty i popovers — czysta biel na kremowym tle */
     --card: 0 0% 100%;                /* #FFFFFF */
-    --card-foreground: 222 47% 11%;   /* #111827 */
+    --card-foreground: 218 60% 16%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 218 60% 16%;
 
-    /* Kolor marki — Primary Blue */
-    --primary: 221 83% 53%;           /* #2563EB */
-    --primary-foreground: 0 0% 100%;  /* #FFFFFF */
-    --primary-dark: 224 76% 48%;      /* #1D4ED8 */
-    --primary-light: 213 93% 67%;     /* #60A5FA */
+    /* Primary — głęboki granat */
+    --primary: 218 60% 16%;           /* #102240 */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 218 67% 10%;      /* #080F20 */
+    --primary-light: 218 52% 36%;     /* #2A4F8A */
 
-    /* Secondary */
-    --secondary: 214 100% 97%;        /* #EFF6FF */
-    --secondary-foreground: 224 76% 48%; /* #1D4ED8 */
+    /* Secondary — ciepły odcień kremu */
+    --secondary: 17 15% 88%;          /* #E3DAD6 */
+    --secondary-foreground: 218 60% 16%;
 
     /* Muted */
-    --muted: 210 40% 96%;             /* #F1F5F9 */
-    --muted-foreground: 215 16% 47%;  /* #64748B */
+    --muted: 17 12% 91%;              /* #EBE5E2 */
+    --muted-foreground: 218 20% 45%;  /* #5A7090 */
 
-    /* Accent */
-    --accent: 214 95% 93%;            /* #DBEAFE */
-    --accent-foreground: 224 76% 48%; /* #1D4ED8 */
+    /* Accent — zieleń medyczna */
+    --accent: 153 50% 43%;            /* #36A372 */
+    --accent-foreground: 0 0% 100%;
+    --accent-dark: 153 48% 32%;       /* #297A56 */
+    --accent-light: 153 44% 56%;      /* #5BC48A */
 
     /* Semantyczne */
     --destructive: 0 84% 60%;         /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;           /* #22C55E */
+    --success: 153 50% 43%;           /* #36A372 — brand green = success */
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;            /* #F59E0B */
     --warning-foreground: 0 0% 100%;
 
     /* UI */
-    --border: 214 32% 91%;            /* #E2E8F0 */
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;              /* #2563EB */
+    --border: 17 10% 84%;             /* #D9D0CC */
+    --input: 17 10% 84%;
+    --ring: 153 50% 43%;              /* #36A372 */
 
     /* Radius */
     --radius: 0.5rem;
@@ -57,46 +60,48 @@
 
   /* ── TRYB CIEMNY ─────────────────────────────────────────── */
   .dark {
-    /* Tła */
-    --background: 217 34% 7%;         /* #0D1117 */
-    --foreground: 210 40% 96%;        /* #F1F5F9 */
+    /* Tła — bardzo głęboki granat */
+    --background: 218 56% 7%;         /* #070D1A */
+    --foreground: 17 19% 93%;         /* #F0EBE9 — krem jako kolor tekstu */
 
-    /* Karty i popovers */
-    --card: 217 26% 11%;              /* #161B22 */
-    --card-foreground: 210 40% 96%;
-    --popover: 217 26% 11%;
-    --popover-foreground: 210 40% 96%;
+    /* Karty */
+    --card: 218 50% 11%;              /* #0D1829 */
+    --card-foreground: 17 19% 93%;
+    --popover: 218 50% 11%;
+    --popover-foreground: 17 19% 93%;
 
-    /* Kolor marki — jaśniejszy na ciemnym tle */
-    --primary: 213 93% 60%;           /* #3B82F6 */
+    /* Primary — rozjaśniony granat widoczny na ciemnym tle */
+    --primary: 218 52% 45%;           /* #3A62A0 */
     --primary-foreground: 0 0% 100%;
-    --primary-dark: 221 83% 53%;      /* #2563EB */
-    --primary-light: 199 89% 48%;     /* #0EA5E9 */
+    --primary-dark: 218 60% 16%;      /* #102240 */
+    --primary-light: 218 60% 60%;     /* #6A9AD4 */
 
     /* Secondary */
-    --secondary: 214 37% 18%;         /* #1E2D40 */
-    --secondary-foreground: 213 93% 79%; /* #93C5FD */
+    --secondary: 218 45% 16%;         /* #142338 */
+    --secondary-foreground: 17 15% 80%;
 
     /* Muted */
-    --muted: 217 33% 17%;             /* #1E293B */
-    --muted-foreground: 215 20% 65%;  /* #94A3B8 */
+    --muted: 218 45% 14%;             /* #101E2E */
+    --muted-foreground: 218 15% 60%;  /* #7A90A8 */
 
-    /* Accent */
-    --accent: 214 53% 24%;            /* #1E3A5F */
-    --accent-foreground: 213 93% 67%; /* #60A5FA */
+    /* Accent — zieleń niezmieniona, doskonały kontrast na granacie */
+    --accent: 153 50% 43%;            /* #36A372 */
+    --accent-foreground: 0 0% 100%;
+    --accent-dark: 153 48% 32%;       /* #297A56 */
+    --accent-light: 153 44% 56%;      /* #5BC48A */
 
-    /* Semantyczne — identyczne jak w jasnym */
-    --destructive: 0 84% 60%;         /* #EF4444 */
+    /* Semantyczne */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;           /* #22C55E */
+    --success: 153 50% 43%;           /* #36A372 */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;            /* #F59E0B */
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
     /* UI */
-    --border: 215 14% 21%;            /* #30363D */
-    --input: 215 14% 21%;
-    --ring: 213 93% 67%;              /* #60A5FA */
+    --border: 218 45% 20%;            /* #1A2E48 */
+    --input: 218 45% 20%;
+    --ring: 153 50% 43%;              /* #36A372 */
   }
 }
 
