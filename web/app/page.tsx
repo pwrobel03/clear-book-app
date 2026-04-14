@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Strona główna — tymczasowo przekierowanie do /colors
-// W kolejnych etapach: /login lub /dashboard (zależnie od ciasteczka)
+// Root — redirect to /auth (middleware handles authenticated users → /dashboard)
 export default function Home() {
-  redirect("/colors");
+  redirect("/auth");
 }
