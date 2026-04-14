@@ -159,7 +159,7 @@ export function RegisterForm() {
   // Success State for Doctors
   if (pendingMessage) {
     return (
-      <div className="flex flex-col items-center gap-4 py-12 text-center animate-in fade-in zoom-in-95 duration-500">
+      <div className="flex flex-col items-center gap-4 py-12 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 ring-8 ring-accent/5">
           <CheckCircle2 size={32} className="text-accent" />
         </div>
@@ -180,7 +180,7 @@ export function RegisterForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         {/* STEP 1: Role Selection */}
         {step === 1 && (
-          <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
+          <div className="space-y-6">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-foreground">
                 How will you use ClearBook?
@@ -273,7 +273,7 @@ export function RegisterForm() {
 
         {/* STEP 2: Basic Information */}
         {step === 2 && (
-          <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-300">
+          <div className="space-y-5 ">
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -419,7 +419,7 @@ export function RegisterForm() {
 
         {/* STEP 3: Doctor Document Upload */}
         {step === 3 && role === "DOCTOR" && (
-          <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-300">
+          <div className="space-y-5 ">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-foreground">
                 Verify your license

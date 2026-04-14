@@ -14,7 +14,7 @@ const TabsList = React.forwardRef<
     ref={ref}
     className={cn(
       "inline-flex w-full items-center justify-center rounded-lg bg-muted p-1",
-      className
+      className,
     )}
     {...props}
   />
@@ -34,7 +34,7 @@ const TabsTrigger = React.forwardRef<
       "disabled:pointer-events-none disabled:opacity-50",
       "text-muted-foreground",
       "data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-      className
+      className,
     )}
     {...props}
   />
@@ -50,7 +50,8 @@ const TabsContent = React.forwardRef<
     className={cn(
       "mt-6 ring-offset-background",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      className
+      "data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:duration-500 data-[state=active]:ease-in-out",
+      className,
     )}
     {...props}
   />
