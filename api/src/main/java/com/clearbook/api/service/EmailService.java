@@ -26,4 +26,19 @@ public class EmailService {
 
         mailSender.send(message);
     }
+
+    public void sendPasswordResetEmail(String toEmail, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Reset your password — ClearBook");
+
+        String resetUrl = "http://localhost:3000/auth/reset-password?token=" + token;
+
+        message.setText("Otrzymaliśmy prośbę o zresetowanie hasła.\n\n" +
+                "Aby ustawić nowe hasło, kliknij w poniższy link:\n" +
+                resetUrl + "\n\n" +
+                "Link wygaśnie za 1 godzinę. Jeśli to nie Ty prosiłeś o zmianę, zignoruj tę wiadomość.");
+
+        mailSender.send(message);
+    }
 }

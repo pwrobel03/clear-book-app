@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -105,12 +106,12 @@ export function LoginForm() {
                   Password
                 </FormLabel>
                 {/* Placeholder for future forgot password feature */}
-                <a
-                  href="#"
+                <Link
+                  href="/auth/forgot-password"
                   className="text-xs font-medium text-accent hover:underline"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <FormControl>
                 <div className="relative">

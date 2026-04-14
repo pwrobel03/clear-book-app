@@ -6,7 +6,14 @@ const PUBLIC_ROUTES = [
   "/api/auth/login", 
   "/api/auth/register", 
   "/api/auth/verify-email", // Proxy API jest publiczne
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/colors"
+];
+
+const AUTH_UI_EXCEPTIONS = [
+  "/auth/email-verification",
+  "/auth/reset-password"
 ];
 
 export function middleware(request: NextRequest) {
@@ -14,9 +21,10 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("clearbook_token")?.value;
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
+  const isAuthUiException = AUTH_UI_EXCEPTIONS.some((r) => pathname.startsWith(r));
 
-  // Zalogowany użytkownik wchodzi na /auth -> odsyłamy do dashboardu, 
-  if (token && pathname.startsWith("/auth") && !pathname.startsWith("/auth/email-verification")) {
+  // Zalogowany użytkownik wchodzi na /auth -> odsyłamy do dashboardu, chyba że to specjalny ekran
+  if (token && pathname.startsWith("/auth") && !isAuthUiException) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

@@ -33,23 +33,30 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-// Safely typed API response to fix TS errors
 interface ApiResponse {
   ok?: boolean;
   status?: string | number;
   message?: string;
 }
 
+// 1. Zaktualizowany schemat Zod z polem confirmPassword
 const registerSchema = z
   .object({
     firstName: z.string().min(1, "First name is required").max(50),
     lastName: z.string().min(1, "Last name is required").max(50),
     email: z.string().email("Please enter a valid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string({
+      required_error: "Please confirm your password",
+    }),
     role: z.enum(["USER", "DOCTOR"], {
       required_error: "Please select an account type",
     }),
     document: z.any().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"], // Błąd pokaże się pod drugim polem
   })
   .refine(
     (data) =>
@@ -67,6 +74,7 @@ export function RegisterForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Nowy stan
   const [serverError, setServerError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -79,6 +87,7 @@ export function RegisterForm() {
       lastName: "",
       email: "",
       password: "",
+      confirmPassword: "", // Nowa wartość domyślna
       role: "USER",
     },
   });
@@ -86,23 +95,23 @@ export function RegisterForm() {
   const { isSubmitting } = form.formState;
   const role = form.watch("role");
 
-  // Step navigation logic
   const handleNext = async () => {
     if (step === 1) {
       setStep(2);
     } else if (step === 2) {
-      // Validate only Step 2 fields before proceeding
+      // Walidujemy teraz również confirmPassword
       const isValid = await form.trigger([
         "firstName",
         "lastName",
         "email",
         "password",
+        "confirmPassword",
       ]);
       if (isValid) {
         if (role === "DOCTOR") {
-          setStep(3); // Doctors go to document upload
+          setStep(3);
         } else {
-          form.handleSubmit(onSubmit)(); // Patients submit directly
+          form.handleSubmit(onSubmit)();
         }
       }
     }
@@ -121,7 +130,7 @@ export function RegisterForm() {
     formData.append("firstName", values.firstName);
     formData.append("lastName", values.lastName);
     formData.append("email", values.email);
-    formData.append("password", values.password);
+    formData.append("password", values.password); // Wysyłamy tylko właściwe hasło
     formData.append("role", values.role);
     if (selectedFile) formData.append("document", selectedFile);
 
@@ -156,10 +165,9 @@ export function RegisterForm() {
     }
   }
 
-  // Success State for Doctors
   if (pendingMessage) {
     return (
-      <div className="flex flex-col items-center gap-4 py-12 text-center">
+      <div className="flex flex-col items-center gap-4 py-12 text-center animate-in fade-in zoom-in-95 duration-500">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 ring-8 ring-accent/5">
           <CheckCircle2 size={32} className="text-accent" />
         </div>
@@ -177,8 +185,7 @@ export function RegisterForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-        {/* STEP 1: Role Selection */}
+      <form onSubmit={form.handleSubmit(onSubmit)}>
         {step === 1 && (
           <div className="space-y-6">
             <div className="space-y-2">
@@ -271,9 +278,8 @@ export function RegisterForm() {
           </div>
         )}
 
-        {/* STEP 2: Basic Information */}
         {step === 2 && (
-          <div className="space-y-5 ">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -344,51 +350,92 @@ export function RegisterForm() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground">
-                    Password
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                        size={18}
-                      />
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Min. 6 characters"
-                        className="pl-10 pr-10 h-11 bg-muted/20"
-                        {...field}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Grid dla haseł, żeby zaoszczędzić miejsce i ładnie to ułożyć */}
+            <div className="grid grid-cols-1 gap-3">
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">
+                      Password
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          size={18}
+                        />
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Min. 6 chars"
+                          className="pl-10 pr-10 h-11 bg-muted/20"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">
+                      Confirm
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Lock
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          size={18}
+                        />
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Repeat password"
+                          className="pl-10 pr-10 h-11 bg-muted/20"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {serverError && (
-              <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive mt-4">
                 {serverError}
               </p>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -417,9 +464,8 @@ export function RegisterForm() {
           </div>
         )}
 
-        {/* STEP 3: Doctor Document Upload */}
         {step === 3 && role === "DOCTOR" && (
-          <div className="space-y-5 ">
+          <div className="space-y-5">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-foreground">
                 Verify your license

@@ -1,12 +1,8 @@
 package com.clearbook.api.auth;
 
-import com.clearbook.api.dto.AuthResponse;
-import com.clearbook.api.dto.LoginRequest;
-import com.clearbook.api.dto.RegisterRequest;
-import com.clearbook.api.model.AccountStatus;
-import com.clearbook.api.model.Role;
-import com.clearbook.api.model.User;
-import com.clearbook.api.model.VerificationToken;
+import com.clearbook.api.dto.*;
+import com.clearbook.api.model.*;
+import com.clearbook.api.repository.PasswordResetTokenRepository;
 import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.VerificationTokenRepository;
 import com.clearbook.api.security.JwtService;
@@ -31,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -99,18 +96,17 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Sprawdzenie poprawności hasła (wyrzuci BadCredentialsException jeśli jest złe)
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        // Szukamy użytkownika po prostu po e-mailu
+        // Szukamy użytkownika po e-mailu
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Nie znaleziono użytkownika."));
+                .orElseThrow(() -> new IllegalArgumentException("User not found."));
 
-        // Precyzyjna weryfikacja statusów
+        // Precyzyjna weryfikacja statusówpublic
         if (user.getStatus() == AccountStatus.UNVERIFIED) {
-            throw new IllegalArgumentException("Musisz potwierdzić swój adres e-mail przed zalogowaniem.");
+            throw new IllegalArgumentException("You have to confirm you're account before logging in.");
         }
 
         if (user.getStatus() == AccountStatus.PENDING) {
@@ -118,12 +114,12 @@ public class AuthService {
             return AuthResponse.builder()
                     .role(user.getRole().name())
                     .status(user.getStatus().name())
-                    .message("Twoje konto oczekuje na weryfikację przez administratora.")
+                    .message("Your account is waiting for administrator approval..")
                     .build();
         }
 
         if (user.getStatus() != AccountStatus.ACTIVE) {
-            throw new IllegalArgumentException("Twoje konto zostało zablokowane lub usunięte.");
+            throw new IllegalArgumentException("Your account has been disabled or has been disabled.");
         }
 
         // Konto jest ACTIVE, generujemy token
@@ -133,5 +129,39 @@ public class AuthService {
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
                 .build();
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            passwordResetTokenRepository.deleteByUser(user);
+
+            String token = UUID.randomUUID().toString();
+            PasswordResetToken resetToken = PasswordResetToken.builder()
+                    .token(token)
+                    .user(user)
+                    .expiryDate(LocalDateTime.now().plusHours(1)) // Ważny przez godzinę
+                    .build();
+
+            passwordResetTokenRepository.save(resetToken);
+            emailService.sendPasswordResetEmail(user.getEmail(), token);
+        });
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new IllegalArgumentException("Wrong or expired token."));
+
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            passwordResetTokenRepository.delete(resetToken);
+            throw new IllegalArgumentException("Link for password reset has been expired.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        userRepository.save(user);
+        passwordResetTokenRepository.delete(resetToken); // Token wykorzystany, usuwamy
     }
 }
