@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/auth", "/api/auth/login", "/api/auth/register", "/colors"];
+const PUBLIC_ROUTES = [
+  "/auth", 
+  "/api/auth/login", 
+  "/api/auth/register", 
+  "/api/auth/verify-email", // Proxy API jest publiczne
+  "/colors"
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -9,12 +15,12 @@ export function middleware(request: NextRequest) {
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 
-  // Authenticated user trying to access /auth → send to dashboard
-  if (token && pathname.startsWith("/auth")) {
+  // Zalogowany użytkownik wchodzi na /auth -> odsyłamy do dashboardu, 
+  if (token && pathname.startsWith("/auth") && !pathname.startsWith("/auth/email-verification")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Unauthenticated user trying to access protected route → send to /auth
+  // Niezalogowany użytkownik wchodzi na chronioną stronę -> na logowanie
   if (!token && !isPublic) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }

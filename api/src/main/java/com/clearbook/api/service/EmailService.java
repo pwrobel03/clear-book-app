@@ -1,0 +1,29 @@
+package com.clearbook.api.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class EmailService {
+
+    private final JavaMailSender mailSender;
+
+    public void sendVerificationEmail(String toEmail, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Potwierdzenie adresu e-mail — ClearBook");
+
+        // Link prowadzi do naszej aplikacji we frontendzie (Next.js)
+        String confirmationUrl = "http://localhost:3000/auth/email-verification?token=" + token;
+
+        message.setText("Witaj w ClearBook!\n\n" +
+                "Aby potwierdzić swój adres e-mail i aktywować konto, kliknij w poniższy link:\n" +
+                confirmationUrl + "\n\n" +
+                "Link wygaśnie za 24 godziny.");
+
+        mailSender.send(message);
+    }
+}
