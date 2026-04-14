@@ -1,4 +1,8 @@
 package com.clearbook.api.model;
 
-public class AccountStatus {
+public enum AccountStatus {
+    PENDING,  // Oczekuje na weryfikację
+    ACTIVE,   // Aktywne konto
+    BANNED,   // Zablokowane przez administratora
+    DELETED
 }
