@@ -5,6 +5,13 @@ info:
   description: |
     System Rezerwacji Wizyt Lekarskich — kolekcja endpointów.
     Autorzy: Piotr Wróbel, Bartosz Kozyra.
+
+    ## Seed accounts (dev only)
+    | Rola   | Email                    | Hasło        |
+    |--------|--------------------------|--------------|
+    | ADMIN  | admin@clearbook.com      | Admin123!    |
+    | USER   | patient@clearbook.com    | Patient123!  |
+    | DOCTOR | doctor@clearbook.com     | Doctor123!   |
   version: "1.0.0"
 
 servers:
