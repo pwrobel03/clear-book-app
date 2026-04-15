@@ -11,11 +11,11 @@ import {
   HeroSearch,
   type SpecializationOption,
 } from "@/components/landing/hero-search";
+import { SPRING_API } from "@/lib/server/spring";
 
-const SPRING = "http://localhost:8080";
 async function fetchSpecializations(): Promise<SpecializationOption[]> {
   try {
-    const res = await fetch(`${SPRING}/api/specializations`, {
+    const res = await fetch(`${SPRING_API}/api/specializations`, {
       cache: "no-store",
     });
     if (!res.ok) return [];

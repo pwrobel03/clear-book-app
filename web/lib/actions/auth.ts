@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-const SPRING = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ async function setAuthCookie(token: string) {
 
 export async function loginAction(email: string, password: string) {
   try {
-    const res = await fetch(`${SPRING}/api/auth/login`, {
+    const res = await fetch(`${SPRING_API}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -54,7 +54,7 @@ export async function registerAction(payload: {
   role: string;
 }) {
   try {
-    const res = await fetch(`${SPRING}/api/auth/register`, {
+    const res = await fetch(`${SPRING_API}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

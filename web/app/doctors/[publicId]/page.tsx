@@ -4,7 +4,7 @@ import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-const SPRING = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ export default async function DoctorPublicProfile({
 }) {
   const { publicId } = await params;
 
-  const res = await fetch(`${SPRING}/api/doctors/${publicId}`, {
+  const res = await fetch(`${SPRING_API}/api/doctors/${publicId}`, {
     cache: "no-store",
   });
 

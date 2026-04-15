@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import type { SessionUser } from "@/types/session";
-
-const SPRING_API = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 /**
  * Server-only utility — reads the httpOnly cookie and fetches

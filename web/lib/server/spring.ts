@@ -1,14 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export const SPRING = "http://localhost:8080";
+export const SPRING_API = process.env.SPRING_API_URL || "http://localhost:8080";
 
 /** Forwards a request to the Spring backend, injecting the httpOnly JWT cookie. */
 export async function springFetch(path: string, init?: RequestInit) {
   const store = await cookies();
   const token = store.get("clearbook_token")?.value;
 
-  return fetch(`${SPRING}${path}`, {
+  return fetch(`${SPRING_API}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const SPRING_API = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 export async function POST(request: Request) {
   try {

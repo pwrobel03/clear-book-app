@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const SPRING_API = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 async function getToken() {
   const cookieStore = await cookies();

@@ -3,7 +3,7 @@ import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-const SPRING = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ export default async function CentersListPage({
 
   let result: PageResult = { content: [], totalElements: 0 };
   try {
-    const res = await fetch(`${SPRING}/api/centers?${params}`, {
+    const res = await fetch(`${SPRING_API}/api/centers?${params}`, {
       cache: "no-store",
     });
     if (res.ok) result = await res.json();

@@ -11,7 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-const SPRING = "http://localhost:8080";
+import { SPRING_API } from "@/lib/server/spring";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,8 +83,8 @@ export default async function CenterPublicPage({
   const { id } = await params;
 
   const [centerRes, membersRes] = await Promise.all([
-    fetch(`${SPRING}/api/centers/${id}`, { cache: "no-store" }),
-    fetch(`${SPRING}/api/centers/${id}/members`, { cache: "no-store" }),
+    fetch(`${SPRING_API}/api/centers/${id}`, { cache: "no-store" }),
+    fetch(`${SPRING_API}/api/centers/${id}/members`, { cache: "no-store" }),
   ]);
 
   if (!centerRes.ok) notFound();

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+const backendUrl = process.env.SPRING_API_URL || "http://localhost:8080";
 const nextConfig: NextConfig = {
   // WŁĄCZENIE FUNKCJI FORBIDDEN() I UNAUTHORIZED()
   experimental: {
@@ -10,7 +11,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/backend/:path*",
-        destination: "http://localhost:8080/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
