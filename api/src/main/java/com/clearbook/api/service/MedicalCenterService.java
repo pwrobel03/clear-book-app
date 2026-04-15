@@ -1,10 +1,12 @@
 package com.clearbook.api.service;
 
+import com.clearbook.api.dto.CenterMemberSummary;
 import com.clearbook.api.dto.CreateCenterRequest;
 import com.clearbook.api.dto.MedicalCenterResponse;
 import com.clearbook.api.dto.MembershipResponse;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.CenterMembershipRepository;
+import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.MedicalCenterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +24,7 @@ public class MedicalCenterService {
 
     private final MedicalCenterRepository centerRepository;
     private final CenterMembershipRepository membershipRepository;
+    private final DoctorProfileRepository profileRepository;
     private final InviteCodeService inviteCodeService;
 
     /**
@@ -141,6 +144,32 @@ public class MedicalCenterService {
 
         membership.setStatus(MembershipStatus.REJECTED);
         membershipRepository.save(membership);
+    }
+
+    /** Returns active members of a center (publicly accessible). */
+    public List<CenterMemberSummary> getCenterMembers(UUID centerId) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
+
+        return membershipRepository.findByCenterAndStatus(center, MembershipStatus.ACTIVE)
+                .stream()
+                .map(m -> {
+                    User user = m.getUser();
+                    return profileRepository.findByUser(user)
+                            .map(p -> CenterMemberSummary.builder()
+                                    .firstName(user.getFirstName())
+                                    .lastName(user.getLastName())
+                                    .publicId(p.getPublicId())
+                                    .specializations(p.getSpecializations())
+                                    .role(m.getRole())
+                                    .build())
+                            .orElseGet(() -> CenterMemberSummary.builder()
+                                    .firstName(user.getFirstName())
+                                    .lastName(user.getLastName())
+                                    .role(m.getRole())
+                                    .build());
+                })
+                .toList();
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 package com.clearbook.api.center;
 
+import com.clearbook.api.dto.CenterMemberSummary;
 import com.clearbook.api.dto.CreateCenterRequest;
 import com.clearbook.api.dto.MedicalCenterResponse;
 import com.clearbook.api.dto.MembershipResponse;
@@ -47,6 +48,12 @@ public class CenterController {
             @RequestParam(required = false) String city,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         return ResponseEntity.ok(centerService.findActive(city, pageable));
+    }
+
+    /** GET /api/centers/{id}/members — active members of a center (public) */
+    @GetMapping("/{id}/members")
+    public ResponseEntity<List<CenterMemberSummary>> getCenterMembers(@PathVariable UUID id) {
+        return ResponseEntity.ok(centerService.getCenterMembers(id));
     }
 
     /** GET /api/centers/my — all memberships for the authenticated user */

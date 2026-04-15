@@ -8,7 +8,9 @@ const PUBLIC_ROUTES = [
   "/api/auth/verify-email", // Proxy API jest publiczne
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
-  "/colors"
+  "/colors",
+  "/doctors",  // public doctor profiles
+  "/centers",  // public center pages
 ];
 
 const AUTH_UI_EXCEPTIONS = [
