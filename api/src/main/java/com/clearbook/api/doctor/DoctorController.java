@@ -53,10 +53,4 @@ public class DoctorController {
             @PathVariable String publicId) {
         return ResponseEntity.ok(profileService.getPublicProfile(publicId));
     }
-
-    @ExceptionHandler({ IllegalArgumentException.class, IllegalStateException.class })
-    public ResponseEntity<java.util.Map<String, String>> handleErrors(RuntimeException e) {
-        return ResponseEntity.badRequest()
-                .body(java.util.Map.of("message", e.getMessage()));
-    }
 }

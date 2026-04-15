@@ -97,9 +97,4 @@ public class CenterController {
         centerService.rejectInvitation(user, membershipId);
         return ResponseEntity.noContent().build();
     }
-
-    @ExceptionHandler({ IllegalArgumentException.class, IllegalStateException.class })
-    public ResponseEntity<Map<String, String>> handleErrors(RuntimeException e) {
-        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-    }
 }

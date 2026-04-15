@@ -52,18 +52,4 @@ public class AuthController {
         authService.resetPassword(request);
         return ResponseEntity.ok().body("{\"message\": \"Your password has been changed.\"}");
     }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException e) {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("message", e.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-    }
-
-    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentialsException(Exception e) {
-        Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("message", "Invalid Credentials.");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-    }
 }

@@ -56,9 +56,4 @@ public class SpecializationController {
             throw new IllegalArgumentException("Access denied.");
         }
     }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleError(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-    }
 }
