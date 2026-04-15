@@ -7,8 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
-import api from "@/lib/api";
-
+import { loginAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,28 +40,25 @@ export function LoginForm() {
 
   async function onSubmit(values: LoginFormData) {
     setServerError(null);
-    try {
-      const { data } = await api.post("/auth/login", values);
 
-      if (data.status === "PENDING") {
-        setServerError("Your account is awaiting admin verification.");
-        return;
-      }
-      if (data.status === "BANNED") {
-        setServerError(
-          "Your account has been suspended. Please contact support.",
-        );
-        return;
-      }
+    const result = await loginAction(values.email, values.password);
 
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Invalid email or password.";
-      setServerError(message);
+    if ("error" in result) {
+      setServerError(result.error);
+      return;
     }
+
+    if (result.status === "PENDING") {
+      setServerError("Your account is awaiting admin verification.");
+      return;
+    }
+    if (result.status === "BANNED") {
+      setServerError("Your account has been suspended. Please contact support.");
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -73,15 +69,10 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-muted-foreground">
-                Email address
-              </FormLabel>
+              <FormLabel className="text-muted-foreground">Email address</FormLabel>
               <FormControl>
                 <div className="relative">
-                  <Mail
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    size={18}
-                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                   <Input
                     type="email"
                     placeholder="john.doe@example.com"
@@ -102,10 +93,7 @@ export function LoginForm() {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel className="text-muted-foreground">
-                  Password
-                </FormLabel>
-                {/* Placeholder for future forgot password feature */}
+                <FormLabel className="text-muted-foreground">Password</FormLabel>
                 <Link
                   href="/auth/forgot-password"
                   className="text-xs font-medium text-accent hover:underline"
@@ -115,10 +103,7 @@ export function LoginForm() {
               </div>
               <FormControl>
                 <div className="relative">
-                  <Lock
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    size={18}
-                  />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
@@ -146,16 +131,9 @@ export function LoginForm() {
           </p>
         )}
 
-        <Button
-          type="submit"
-          className="w-full h-11 text-base shadow-sm mt-2"
-          disabled={isSubmitting}
-        >
+        <Button type="submit" className="w-full h-11 text-base shadow-sm mt-2" disabled={isSubmitting}>
           {isSubmitting ? (
-            <>
-              <Loader2 size={18} className="mr-2 animate-spin" />
-              Signing in…
-            </>
+            <><Loader2 size={18} className="mr-2 animate-spin" /> Signing in…</>
           ) : (
             "Sign in"
           )}

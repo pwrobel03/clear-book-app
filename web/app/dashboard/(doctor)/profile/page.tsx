@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Save, UserCircle } from "lucide-react";
+import { upsertProfileAction } from "@/lib/actions/doctor";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,23 +111,17 @@ export default function DoctorProfilePage() {
   async function onSubmit(values: FormData) {
     setServerError(null);
     setSuccess(false);
-    try {
-      const res = await fetch("/api/doctors/me/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (res.ok) {
-        setSuccess(true);
-        setProfileExists(true);
-        setTimeout(() => setSuccess(false), 3000);
-      } else {
-        const d = await res.json();
-        setServerError(d.message ?? "Failed to save profile.");
-      }
-    } catch {
-      setServerError("Network error. Please try again.");
+
+    const result = await upsertProfileAction(values);
+
+    if ("error" in result) {
+      setServerError(result.error);
+      return;
     }
+
+    setSuccess(true);
+    setProfileExists(true);
+    setTimeout(() => setSuccess(false), 3000);
   }
 
   function toggleSpecialization(value: string) {

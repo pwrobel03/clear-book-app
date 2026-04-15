@@ -2,6 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
+  verifyDoctorAction,
+  approveCenterAction,
+  rejectCenterAction,
+} from "@/lib/actions/admin";
+import {
   Stethoscope,
   Building2,
   CheckCircle,
@@ -231,18 +236,15 @@ export default function VerificationsPage() {
 
   async function handleDoctor(id: string, action: "approve" | "reject") {
     setActionLoading(true);
-    await fetch(`/api/admin/doctors/${id}/verify`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
+    await verifyDoctorAction(id, action);
     await load();
     setActionLoading(false);
   }
 
   async function handleCenter(id: string, action: "approve" | "reject") {
     setActionLoading(true);
-    await fetch(`/api/admin/centers/${id}/${action}`, { method: "PATCH" });
+    if (action === "approve") await approveCenterAction(id);
+    else await rejectCenterAction(id);
     await load();
     setActionLoading(false);
   }

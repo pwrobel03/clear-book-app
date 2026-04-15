@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  createCenterAction,
+  acceptInvitationAction,
+  rejectInvitationAction,
+} from "@/lib/actions/centers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -200,23 +205,14 @@ function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
 
   async function onSubmit(values: CreateCenterData) {
     setServerError(null);
-    try {
-      const res = await fetch("/api/centers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (res.ok) {
-        form.reset();
-        setOpen(false);
-        onCreated();
-      } else {
-        const d = await res.json();
-        setServerError(d.message ?? "Failed to create center.");
-      }
-    } catch {
-      setServerError("Network error. Please try again.");
+    const result = await createCenterAction(values);
+    if ("error" in result) {
+      setServerError(result.error);
+      return;
     }
+    form.reset();
+    setOpen(false);
+    onCreated();
   }
 
   if (!open) {
@@ -416,13 +412,13 @@ export default function CentersPage() {
   useEffect(() => { load(); }, []);
 
   async function handleAccept(id: string) {
-    const res = await fetch(`/api/centers/memberships/${id}/accept`, { method: "POST" });
-    if (res.ok) load();
+    await acceptInvitationAction(id);
+    load();
   }
 
   async function handleReject(id: string) {
-    const res = await fetch(`/api/centers/memberships/${id}/reject`, { method: "POST" });
-    if (res.ok) load();
+    await rejectInvitationAction(id);
+    load();
   }
 
   const pending = memberships.filter((m) => m.status === "INVITED");

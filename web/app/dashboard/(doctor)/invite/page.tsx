@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/header";
+import { refreshInviteCodeAction, getInviteCodeAction } from "@/lib/actions/doctor";
 import { Button } from "@/components/ui/button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,8 +54,8 @@ export default function InvitePage() {
   const [copied, setCopied] = useState(false);
 
   async function fetchCode() {
-    const res = await fetch("/api/users/me/invite-code");
-    if (res.ok) setData(await res.json());
+    const result = await getInviteCodeAction();
+    if (!("error" in result)) setData(result.data);
   }
 
   useEffect(() => {
@@ -63,8 +64,8 @@ export default function InvitePage() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    const res = await fetch("/api/users/me/invite-code/refresh", { method: "POST" });
-    if (res.ok) setData(await res.json());
+    const result = await refreshInviteCodeAction();
+    if (!("error" in result)) setData(result.data);
     setRefreshing(false);
   }
 
