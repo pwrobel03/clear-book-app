@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Navbar } from "@/components/navbar";
 
 const SPRING = "http://localhost:8080";
 
@@ -47,29 +48,6 @@ const SPEC_LABELS: Record<string, string> = {
   FAMILY_MEDICINE: "Family Medicine",
 };
 
-// ─── Minimal public header ────────────────────────────────────────────────────
-
-function PublicHeader() {
-  return (
-    <header className="border-b border-border bg-card">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#102240]">
-            <span className="text-xs font-black text-[#36A372]">CB</span>
-          </div>
-          <span className="font-bold text-foreground">ClearBook</span>
-        </Link>
-        <Link
-          href="/auth"
-          className="text-sm font-medium text-accent hover:underline"
-        >
-          Sign in
-        </Link>
-      </div>
-    </header>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DoctorPublicProfile({
@@ -92,7 +70,7 @@ export default async function DoctorPublicProfile({
 
   return (
     <div className="min-h-screen bg-background">
-      <PublicHeader />
+      <Navbar />
 
       <main className="mx-auto max-w-4xl px-6 py-12">
         <div className="grid gap-8 lg:grid-cols-3">

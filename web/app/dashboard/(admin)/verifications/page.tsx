@@ -14,6 +14,7 @@ import {
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/store/auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -73,7 +74,8 @@ function DoctorCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {doctor.firstName[0]}{doctor.lastName[0]}
+            {doctor.firstName[0]}
+            {doctor.lastName[0]}
           </div>
           <div>
             <p className="font-semibold text-foreground">
@@ -150,7 +152,9 @@ function CenterCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <Badge variant="muted">{centerTypeLabel[center.type] ?? center.type}</Badge>
+          <Badge variant="muted">
+            {centerTypeLabel[center.type] ?? center.type}
+          </Badge>
           <Badge variant="warning">Pending Review</Badge>
         </div>
       </div>
@@ -188,7 +192,13 @@ function CenterCard({
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+function EmptyState({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ElementType;
+  label: string;
+}) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-8 text-center">
       <Icon size={24} className="text-muted-foreground/50" />
@@ -215,7 +225,9 @@ export default function VerificationsPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function handleDoctor(id: string, action: "approve" | "reject") {
     setActionLoading(true);
@@ -242,10 +254,12 @@ export default function VerificationsPage() {
       <DashboardHeader title="Verifications" />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl space-y-10">
-
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 size={24} className="animate-spin text-muted-foreground" />
+              <Loader2
+                size={24}
+                className="animate-spin text-muted-foreground"
+              />
             </div>
           ) : (
             <>
@@ -272,7 +286,10 @@ export default function VerificationsPage() {
                 </div>
 
                 {doctors.length === 0 ? (
-                  <EmptyState icon={Stethoscope} label="No doctors awaiting verification" />
+                  <EmptyState
+                    icon={Stethoscope}
+                    label="No doctors awaiting verification"
+                  />
                 ) : (
                   doctors.map((d) => (
                     <DoctorCard
@@ -300,7 +317,10 @@ export default function VerificationsPage() {
                 </div>
 
                 {centers.length === 0 ? (
-                  <EmptyState icon={Building2} label="No centers awaiting approval" />
+                  <EmptyState
+                    icon={Building2}
+                    label="No centers awaiting approval"
+                  />
                 ) : (
                   centers.map((c) => (
                     <CenterCard

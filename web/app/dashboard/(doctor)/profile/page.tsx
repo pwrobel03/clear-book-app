@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
+import { forbidden } from "next/navigation";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,8 @@ export default function DoctorProfilePage() {
     async function load() {
       try {
         const res = await fetch("/api/doctors/me/profile");
+        console.log("record");
+        if (res.status === 403) forbidden();
         if (res.ok) {
           const data = await res.json();
           setProfileExists(true);
