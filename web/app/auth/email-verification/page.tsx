@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { log } from "console";
+
+import { verifyEmailAction } from "@/lib/actions/auth";
 
 function VerificationManager() {
   const searchParams = useSearchParams();
@@ -25,27 +26,17 @@ function VerificationManager() {
       return;
     }
 
-    // Wywołanie naszego endpointu w Spring Boot
-    fetch(`/api/auth/verify-email?token=${token}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-
-        if (res.ok) {
-          setStatus("success");
-          setMessage(
-            data.message ?? "Your email has been successfully verified.",
-          );
-        } else {
-          setStatus("error");
-          setMessage(
-            data.message ?? "Verification failed. The link might be expired.",
-          );
-        }
-      })
-      .catch(() => {
+    verifyEmailAction(token).then((result) => {
+      if (result.error) {
         setStatus("error");
-        setMessage("Unable to reach the server. Please try again later.");
-      });
+        setMessage(result.error);
+      } else {
+        setStatus("success");
+        setMessage(
+          result.message ?? "Your email has been successfully verified.",
+        );
+      }
+    });
   }, [token]);
 
   return (

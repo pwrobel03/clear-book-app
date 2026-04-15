@@ -18,6 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import { resetPasswordAction } from "@/lib/actions/auth";
+
 const resetSchema = z
   .object({
     newPassword: z.string().min(6, "Password must be at least 6 characters"),
@@ -65,24 +67,20 @@ function ResetPasswordForm() {
 
   async function onSubmit(values: ResetFormData) {
     setServerError(null);
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: values.newPassword }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setServerError(data.message ?? "Failed to reset password.");
-        return;
-      }
-
-      setIsSuccess(true);
-    } catch {
-      setServerError("Unable to connect to the server.");
+    if (!token) {
+      setServerError(
+        "Missing reset token. Please use the link from your email.",
+      );
+      return;
     }
+    const result = await resetPasswordAction(token, values.newPassword);
+
+    if (result.error) {
+      setServerError(result.error);
+      return;
+    }
+
+    setIsSuccess(true);
   }
 
   if (isSuccess) {

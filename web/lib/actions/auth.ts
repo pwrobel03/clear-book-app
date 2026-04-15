@@ -78,6 +78,49 @@ export async function registerAction(payload: {
   }
 }
 
+export async function forgotPasswordAction(email: string) {
+  try {
+    const res = await fetch(`${SPRING_API}/api/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.message ?? "Wystąpił błąd podczas wysyłania linku." };
+    return { success: true, message: data.message };
+  } catch {
+    return { error: "Unable to reach the server. Please try again later." };
+  }
+}
+
+export async function resetPasswordAction(token: string, newPassword: string) {
+  try {
+    const res = await fetch(`${SPRING_API}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.message ?? "Wystąpił błąd podczas resetowania hasła." };
+    return { success: true, message: data.message };
+  } catch {
+    return { error: "Unable to reach the server. Please try again later." };
+  }
+}
+
+export async function verifyEmailAction(token: string) {
+  try {
+    const res = await fetch(`${SPRING_API}/api/auth/verify-email?token=${token}`, {
+      method: "GET",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { error: data.message ?? "Verification failed." };
+    return { success: true, message: data.message };
+  } catch {
+    return { error: "Unable to reach the server. Please try again later." };
+  }
+}
+
 export async function logoutAction() {
   const store = await cookies();
   store.delete("clearbook_token");

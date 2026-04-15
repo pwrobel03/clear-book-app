@@ -18,6 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import { forgotPasswordAction } from "@/lib/actions/auth";
+
 const forgotSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
 });
@@ -38,24 +40,14 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(values: ForgotFormData) {
     setServerError(null);
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
+    const result = await forgotPasswordAction(values.email);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setServerError(data.message ?? "Something went wrong.");
-        return;
-      }
-
-      setIsSuccess(true);
-    } catch {
-      setServerError("Unable to connect to the server.");
+    if (result.error) {
+      setServerError(result.error);
+      return;
     }
+
+    setIsSuccess(true);
   }
 
   return (
