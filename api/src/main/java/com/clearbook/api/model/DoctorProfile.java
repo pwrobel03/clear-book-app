@@ -36,7 +36,7 @@ public class DoctorProfile {
     @Column(unique = true, nullable = false)
     private String publicId;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany
     @JoinTable(
             name = "doctor_profile_specializations",
             joinColumns = @JoinColumn(name = "doctor_profile_id"),
