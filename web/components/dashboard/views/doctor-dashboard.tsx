@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SessionUser } from "@/types/session";
+import {
+  getInviteCodeAction,
+  refreshInviteCodeAction,
+} from "@/lib/actions/doctor";
 
 // ─── Invite Code Card ─────────────────────────────────────────────────────────
 
@@ -23,30 +27,23 @@ function InviteCodeCard() {
   const [refreshing, setRefreshing] = useState(false);
 
   async function fetchCode() {
-    try {
-      const res = await fetch("/api/users/me/invite-code");
-      if (res.ok) {
-        const data = await res.json();
-        setCode(data.code);
-        setExpiresAt(data.expiresAt);
-      }
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    const result = await getInviteCodeAction();
+    if (result.data) {
+      setCode(result.data.code);
+      setExpiresAt(result.data.expiresAt);
     }
+    setLoading(false);
   }
 
   async function handleRefresh() {
     setRefreshing(true);
-    try {
-      const res = await fetch("/api/users/me/invite-code/refresh", { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setCode(data.code);
-        setExpiresAt(data.expiresAt);
-      }
-    } finally {
-      setRefreshing(false);
+    const result = await refreshInviteCodeAction();
+    if (result.data) {
+      setCode(result.data.code);
+      setExpiresAt(result.data.expiresAt);
     }
+    setRefreshing(false);
   }
 
   async function handleCopy() {
@@ -128,8 +125,18 @@ function InviteCodeCard() {
 // ─── Doctor Dashboard ─────────────────────────────────────────────────────────
 
 const placeholderCards = [
-  { icon: Calendar, label: "Today's Appointments", value: "—", sub: "No appointments today" },
-  { icon: Building2, label: "Affiliated Centers", value: "—", sub: "No centers yet" },
+  {
+    icon: Calendar,
+    label: "Today's Appointments",
+    value: "—",
+    sub: "No appointments today",
+  },
+  {
+    icon: Building2,
+    label: "Affiliated Centers",
+    value: "—",
+    sub: "No centers yet",
+  },
 ];
 
 export function DoctorDashboard({ user }: { user: SessionUser }) {
@@ -146,12 +153,17 @@ export function DoctorDashboard({ user }: { user: SessionUser }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {placeholderCards.map(({ icon: Icon, label, value, sub }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-5">
+          <div
+            key={label}
+            className="rounded-xl border border-border bg-card p-5"
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
                 <Icon size={18} className="text-accent" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">{label}</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {label}
+              </span>
             </div>
             <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
             <p className="mt-1 text-xs text-muted-foreground">{sub}</p>

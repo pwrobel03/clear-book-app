@@ -5,6 +5,8 @@ import {
   verifyDoctorAction,
   approveCenterAction,
   rejectCenterAction,
+  getPendingDoctorsAction,
+  getPendingCentersAction,
 } from "@/lib/actions/admin";
 import {
   Stethoscope,
@@ -221,12 +223,15 @@ export default function VerificationsPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const [dRes, cRes] = await Promise.all([
-      fetch("/api/admin/doctors/pending"),
-      fetch("/api/admin/centers/pending"),
+      getPendingDoctorsAction(),
+      getPendingCentersAction(),
     ]);
-    if (dRes.ok) setDoctors(await dRes.json());
-    if (cRes.ok) setCenters(await cRes.json());
+
+    if (dRes.data) setDoctors(dRes.data);
+    if (cRes.data) setCenters(cRes.data);
+
     setLoading(false);
   }, []);
 

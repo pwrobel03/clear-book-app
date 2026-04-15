@@ -22,6 +22,26 @@ export async function verifyDoctorAction(userId: string, action: "approve" | "re
   }
 }
 
+export async function getPendingDoctorsAction() {
+  try {
+    const res = await springFetch("/api/admin/doctors/pending");
+    if (!res.ok) return { error: "Failed to fetch doctors" };
+    return { data: await res.json() };
+  } catch {
+    return { error: "Service unavailable" };
+  }
+}
+
+export async function getPendingCentersAction() {
+  try {
+    const res = await springFetch("/api/admin/centers/pending");
+    if (!res.ok) return { error: "Failed to fetch centers" };
+    return { data: await res.json() };
+  } catch {
+    return { error: "Service unavailable" };
+  }
+}
+
 export async function approveCenterAction(centerId: string) {
   try {
     const res = await springFetch(`/api/admin/centers/${centerId}/approve`, {

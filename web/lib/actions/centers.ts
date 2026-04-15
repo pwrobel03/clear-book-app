@@ -48,6 +48,19 @@ export async function acceptInvitationAction(membershipId: string) {
   }
 }
 
+export async function getMyCentersAction() {
+  try {
+    const res = await springFetch("/api/centers/my");
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      return { error: json.message ?? "Failed to fetch centers." };
+    }
+    return { data: await res.json() };
+  } catch {
+    return { error: "Service unavailable. Please try again later." };
+  }
+}
+
 export async function rejectInvitationAction(membershipId: string) {
   try {
     const res = await springFetch(
