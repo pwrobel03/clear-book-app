@@ -17,21 +17,34 @@ type DoctorProfile = {
   bio: string | null;
   licenseNumber: string | null;
   photoUrl: string | null;
-  isPublic: boolean;
+  public: boolean;
 };
 
 // ─── Specialization labels ────────────────────────────────────────────────────
 
 const SPEC_LABELS: Record<string, string> = {
-  CARDIOLOGY: "Cardiology", NEUROLOGY: "Neurology", ORTHOPEDICS: "Orthopedics",
-  PEDIATRICS: "Pediatrics", DERMATOLOGY: "Dermatology", GYNECOLOGY: "Gynecology",
-  PSYCHIATRY: "Psychiatry", OPHTHALMOLOGY: "Ophthalmology", RADIOLOGY: "Radiology",
-  ONCOLOGY: "Oncology", EMERGENCY_MEDICINE: "Emergency Medicine",
-  INTERNAL_MEDICINE: "Internal Medicine", SURGERY: "Surgery", UROLOGY: "Urology",
-  ENDOCRINOLOGY: "Endocrinology", GASTROENTEROLOGY: "Gastroenterology",
-  PULMONOLOGY: "Pulmonology", RHEUMATOLOGY: "Rheumatology",
-  NEPHROLOGY: "Nephrology", HEMATOLOGY: "Hematology",
-  ANESTHESIOLOGY: "Anesthesiology", FAMILY_MEDICINE: "Family Medicine",
+  CARDIOLOGY: "Cardiology",
+  NEUROLOGY: "Neurology",
+  ORTHOPEDICS: "Orthopedics",
+  PEDIATRICS: "Pediatrics",
+  DERMATOLOGY: "Dermatology",
+  GYNECOLOGY: "Gynecology",
+  PSYCHIATRY: "Psychiatry",
+  OPHTHALMOLOGY: "Ophthalmology",
+  RADIOLOGY: "Radiology",
+  ONCOLOGY: "Oncology",
+  EMERGENCY_MEDICINE: "Emergency Medicine",
+  INTERNAL_MEDICINE: "Internal Medicine",
+  SURGERY: "Surgery",
+  UROLOGY: "Urology",
+  ENDOCRINOLOGY: "Endocrinology",
+  GASTROENTEROLOGY: "Gastroenterology",
+  PULMONOLOGY: "Pulmonology",
+  RHEUMATOLOGY: "Rheumatology",
+  NEPHROLOGY: "Nephrology",
+  HEMATOLOGY: "Hematology",
+  ANESTHESIOLOGY: "Anesthesiology",
+  FAMILY_MEDICINE: "Family Medicine",
 };
 
 // ─── Minimal public header ────────────────────────────────────────────────────
@@ -73,7 +86,7 @@ export default async function DoctorPublicProfile({
   if (!res.ok) notFound();
 
   const doctor: DoctorProfile = await res.json();
-  if (!doctor.isPublic) notFound();
+  if (!doctor.public) notFound();
 
   const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`.toUpperCase();
 
@@ -83,7 +96,6 @@ export default async function DoctorPublicProfile({
 
       <main className="mx-auto max-w-4xl px-6 py-12">
         <div className="grid gap-8 lg:grid-cols-3">
-
           {/* Left column — identity */}
           <div className="space-y-6">
             {/* Avatar */}
@@ -117,7 +129,6 @@ export default async function DoctorPublicProfile({
 
           {/* Right column — details */}
           <div className="space-y-6 lg:col-span-2">
-
             {/* Bio */}
             {doctor.bio ? (
               <div className="rounded-2xl border border-border bg-card p-6">
@@ -137,7 +148,9 @@ export default async function DoctorPublicProfile({
             {/* Book CTA */}
             <div className="flex items-center justify-between rounded-2xl border border-accent/20 bg-accent/5 p-5">
               <div>
-                <p className="font-semibold text-foreground">Book an appointment</p>
+                <p className="font-semibold text-foreground">
+                  Book an appointment
+                </p>
                 <p className="text-sm text-muted-foreground">
                   Create an account or sign in to book with Dr.{" "}
                   {doctor.lastName}.

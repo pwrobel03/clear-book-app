@@ -58,8 +58,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         // Public doctor profiles and center listings (GET only)
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/doctors/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/centers/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/doctors",
+                                "/api/doctors/",
+                                "/api/doctors/**",
+                                "/api/centers",
+                                "/api/centers/",
+                                "/api/centers/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

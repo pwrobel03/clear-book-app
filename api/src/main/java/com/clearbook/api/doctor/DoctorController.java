@@ -6,6 +6,9 @@ import com.clearbook.api.model.User;
 import com.clearbook.api.service.DoctorProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +19,18 @@ import org.springframework.web.bind.annotation.*;
 public class DoctorController {
 
     private final DoctorProfileService profileService;
+
+    /**
+     * GET /api/doctors?specialization=CARDIOLOGY&city=Warsaw
+     * Public search — no authentication required.
+     */
+    @GetMapping
+    public ResponseEntity<Page<DoctorProfileResponse>> search(
+            @RequestParam(required = false) String specialization,
+            @RequestParam(required = false) String city,
+            @PageableDefault(size = 12) Pageable pageable) {
+        return ResponseEntity.ok(profileService.search(specialization, city, pageable));
+    }
 
     /** GET /api/doctors/me/profile — own profile (authenticated doctor) */
     @GetMapping("/me/profile")

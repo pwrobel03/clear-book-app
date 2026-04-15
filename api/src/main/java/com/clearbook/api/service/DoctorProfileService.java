@@ -3,10 +3,14 @@ package com.clearbook.api.service;
 import com.clearbook.api.dto.DoctorProfileRequest;
 import com.clearbook.api.dto.DoctorProfileResponse;
 import com.clearbook.api.model.DoctorProfile;
+import com.clearbook.api.model.MembershipStatus;
 import com.clearbook.api.model.Role;
+import com.clearbook.api.model.Specialization;
 import com.clearbook.api.model.User;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,11 +56,38 @@ public class DoctorProfileService {
     /**
      * Returns a public-facing profile by publicId (accessible without authentication).
      */
+    @Transactional(readOnly = true)
     public DoctorProfileResponse getPublicProfile(String publicId) {
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
                 .filter(DoctorProfile::isPublic)
                 .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found."));
         return toResponse(profile);
+    }
+
+    /** Public doctor search — filterable by specialization and/or city. */
+    @Transactional(readOnly = true)
+    public Page<DoctorProfileResponse> search(String specialization, String city, Pageable pageable) {
+        boolean hasSpec = specialization != null && !specialization.isBlank();
+        boolean hasCity = city != null && !city.isBlank();
+
+        // No filters → use simpler query to avoid Hibernate NULL parameter issues
+        if (!hasSpec && !hasCity) {
+            return profileRepository.findByIsPublicTrue(pageable).map(this::toResponse);
+        }
+
+        Specialization spec = null;
+        if (hasSpec) {
+            try {
+                spec = Specialization.valueOf(specialization.toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                return Page.empty(pageable);
+            }
+        }
+        String cityParam = hasCity ? city.trim() : null;
+
+        return profileRepository
+                .search(spec, cityParam, MembershipStatus.ACTIVE, pageable)
+                .map(this::toResponse);
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

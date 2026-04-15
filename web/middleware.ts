@@ -9,8 +9,9 @@ const PUBLIC_ROUTES = [
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/colors",
-  "/doctors",  // public doctor profiles
-  "/centers",  // public center pages
+  "/doctors",  // public doctor profiles + search results
+  "/centers",  // public center listing + individual center pages
+  "/",         // landing page
 ];
 
 const AUTH_UI_EXCEPTIONS = [
