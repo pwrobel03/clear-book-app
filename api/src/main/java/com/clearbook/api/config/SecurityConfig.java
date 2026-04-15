@@ -57,14 +57,16 @@ public class SecurityConfig {
                 // Reguły dostępu do endpointów
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Public doctor profiles and center listings (GET only)
+                        // Public endpoints (GET only)
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/doctors",
                                 "/api/doctors/",
                                 "/api/doctors/**",
                                 "/api/centers",
                                 "/api/centers/",
-                                "/api/centers/**"
+                                "/api/centers/**",
+                                "/api/specializations",
+                                "/api/specializations/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

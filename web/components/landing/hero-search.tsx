@@ -4,36 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
-const SPECIALIZATIONS = [
-  { value: "", label: "All specializations" },
-  { value: "CARDIOLOGY", label: "Cardiology" },
-  { value: "NEUROLOGY", label: "Neurology" },
-  { value: "ORTHOPEDICS", label: "Orthopedics" },
-  { value: "PEDIATRICS", label: "Pediatrics" },
-  { value: "DERMATOLOGY", label: "Dermatology" },
-  { value: "GYNECOLOGY", label: "Gynecology" },
-  { value: "PSYCHIATRY", label: "Psychiatry" },
-  { value: "OPHTHALMOLOGY", label: "Ophthalmology" },
-  { value: "RADIOLOGY", label: "Radiology" },
-  { value: "ONCOLOGY", label: "Oncology" },
-  { value: "EMERGENCY_MEDICINE", label: "Emergency Medicine" },
-  { value: "INTERNAL_MEDICINE", label: "Internal Medicine" },
-  { value: "SURGERY", label: "Surgery" },
-  { value: "UROLOGY", label: "Urology" },
-  { value: "ENDOCRINOLOGY", label: "Endocrinology" },
-  { value: "GASTROENTEROLOGY", label: "Gastroenterology" },
-  { value: "PULMONOLOGY", label: "Pulmonology" },
-  { value: "RHEUMATOLOGY", label: "Rheumatology" },
-  { value: "NEPHROLOGY", label: "Nephrology" },
-  { value: "HEMATOLOGY", label: "Hematology" },
-  { value: "ANESTHESIOLOGY", label: "Anesthesiology" },
-  { value: "FAMILY_MEDICINE", label: "Family Medicine" },
-];
+export type SpecializationOption = { code: string; name: string };
 
-export function HeroSearch() {
+interface HeroSearchProps {
+  specializations: SpecializationOption[];
+  defaultSpecialization?: string;
+  defaultCity?: string;
+}
+
+export function HeroSearch({
+  specializations,
+  defaultSpecialization = "",
+  defaultCity = "",
+}: HeroSearchProps) {
   const router = useRouter();
-  const [specialization, setSpecialization] = useState("");
-  const [city, setCity] = useState("");
+  const [specialization, setSpecialization] = useState(defaultSpecialization);
+  const [city, setCity] = useState(defaultCity);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -55,15 +41,26 @@ export function HeroSearch() {
           onChange={(e) => setSpecialization(e.target.value)}
           className="w-full appearance-none rounded-xl border-0 bg-white px-4 py-3.5 text-sm text-[#102240] shadow-sm ring-1 ring-inset ring-gray-200 focus:outline-none focus:ring-2 focus:ring-[#36A372]"
         >
-          {SPECIALIZATIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
+          <option value="">All specializations</option>
+          {specializations.map((s) => (
+            <option key={s.code} value={s.code}>
+              {s.name}
             </option>
           ))}
         </select>
         <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </div>
       </div>

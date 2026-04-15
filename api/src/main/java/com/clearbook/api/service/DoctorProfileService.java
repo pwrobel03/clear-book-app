@@ -8,23 +8,25 @@ import com.clearbook.api.model.Role;
 import com.clearbook.api.model.Specialization;
 import com.clearbook.api.model.User;
 import com.clearbook.api.repository.DoctorProfileRepository;
+import com.clearbook.api.repository.SpecializationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DoctorProfileService {
 
     private final DoctorProfileRepository profileRepository;
+    private final SpecializationRepository specializationRepository;
 
-    /**
-     * Returns the authenticated doctor's profile, or throws if they don't have one yet.
-     */
+    /** Returns the authenticated doctor's profile. */
     public DoctorProfileResponse getMyProfile(User user) {
         assertDoctor(user);
         DoctorProfile profile = profileRepository.findByUser(user)
@@ -32,9 +34,7 @@ public class DoctorProfileService {
         return toResponse(profile);
     }
 
-    /**
-     * Creates the profile on first call, updates it on subsequent calls.
-     */
+    /** Creates or updates the profile. */
     @Transactional
     public DoctorProfileResponse createOrUpdate(User user, DoctorProfileRequest request) {
         assertDoctor(user);
@@ -45,7 +45,13 @@ public class DoctorProfileService {
                         .publicId(generatePublicId(user))
                         .build());
 
-        profile.setSpecializations(request.getSpecializations());
+        // Resolve codes → entities, silently skip unknown codes
+        Set<Specialization> specs = request.getSpecializations().stream()
+                .map(code -> specializationRepository.findByCode(code.toUpperCase()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        profile.setSpecializations(specs);
         profile.setBio(request.getBio());
         profile.setLicenseNumber(request.getLicenseNumber());
         profile.setPublic(request.isPublic());
@@ -53,10 +59,7 @@ public class DoctorProfileService {
         return toResponse(profileRepository.save(profile));
     }
 
-    /**
-     * Returns a public-facing profile by publicId (accessible without authentication).
-     */
-    @Transactional(readOnly = true)
+    /** Public profile by publicId (no auth required). */
     public DoctorProfileResponse getPublicProfile(String publicId) {
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
                 .filter(DoctorProfile::isPublic)
@@ -64,29 +67,20 @@ public class DoctorProfileService {
         return toResponse(profile);
     }
 
-    /** Public doctor search — filterable by specialization and/or city. */
-    @Transactional(readOnly = true)
+    /** Public search — filterable by specialization code and/or city. */
     public Page<DoctorProfileResponse> search(String specialization, String city, Pageable pageable) {
         boolean hasSpec = specialization != null && !specialization.isBlank();
         boolean hasCity = city != null && !city.isBlank();
 
-        // No filters → use simpler query to avoid Hibernate NULL parameter issues
         if (!hasSpec && !hasCity) {
             return profileRepository.findByIsPublicTrue(pageable).map(this::toResponse);
         }
 
-        Specialization spec = null;
-        if (hasSpec) {
-            try {
-                spec = Specialization.valueOf(specialization.toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                return Page.empty(pageable);
-            }
-        }
+        String specCode = hasSpec ? specialization.toUpperCase().trim() : null;
         String cityParam = hasCity ? city.trim() : null;
 
         return profileRepository
-                .search(spec, cityParam, MembershipStatus.ACTIVE, pageable)
+                .search(specCode, cityParam, MembershipStatus.ACTIVE, pageable)
                 .map(this::toResponse);
     }
 
@@ -98,19 +92,16 @@ public class DoctorProfileService {
         }
     }
 
-    /** Generates a URL-safe publicId, e.g. "anna-nowak-a3f2". Retries on collision. */
     private String generatePublicId(User user) {
         String base = (user.getFirstName() + "-" + user.getLastName())
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("^-|-$", "");
-
         String candidate;
         do {
             String suffix = UUID.randomUUID().toString().substring(0, 4);
             candidate = base + "-" + suffix;
         } while (profileRepository.existsByPublicId(candidate));
-
         return candidate;
     }
 
@@ -121,7 +112,10 @@ public class DoctorProfileService {
                 .firstName(p.getUser().getFirstName())
                 .lastName(p.getUser().getLastName())
                 .email(p.getUser().getUsername())
-                .specializations(p.getSpecializations())
+                // Return codes for backward compatibility; frontend resolves names via /api/specializations
+                .specializations(p.getSpecializations().stream()
+                        .map(Specialization::getCode)
+                        .collect(Collectors.toSet()))
                 .bio(p.getBio())
                 .licenseNumber(p.getLicenseNumber())
                 .photoUrl(p.getPhotoUrl())

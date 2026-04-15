@@ -7,12 +7,35 @@ import {
   Stethoscope,
   ArrowRight,
 } from "lucide-react";
-import { HeroSearch } from "@/components/landing/hero-search";
+import {
+  HeroSearch,
+  type SpecializationOption,
+} from "@/components/landing/hero-search";
+
+const SPRING = "http://localhost:8080";
+async function fetchSpecializations(): Promise<SpecializationOption[]> {
+  try {
+    const res = await fetch(`${SPRING}/api/specializations`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return ((await res.json()) as { code: string; name: string }[]).map(
+      (s) => ({ code: s.code, name: s.name }),
+    );
+  } catch {
+    return [];
+  }
+}
 import { Navbar } from "@/components/navbar";
+import { getServerSession } from "@/lib/server/session";
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
-function Hero() {
+function Hero({
+  specializations,
+}: {
+  specializations: SpecializationOption[];
+}) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-[#080F20] to-[#102240] pb-24 pt-20 min-h-[92vh]">
       {/* Decorative blobs */}
@@ -40,7 +63,7 @@ function Hero() {
 
         {/* Search card */}
         <div className="mx-auto mt-10 max-w-2xl rounded-2xl bg-white/5 p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
-          <HeroSearch />
+          <HeroSearch specializations={specializations} />
         </div>
 
         {/* Stats */}
@@ -243,10 +266,15 @@ function Footer() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function LandingPage() {
+  const [session, specializations] = await Promise.all([
+    getServerSession(),
+    fetchSpecializations(),
+  ]);
+
   return (
     <div className="min-h-screen">
       <Navbar />
-      <Hero />
+      <Hero specializations={specializations} />
       <HowItWorks />
       <B2BSection />
       <Footer />

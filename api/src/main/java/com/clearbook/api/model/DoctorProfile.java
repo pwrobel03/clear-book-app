@@ -36,13 +36,12 @@ public class DoctorProfile {
     @Column(unique = true, nullable = false)
     private String publicId;
 
-    @Enumerated(EnumType.STRING)
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "doctor_specializations",
-            joinColumns = @JoinColumn(name = "doctor_profile_id")
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "doctor_profile_specializations",
+            joinColumns = @JoinColumn(name = "doctor_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "specialization_id")
     )
-    @Column(name = "specialization")
     @Builder.Default
     private Set<Specialization> specializations = new HashSet<>();
 

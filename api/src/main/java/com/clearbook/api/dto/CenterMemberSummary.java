@@ -1,7 +1,6 @@
 package com.clearbook.api.dto;
 
 import com.clearbook.api.model.MembershipRole;
-import com.clearbook.api.model.Specialization;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +18,7 @@ public class CenterMemberSummary {
     private String lastName;
     /** Null if the doctor has not completed their profile yet. */
     private String publicId;
-    private Set<Specialization> specializations;
+    /** Specialization codes */
+    private Set<String> specializations;
     private MembershipRole role;
 }

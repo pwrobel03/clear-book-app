@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Save, UserCircle } from "lucide-react";
-import { upsertProfileAction } from "@/lib/actions/doctor";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,35 +20,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
+
+import {
+  upsertProfileAction,
+  getProfileAction,
+  getSpecializationsAction,
+} from "@/lib/actions/doctor";
 import { forbidden } from "next/navigation";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const SPECIALIZATIONS = [
-  { value: "CARDIOLOGY", label: "Cardiology" },
-  { value: "NEUROLOGY", label: "Neurology" },
-  { value: "ORTHOPEDICS", label: "Orthopedics" },
-  { value: "PEDIATRICS", label: "Pediatrics" },
-  { value: "DERMATOLOGY", label: "Dermatology" },
-  { value: "GYNECOLOGY", label: "Gynecology" },
-  { value: "PSYCHIATRY", label: "Psychiatry" },
-  { value: "OPHTHALMOLOGY", label: "Ophthalmology" },
-  { value: "RADIOLOGY", label: "Radiology" },
-  { value: "ONCOLOGY", label: "Oncology" },
-  { value: "EMERGENCY_MEDICINE", label: "Emergency Medicine" },
-  { value: "INTERNAL_MEDICINE", label: "Internal Medicine" },
-  { value: "SURGERY", label: "Surgery" },
-  { value: "UROLOGY", label: "Urology" },
-  { value: "ENDOCRINOLOGY", label: "Endocrinology" },
-  { value: "GASTROENTEROLOGY", label: "Gastroenterology" },
-  { value: "PULMONOLOGY", label: "Pulmonology" },
-  { value: "RHEUMATOLOGY", label: "Rheumatology" },
-  { value: "NEPHROLOGY", label: "Nephrology" },
-  { value: "HEMATOLOGY", label: "Hematology" },
-  { value: "ANESTHESIOLOGY", label: "Anesthesiology" },
-  { value: "FAMILY_MEDICINE", label: "Family Medicine" },
-];
-
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -63,6 +40,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+type SpecOption = { code: string; name: string };
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DoctorProfilePage() {
@@ -70,6 +49,7 @@ export default function DoctorProfilePage() {
   const [success, setSuccess] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [profileExists, setProfileExists] = useState(false);
+  const [specsList, setSpecsList] = useState<SpecOption[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -88,17 +68,24 @@ export default function DoctorProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/doctors/me/profile");
-        console.log("record");
-        if (res.status === 403) forbidden();
-        if (res.ok) {
-          const data = await res.json();
+        const [profResult, specResult] = await Promise.all([
+          getProfileAction(),
+          getSpecializationsAction(),
+        ]);
+
+        if (profResult.error === "Forbidden") forbidden();
+
+        if (specResult.data) {
+          setSpecsList(specResult.data);
+        }
+
+        if (profResult.data) {
           setProfileExists(true);
           form.reset({
-            specializations: data.specializations ?? [],
-            bio: data.bio ?? "",
-            licenseNumber: data.licenseNumber ?? "",
-            isPublic: data.isPublic ?? true,
+            specializations: profResult.data.specializations ?? [],
+            bio: profResult.data.bio ?? "",
+            licenseNumber: profResult.data.licenseNumber ?? "",
+            isPublic: profResult.data.public ?? true,
           });
         }
       } finally {
@@ -177,13 +164,13 @@ export default function DoctorProfilePage() {
                     <FormLabel>Specializations</FormLabel>
                     <FormControl>
                       <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-3">
-                        {SPECIALIZATIONS.map((s) => {
-                          const active = selected.includes(s.value);
+                        {specsList.map((s) => {
+                          const active = selected.includes(s.code); // UWAGA: s.code zamiast s.value
                           return (
                             <button
-                              key={s.value}
+                              key={s.code}
                               type="button"
-                              onClick={() => toggleSpecialization(s.value)}
+                              onClick={() => toggleSpecialization(s.code)}
                               className={cn(
                                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                                 active
@@ -191,7 +178,7 @@ export default function DoctorProfilePage() {
                                   : "border-border text-muted-foreground hover:border-accent/50 hover:text-foreground",
                               )}
                             >
-                              {s.label}
+                              {s.name}
                             </button>
                           );
                         })}
@@ -202,10 +189,10 @@ export default function DoctorProfilePage() {
                       {selected.length > 0
                         ? selected
                             .map(
-                              (v) =>
-                                SPECIALIZATIONS.find((s) => s.value === v)
-                                  ?.label,
+                              (code) =>
+                                specsList.find((s) => s.code === code)?.name,
                             )
+                            .filter(Boolean) // Pomija undefined w razie błędu
                             .join(", ")
                         : "none"}
                     </FormDescription>

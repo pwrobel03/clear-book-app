@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Search, ArrowLeft } from "lucide-react";
-import { HeroSearch } from "@/components/landing/hero-search";
+import {
+  HeroSearch,
+  type SpecializationOption,
+} from "@/components/landing/hero-search";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
@@ -120,6 +123,17 @@ export default async function DoctorsSearchPage({
   if (specialization) params.set("specialization", specialization);
   if (city) params.set("city", city);
 
+  // Fetch specializations for the search form
+  let specializations: SpecializationOption[] = [];
+  try {
+    const sRes = await fetch(`${SPRING}/api/specializations`, {
+      cache: "no-store",
+    });
+    if (sRes.ok) specializations = await sRes.json();
+  } catch {
+    /* ignore */
+  }
+
   let result: PageResult = { content: [], totalElements: 0, totalPages: 0 };
   try {
     const res = await fetch(`${SPRING}/api/doctors?${params}`, {
@@ -147,7 +161,11 @@ export default async function DoctorsSearchPage({
       {/* Search bar */}
       <div className="border-b border-border bg-card py-6">
         <div className="mx-auto max-w-5xl px-6">
-          <HeroSearch />
+          <HeroSearch
+            specializations={specializations}
+            defaultSpecialization={specialization}
+            defaultCity={city}
+          />
         </div>
       </div>
 

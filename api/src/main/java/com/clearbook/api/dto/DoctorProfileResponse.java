@@ -1,6 +1,6 @@
 package com.clearbook.api.dto;
 
-import com.clearbook.api.model.Specialization;
+// specializations returned as code strings for backward compatibility
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +21,8 @@ public class DoctorProfileResponse {
     private String firstName;
     private String lastName;
     private String email;
-    private Set<Specialization> specializations;
+    /** Specialization codes, e.g. ["CARDIOLOGY", "NEUROLOGY"] */
+    private Set<String> specializations;
     private String bio;
     private String licenseNumber;
     private String photoUrl;
