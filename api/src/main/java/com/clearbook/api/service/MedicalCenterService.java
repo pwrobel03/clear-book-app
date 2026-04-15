@@ -185,6 +185,7 @@ public class MedicalCenterService {
                 .centerCity(m.getCenter().getCity())
                 .role(m.getRole())
                 .status(m.getStatus())
+                .centerStatus(m.getCenter().getStatus())
                 .invitedAt(m.getInvitedAt())
                 .joinedAt(m.getJoinedAt())
                 .build();

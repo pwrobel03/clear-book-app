@@ -1,5 +1,6 @@
 package com.clearbook.api.dto;
 
+import com.clearbook.api.model.CenterStatus;
 import com.clearbook.api.model.MembershipRole;
 import com.clearbook.api.model.MembershipStatus;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ public class MembershipResponse {
     private String centerCity;
     private MembershipRole role;
     private MembershipStatus status;
+    private CenterStatus centerStatus;
     private LocalDateTime invitedAt;
     private LocalDateTime joinedAt;
 }

@@ -61,7 +61,6 @@ const navByRole: Record<UserRole, NavItem[]> = {
       href: "/dashboard/verifications",
       icon: ShieldCheck,
       label: "Verifications",
-      soon: true,
     },
     { href: "/dashboard/users", icon: Users, label: "Users", soon: true },
     {

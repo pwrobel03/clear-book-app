@@ -45,6 +45,7 @@ type Membership = {
   centerCity: string;
   role: "MEMBER" | "ADMIN";
   status: "INVITED" | "ACTIVE" | "SUSPENDED" | "REJECTED";
+  centerStatus: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED";
   invitedAt: string;
   joinedAt: string | null;
 };
@@ -129,15 +130,30 @@ function MembershipCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge variant={membership.role === "ADMIN" ? "default" : "muted"}>
             {membership.role === "ADMIN" && <ShieldCheck size={10} className="mr-1" />}
             {roleLabel}
           </Badge>
-          <Badge variant={statusVariant[membership.status] ?? "muted"}>
-            {isPending && <Clock size={10} className="mr-1" />}
-            {membership.status}
-          </Badge>
+          {isPending ? (
+            <Badge variant="warning">
+              <Clock size={10} className="mr-1" /> Invited
+            </Badge>
+          ) : (
+            <Badge
+              variant={
+                membership.centerStatus === "ACTIVE"
+                  ? "accent"
+                  : membership.centerStatus === "PENDING_APPROVAL"
+                  ? "warning"
+                  : "muted"
+              }
+            >
+              {membership.centerStatus === "PENDING_APPROVAL"
+                ? "Pending Review"
+                : membership.centerStatus}
+            </Badge>
+          )}
         </div>
       </div>
 
