@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +24,6 @@ import { forgotSchema, type ForgotFormData } from "@/lib/schemas/auth";
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [isSuccess, setIsSuccess] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<ForgotFormData>({
     resolver: zodResolver(forgotSchema),
@@ -33,11 +33,10 @@ export default function ForgotPasswordPage() {
   const { isSubmitting } = form.formState;
 
   async function onSubmit(values: ForgotFormData) {
-    setServerError(null);
     const result = await forgotPasswordAction(values.email);
 
     if (result.error) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
 
@@ -109,12 +108,6 @@ export default function ForgotPasswordPage() {
                     </FormItem>
                   )}
                 />
-
-                {serverError && (
-                  <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                    {serverError}
-                  </p>
-                )}
 
                 <Button
                   type="submit"

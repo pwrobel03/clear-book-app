@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Form } from "@/components/ui/form";
 import {
   RoleSelectionStep,
@@ -14,12 +15,11 @@ import {
 } from "./register-steps";
 
 import { registerSchema, type RegisterFormData } from "@/lib/schemas/auth";
-import { registerAction } from "@/lib/actions/auth"; // Dodany import akcji serwerowej
+import { registerAction } from "@/lib/actions/auth";
 
 export function RegisterForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -60,16 +60,12 @@ export function RegisterForm() {
   };
 
   const handleBack = () => {
-    setServerError(null);
     setStep((prev) => prev - 1);
   };
 
   async function onSubmit(values: RegisterFormData) {
-    setServerError(null);
     setPendingMessage(null);
 
-    // Przekazujemy czyste dane w formie JSONa do naszej Server Action.
-    // (Zignorowanie pliku na tym etapie jest celowe - backend na razie nie ma go w DTO).
     const result = await registerAction({
       firstName: values.firstName,
       lastName: values.lastName,
@@ -79,17 +75,19 @@ export function RegisterForm() {
     });
 
     if (result.error) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
 
     if (result.status === "PENDING") {
+      toast.success("Application submitted successfully!");
       setPendingMessage(
         result.message ?? "Your account is pending admin verification.",
       );
       return;
     }
 
+    toast.success("Account created successfully!");
     router.push("/dashboard");
     router.refresh();
   }
@@ -124,7 +122,6 @@ export function RegisterForm() {
             onNext={handleNext}
             onBack={handleBack}
             isSubmitting={isSubmitting}
-            serverError={serverError}
             role={role}
           />
         )}
@@ -134,7 +131,6 @@ export function RegisterForm() {
             onBack={handleBack}
             onSubmit={form.handleSubmit(onSubmit)}
             isSubmitting={isSubmitting}
-            serverError={serverError}
             selectedFile={selectedFile}
             setSelectedFile={setSelectedFile}
           />

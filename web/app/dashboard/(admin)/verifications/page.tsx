@@ -5,8 +5,6 @@ import {
   verifyDoctorAction,
   approveCenterAction,
   rejectCenterAction,
-  getPendingDoctorsAction,
-  getPendingCentersAction,
 } from "@/lib/actions/admin";
 import {
   Stethoscope,
@@ -21,7 +19,7 @@ import {
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuthStore } from "@/store/auth";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -223,15 +221,12 @@ export default function VerificationsPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     const [dRes, cRes] = await Promise.all([
-      getPendingDoctorsAction(),
-      getPendingCentersAction(),
+      fetch("/api/admin/doctors/pending"),
+      fetch("/api/admin/centers/pending"),
     ]);
-
-    if (dRes.data) setDoctors(dRes.data);
-    if (cRes.data) setCenters(cRes.data);
-
+    if (dRes.ok) setDoctors(await dRes.json());
+    if (cRes.ok) setCenters(await cRes.json());
     setLoading(false);
   }, []);
 
@@ -239,17 +234,44 @@ export default function VerificationsPage() {
     load();
   }, [load]);
 
-  async function handleDoctor(id: string, action: "approve" | "reject") {
+  async function handleDoctor(id: string, action: "APPROVE" | "REJECT") {
     setActionLoading(true);
-    await verifyDoctorAction(id, action);
+    const result = await verifyDoctorAction(id, action);
+
+    if (result && "error" in result) {
+      toast.error(result.error);
+    } else {
+      toast.success(
+        `Doctor account has been ${
+          action === "APPROVE" ? "approved" : "rejected"
+        }.`,
+      );
+    }
+
     await load();
     setActionLoading(false);
   }
 
-  async function handleCenter(id: string, action: "approve" | "reject") {
+  async function handleCenter(id: string, action: "APPROVE" | "REJECT") {
     setActionLoading(true);
-    if (action === "approve") await approveCenterAction(id);
-    else await rejectCenterAction(id);
+    let result;
+
+    if (action === "APPROVE") {
+      result = await approveCenterAction(id);
+    } else {
+      result = await rejectCenterAction(id);
+    }
+
+    if (result && "error" in result) {
+      toast.error(result.error);
+    } else {
+      toast.success(
+        `Medical center has been ${
+          action === "APPROVE" ? "approved" : "rejected"
+        }.`,
+      );
+    }
+
     await load();
     setActionLoading(false);
   }
@@ -302,8 +324,8 @@ export default function VerificationsPage() {
                     <DoctorCard
                       key={d.id}
                       doctor={d}
-                      onApprove={(id) => handleDoctor(id, "approve")}
-                      onReject={(id) => handleDoctor(id, "reject")}
+                      onApprove={(id) => handleDoctor(id, "APPROVE")}
+                      onReject={(id) => handleDoctor(id, "REJECT")}
                       loading={actionLoading}
                     />
                   ))
@@ -333,8 +355,8 @@ export default function VerificationsPage() {
                     <CenterCard
                       key={c.id}
                       center={c}
-                      onApprove={(id) => handleCenter(id, "approve")}
-                      onReject={(id) => handleCenter(id, "reject")}
+                      onApprove={(id) => handleCenter(id, "APPROVE")}
+                      onReject={(id) => handleCenter(id, "REJECT")}
                       loading={actionLoading}
                     />
                   ))

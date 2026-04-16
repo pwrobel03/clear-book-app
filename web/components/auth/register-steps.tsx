@@ -125,7 +125,6 @@ interface PersonalDetailsStepProps {
   onNext: () => void;
   onBack: () => void;
   isSubmitting: boolean;
-  serverError: string | null;
   role: "USER" | "DOCTOR";
 }
 
@@ -133,7 +132,6 @@ export function PersonalDetailsStep({
   onNext,
   onBack,
   isSubmitting,
-  serverError,
   role,
 }: PersonalDetailsStepProps) {
   const { control } = useFormContext<RegisterFormData>();
@@ -278,12 +276,6 @@ export function PersonalDetailsStep({
         />
       </div>
 
-      {serverError && (
-        <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive mt-4">
-          {serverError}
-        </p>
-      )}
-
       <div className="flex gap-3 pt-4">
         <Button
           type="button"
@@ -320,7 +312,6 @@ interface DoctorVerificationStepProps {
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
-  serverError: string | null;
   selectedFile: File | null;
   setSelectedFile: (file: File | null) => void;
 }
@@ -329,7 +320,6 @@ export function DoctorVerificationStep({
   onBack,
   onSubmit,
   isSubmitting,
-  serverError,
   selectedFile,
   setSelectedFile,
 }: DoctorVerificationStepProps) {
@@ -408,12 +398,6 @@ export function DoctorVerificationStep({
           </FormItem>
         )}
       />
-
-      {serverError && (
-        <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-          {serverError}
-        </p>
-      )}
 
       <div className="flex gap-3 pt-2">
         <Button

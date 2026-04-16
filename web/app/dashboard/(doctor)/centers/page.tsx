@@ -33,9 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// --- Custom Actions ───────────────────────────────────────────────────────────
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 import {
   createCenterAction,
@@ -43,11 +42,7 @@ import {
   rejectInvitationAction,
   getMyCentersAction,
 } from "@/lib/actions/centers";
-
-import {
-  createCenterSchema,
-  type CreateCenterData,
-} from "@/lib/schemas/center";
+import { CreateCenterData, createCenterSchema } from "@/lib/schemas/center";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,16 +80,6 @@ function MembershipCard({
   onReject: (id: string) => void;
 }) {
   const isPending = membership.status === "INVITED";
-
-  const statusVariant: Record<
-    string,
-    "accent" | "muted" | "warning" | "destructive"
-  > = {
-    ACTIVE: "accent",
-    INVITED: "warning",
-    SUSPENDED: "muted",
-    REJECTED: "destructive",
-  };
 
   const roleLabel = membership.role === "ADMIN" ? "Administrator" : "Member";
 
@@ -187,7 +172,6 @@ function MembershipCard({
 
 function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<CreateCenterData>({
     resolver: zodResolver(createCenterSchema),
@@ -204,14 +188,15 @@ function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
   });
 
   async function onSubmit(values: CreateCenterData) {
-    setServerError(null);
     const result = await createCenterAction(values);
     if ("error" in result) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
+
     form.reset();
     setOpen(false);
+    toast.success("Center registered successfully. Pending approval.");
     onCreated();
   }
 
@@ -374,12 +359,6 @@ function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
             />
           </div>
 
-          {serverError && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {serverError}
-            </p>
-          )}
-
           <p className="text-xs text-muted-foreground">
             The center will be reviewed by platform administrators before going
             live. You will be automatically assigned as its administrator.
@@ -420,11 +399,16 @@ export default function CentersPage() {
 
   async function load() {
     setLoading(true);
-    const result = await getMyCentersAction();
-    if (result.data) {
-      setMemberships(result.data);
+    try {
+      const result = await getMyCentersAction();
+      if (result.data) {
+        setMemberships(result.data);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -432,13 +416,23 @@ export default function CentersPage() {
   }, []);
 
   async function handleAccept(id: string) {
-    await acceptInvitationAction(id);
-    load();
+    const result = await acceptInvitationAction(id);
+    if (result && "error" in result) {
+      toast.error(result.error);
+    } else {
+      toast.success("Invitation accepted.");
+      load();
+    }
   }
 
   async function handleReject(id: string) {
-    await rejectInvitationAction(id);
-    load();
+    const result = await rejectInvitationAction(id);
+    if (result && "error" in result) {
+      toast.error(result.error);
+    } else {
+      toast.success("Invitation rejected.");
+      load();
+    }
   }
 
   const pending = memberships.filter((m) => m.status === "INVITED");

@@ -8,6 +8,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Form,
   FormControl,
@@ -37,8 +38,6 @@ import {
 
 export default function DoctorProfilePage() {
   const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [profileExists, setProfileExists] = useState(false);
   const [specsList, setSpecsList] = useState<SpecOption[]>([]);
 
@@ -87,19 +86,15 @@ export default function DoctorProfilePage() {
   }, [form]);
 
   async function onSubmit(values: DoctorProfileFormData) {
-    setServerError(null);
-    setSuccess(false);
-
     const result = await upsertProfileAction(values);
 
     if ("error" in result) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
 
-    setSuccess(true);
     setProfileExists(true);
-    setTimeout(() => setSuccess(false), 3000);
+    toast.success("Profile saved successfully.");
   }
 
   function toggleSpecialization(value: string) {
@@ -269,20 +264,6 @@ export default function DoctorProfilePage() {
                   </FormItem>
                 )}
               />
-
-              {/* Server error */}
-              {serverError && (
-                <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {serverError}
-                </p>
-              )}
-
-              {/* Success */}
-              {success && (
-                <p className="rounded-lg bg-success/10 px-4 py-3 text-sm text-success">
-                  Profile saved successfully.
-                </p>
-              )}
 
               <Button type="submit" disabled={isSubmitting} className="gap-2">
                 {isSubmitting ? (

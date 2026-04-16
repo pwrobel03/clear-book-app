@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import { loginAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -18,13 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { toast } from "sonner";
 
 import { loginSchema, type LoginFormData } from "@/lib/schemas/auth";
 
 export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -34,26 +33,23 @@ export function LoginForm() {
   const { isSubmitting } = form.formState;
 
   async function onSubmit(values: LoginFormData) {
-    setServerError(null);
-
     const result = await loginAction(values.email, values.password);
 
     if ("error" in result) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
 
     if (result.status === "PENDING") {
-      setServerError("Your account is awaiting admin verification.");
+      toast.warning("Your account is awaiting admin verification.");
       return;
     }
     if (result.status === "BANNED") {
-      setServerError(
-        "Your account has been suspended. Please contact support.",
-      );
+      toast.error("Your account has been suspended. Please contact support.");
       return;
     }
 
+    toast.success("Signed in successfully!");
     router.push("/dashboard");
     router.refresh();
   }
@@ -131,12 +127,6 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-
-        {serverError && (
-          <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-            {serverError}
-          </p>
-        )}
 
         <Button
           type="submit"

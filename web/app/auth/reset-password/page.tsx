@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,7 +29,6 @@ function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<ResetFormData>({
     resolver: zodResolver(resetSchema),
@@ -52,17 +52,14 @@ function ResetPasswordForm() {
   }
 
   async function onSubmit(values: ResetFormData) {
-    setServerError(null);
     if (!token) {
-      setServerError(
-        "Missing reset token. Please use the link from your email.",
-      );
+      toast.error("Missing reset token. Please use the link from your email.");
       return;
     }
     const result = await resetPasswordAction(token, values.newPassword);
 
     if (result.error) {
-      setServerError(result.error);
+      toast.error(result.error);
       return;
     }
 
@@ -176,12 +173,6 @@ function ResetPasswordForm() {
               </FormItem>
             )}
           />
-
-          {serverError && (
-            <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-              {serverError}
-            </p>
-          )}
 
           <Button
             type="submit"

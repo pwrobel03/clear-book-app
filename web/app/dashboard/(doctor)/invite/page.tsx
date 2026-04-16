@@ -13,8 +13,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { refreshInviteCodeAction, getInviteCodeAction } from "@/lib/actions/doctor";
+import {
+  refreshInviteCodeAction,
+  getInviteCodeAction,
+} from "@/lib/actions/doctor";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner"; // IMPORT TOAST
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +45,8 @@ const STEPS = [
   {
     n: "3",
     title: "Accept or reject",
-    description: "Review the invitation in My Centers and choose to join or decline.",
+    description:
+      "Review the invitation in My Centers and choose to join or decline.",
   },
 ];
 
@@ -65,7 +70,12 @@ export default function InvitePage() {
   async function handleRefresh() {
     setRefreshing(true);
     const result = await refreshInviteCodeAction();
-    if (!("error" in result)) setData(result.data);
+    if ("error" in result) {
+      toast.error(result.error);
+    } else {
+      setData(result.data);
+      toast.success("Invite code refreshed successfully.");
+    }
     setRefreshing(false);
   }
 
@@ -73,6 +83,7 @@ export default function InvitePage() {
     if (!data) return;
     await navigator.clipboard.writeText(data.code);
     setCopied(true);
+    toast.success("Code copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -97,7 +108,6 @@ export default function InvitePage() {
       <DashboardHeader title="Invite Code" />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-2xl space-y-8">
-
           {/* Code card */}
           <div className="rounded-2xl border border-border bg-card p-8">
             <div className="flex items-center gap-3 mb-6">
@@ -107,14 +117,18 @@ export default function InvitePage() {
               <div>
                 <h2 className="font-bold text-foreground">Your Invite Code</h2>
                 <p className="text-sm text-muted-foreground">
-                  Share this with medical centers to receive affiliation invitations.
+                  Share this with medical centers to receive affiliation
+                  invitations.
                 </p>
               </div>
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 size={24} className="animate-spin text-muted-foreground" />
+                <Loader2
+                  size={24}
+                  className="animate-spin text-muted-foreground"
+                />
               </div>
             ) : (
               <>
@@ -142,7 +156,11 @@ export default function InvitePage() {
 
                 {/* Actions */}
                 <div className="mt-5 flex gap-3 justify-center">
-                  <Button onClick={handleCopy} disabled={!data} className="gap-2">
+                  <Button
+                    onClick={handleCopy}
+                    disabled={!data}
+                    className="gap-2"
+                  >
                     {copied ? (
                       <>
                         <Check size={15} /> Copied!
@@ -159,13 +177,17 @@ export default function InvitePage() {
                     disabled={refreshing}
                     className="gap-2"
                   >
-                    <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
+                    <RefreshCw
+                      size={15}
+                      className={refreshing ? "animate-spin" : ""}
+                    />
                     {refreshing ? "Refreshing…" : "Refresh Code"}
                   </Button>
                 </div>
 
                 <p className="mt-4 text-center text-xs text-muted-foreground">
-                  Refreshing generates a new code and immediately invalidates the current one.
+                  Refreshing generates a new code and immediately invalidates
+                  the current one.
                 </p>
               </>
             )}
