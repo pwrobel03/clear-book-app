@@ -1,89 +1,85 @@
-"use server";
+"use server"
 
-import { springFetch } from "@/lib/server/spring";
-import { revalidatePath } from "next/cache";
+import { revalidatePath } from "next/cache"
 
-export async function getProfileAction() {
+import { springFetch } from "@/lib/server/spring"
+import { callApi } from "@/lib/server/api-action"
+import type {
+  ActionResult,
+  DoctorProfileResponse,
+  InviteCodeResponse,
+  SpecializationDto,
+} from "@/types/api"
+
+/**
+ * Fetches the authenticated doctor's own profile.
+ *
+ * Kept as a custom handler because the 404 case is semantically meaningful
+ * (no profile created yet → data: null) rather than an error.
+ */
+export async function getProfileAction(): Promise<
+  ActionResult<DoctorProfileResponse | null>
+> {
   try {
-    const res = await springFetch("/api/doctors/me/profile");
-    
-    if (res.status === 403) return { error: "Forbidden" };
-    if (res.status === 400 || res.status === 404) return { data: null }; // Brak profilu
+    const res = await springFetch("/api/doctors/me/profile")
 
-    const json = await res.json();
-    if (!res.ok) return { error: json.message ?? "Failed to load profile." };
+    if (res.status === 403) return { error: "Access denied." }
+    if (res.status === 404) return { data: null }
 
-    return { data: json };
+    const json = await res.json()
+    if (!res.ok) return { error: json.message ?? "Failed to load profile." }
+
+    return { data: json as DoctorProfileResponse }
   } catch {
-    return { error: "Service unavailable." };
+    return { error: "Service unavailable. Please try again later." }
   }
 }
 
-export async function getSpecializationsAction() {
-  try {
-    const res = await springFetch("/api/specializations");
-    
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      return { error: json.message ?? "Failed to load specializations." };
-    }
-
-    const data = await res.json();
-    return { data };
-  } catch {
-    return { error: "Service unavailable." };
-  }
+export async function getSpecializationsAction(): Promise<ActionResult<SpecializationDto[]>> {
+  return callApi<SpecializationDto[]>(
+    () => springFetch("/api/specializations"),
+    "Failed to load specializations."
+  )
 }
 
 export async function upsertProfileAction(data: {
-  specializations: string[];
-  bio?: string;
-  licenseNumber?: string;
-  isPublic: boolean;
-}) {
-  try {
-    const res = await springFetch("/api/doctors/me/profile", {
-      method: "PUT",
-      body: JSON.stringify({
-        specializations: data.specializations,
-        bio: data.bio,
-        licenseNumber: data.licenseNumber,
-        public: data.isPublic // KLUCZOWE: backend oczekuje 'public'
+  specializations: string[]
+  bio?: string
+  licenseNumber?: string
+  isPublic: boolean
+}): Promise<ActionResult<DoctorProfileResponse>> {
+  const result = await callApi<DoctorProfileResponse>(
+    () =>
+      springFetch("/api/doctors/me/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          specializations: data.specializations,
+          bio: data.bio,
+          licenseNumber: data.licenseNumber,
+          public: data.isPublic, // backend expects 'public'
+        }),
       }),
-    });
+    "Failed to save profile."
+  )
 
-    const json = await res.json();
-    if (!res.ok) return { error: json.message ?? "Failed to save profile." };
+  if (!result.error) revalidatePath("/dashboard/profile")
 
-    revalidatePath("/dashboard/profile");
-    return { data: json };
-  } catch {
-    return { error: "Service unavailable. Please try again later." };
-  }
+  return result
 }
 
-export async function refreshInviteCodeAction() {
-  try {
-    const res = await springFetch("/api/users/me/invite-code/refresh", {
-      method: "POST",
-    });
-
-    const json = await res.json();
-    if (!res.ok) return { error: json.message ?? "Failed to refresh code." };
-
-    return { data: json };
-  } catch {
-    return { error: "Service unavailable. Please try again later." };
-  }
+export async function getInviteCodeAction(): Promise<ActionResult<InviteCodeResponse>> {
+  return callApi<InviteCodeResponse>(
+    () => springFetch("/api/users/me/invite-code"),
+    "Failed to load invite code."
+  )
 }
 
-export async function getInviteCodeAction() {
-  try {
-    const res = await springFetch("/api/users/me/invite-code");
-    const json = await res.json();
-    if (!res.ok) return { error: json.message ?? "Failed to load code." };
-    return { data: json };
-  } catch {
-    return { error: "Service unavailable. Please try again later." };
-  }
+export async function refreshInviteCodeAction(): Promise<ActionResult<InviteCodeResponse>> {
+  return callApi<InviteCodeResponse>(
+    () =>
+      springFetch("/api/users/me/invite-code/refresh", {
+        method: "POST",
+      }),
+    "Failed to refresh invite code."
+  )
 }
