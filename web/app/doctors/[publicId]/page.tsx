@@ -1,54 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-import { SPRING_API } from "@/lib/server/spring";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type DoctorProfile = {
-  id: string;
-  publicId: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  specializations: string[];
-  bio: string | null;
-  licenseNumber: string | null;
-  photoUrl: string | null;
-  public: boolean;
-};
-
-// ─── Specialization labels ────────────────────────────────────────────────────
-
-const SPEC_LABELS: Record<string, string> = {
-  CARDIOLOGY: "Cardiology",
-  NEUROLOGY: "Neurology",
-  ORTHOPEDICS: "Orthopedics",
-  PEDIATRICS: "Pediatrics",
-  DERMATOLOGY: "Dermatology",
-  GYNECOLOGY: "Gynecology",
-  PSYCHIATRY: "Psychiatry",
-  OPHTHALMOLOGY: "Ophthalmology",
-  RADIOLOGY: "Radiology",
-  ONCOLOGY: "Oncology",
-  EMERGENCY_MEDICINE: "Emergency Medicine",
-  INTERNAL_MEDICINE: "Internal Medicine",
-  SURGERY: "Surgery",
-  UROLOGY: "Urology",
-  ENDOCRINOLOGY: "Endocrinology",
-  GASTROENTEROLOGY: "Gastroenterology",
-  PULMONOLOGY: "Pulmonology",
-  RHEUMATOLOGY: "Rheumatology",
-  NEPHROLOGY: "Nephrology",
-  HEMATOLOGY: "Hematology",
-  ANESTHESIOLOGY: "Anesthesiology",
-  FAMILY_MEDICINE: "Family Medicine",
-};
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import {
+  getDoctorByPublicIdAction,
+  getSpecializationsAction,
+} from "@/lib/actions/doctor";
 
 export default async function DoctorPublicProfile({
   params,
@@ -57,14 +15,21 @@ export default async function DoctorPublicProfile({
 }) {
   const { publicId } = await params;
 
-  const res = await fetch(`${SPRING_API}/api/doctors/${publicId}`, {
-    cache: "no-store",
-  });
+  // Równoległe pobranie lekarza oraz listy specjalizacji
+  const [doctor, specResult] = await Promise.all([
+    getDoctorByPublicIdAction(publicId),
+    getSpecializationsAction(),
+  ]);
 
-  if (!res.ok) notFound();
+  if (!doctor || !doctor.public) notFound();
 
-  const doctor: DoctorProfile = await res.json();
-  if (!doctor.public) notFound();
+  // Budujemy słownik
+  const specLabels: Record<string, string> = {};
+  if (specResult.data) {
+    specResult.data.forEach((s) => {
+      specLabels[s.code] = s.name;
+    });
+  }
 
   const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`.toUpperCase();
 
@@ -76,7 +41,6 @@ export default async function DoctorPublicProfile({
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left column — identity */}
           <div className="space-y-6">
-            {/* Avatar */}
             <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
                 {initials}
@@ -92,12 +56,12 @@ export default async function DoctorPublicProfile({
                 )}
               </div>
 
-              {/* Specializations */}
+              {/* Specializations z bazy */}
               {doctor.specializations.length > 0 && (
                 <div className="flex flex-wrap justify-center gap-1.5">
                   {doctor.specializations.map((s) => (
                     <Badge key={s} variant="accent" className="text-xs">
-                      {SPEC_LABELS[s] ?? s}
+                      {specLabels[s] ?? s}
                     </Badge>
                   ))}
                 </div>
@@ -107,7 +71,6 @@ export default async function DoctorPublicProfile({
 
           {/* Right column — details */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Bio */}
             {doctor.bio ? (
               <div className="rounded-2xl border border-border bg-card p-6">
                 <h2 className="mb-3 font-semibold text-foreground">About</h2>
@@ -123,7 +86,6 @@ export default async function DoctorPublicProfile({
               </div>
             )}
 
-            {/* Book CTA */}
             <div className="flex items-center justify-between rounded-2xl border border-accent/20 bg-accent/5 p-5">
               <div>
                 <p className="font-semibold text-foreground">

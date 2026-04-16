@@ -9,6 +9,7 @@ import type {
   DoctorProfileResponse,
   InviteCodeResponse,
   SpecializationDto,
+  SpringPage
 } from "@/types/api"
 
 /**
@@ -56,7 +57,7 @@ export async function upsertProfileAction(data: {
           specializations: data.specializations,
           bio: data.bio,
           licenseNumber: data.licenseNumber,
-          public: data.isPublic, // backend expects 'public'
+          public: data.isPublic,
         }),
       }),
     "Failed to save profile."
@@ -82,4 +83,29 @@ export async function refreshInviteCodeAction(): Promise<ActionResult<InviteCode
       }),
     "Failed to refresh invite code."
   )
+}
+
+export async function getDoctorsAction(specialization?: string, city?: string): Promise<SpringPage<DoctorProfileResponse>> {
+  const params = new URLSearchParams({ size: "12" });
+  if (specialization) params.set("specialization", specialization);
+  if (city) params.set("city", city);
+
+  try {
+    const res = await springFetch(`/api/doctors?${params}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to fetch doctors");
+    return res.json();
+  } catch (error) {
+    // Prawidłowy pusty fallback SpringPage
+    return { content: [], totalElements: 0, totalPages: 0, size: 12, number: 0 };
+  }
+}
+
+export async function getDoctorByPublicIdAction(publicId: string): Promise<DoctorProfileResponse | null> {
+  try {
+    const res = await springFetch(`/api/doctors/${publicId}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }

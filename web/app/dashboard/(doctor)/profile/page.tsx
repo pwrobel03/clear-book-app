@@ -63,7 +63,7 @@ export default function DoctorProfilePage() {
           getSpecializationsAction(),
         ]);
 
-        if (profResult.error === "Forbidden") forbidden();
+        if (profResult.error === "Access denied.") forbidden();
 
         if (specResult.data) {
           setSpecsList(specResult.data);
@@ -88,7 +88,8 @@ export default function DoctorProfilePage() {
   async function onSubmit(values: DoctorProfileFormData) {
     const result = await upsertProfileAction(values);
 
-    if ("error" in result) {
+    // POPRAWKA 3: Bezpieczniejsze sprawdzanie błędu pod TS
+    if (result.error) {
       toast.error(result.error);
       return;
     }
@@ -151,7 +152,7 @@ export default function DoctorProfilePage() {
                     <FormControl>
                       <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-3">
                         {specsList.map((s) => {
-                          const active = selected.includes(s.code); // UWAGA: s.code zamiast s.value
+                          const active = selected.includes(s.code);
                           return (
                             <button
                               key={s.code}
@@ -178,7 +179,7 @@ export default function DoctorProfilePage() {
                               (code) =>
                                 specsList.find((s) => s.code === code)?.name,
                             )
-                            .filter(Boolean) // Pomija undefined w razie błędu
+                            .filter(Boolean)
                             .join(", ")
                         : "none"}
                     </FormDescription>

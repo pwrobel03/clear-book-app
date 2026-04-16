@@ -1,7 +1,7 @@
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "PATIENT" | "DOCTOR" | "ADMIN"
-export type UserStatus = "PENDING_VERIFICATION" | "ACTIVE" | "SUSPENDED"
+export type UserRole = "USER" | "DOCTOR" | "ADMIN"
+export type AccountStatus = "UNVERIFIED" | "PENDING" | "ACTIVE" | "BANNED" | "DELETED"
 
 export type CenterType =
   | "CLINIC"
@@ -12,34 +12,27 @@ export type CenterType =
 
 export type CenterStatus = "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED"
 export type MembershipRole = "ADMIN" | "MEMBER"
-export type MembershipStatus = "INVITED" | "ACTIVE" | "REJECTED"
-
+export type MembershipStatus = "INVITED" | "ACTIVE" | "SUSPENDED" | "REJECTED"
 export type VerificationAction = "APPROVE" | "REJECT"
 
 // ─── Action utility types ─────────────────────────────────────────────────────
 
-/** Use when the action returns a value on success. */
 export type ActionResult<T> =
   | { data: T; error?: never }
   | { data?: never; error: string }
 
-/** Use when the action returns nothing on success (204 No Content). */
 export type VoidResult =
   | { success: true; error?: never }
   | { success?: never; error: string }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ─── Auth & User ──────────────────────────────────────────────────────────────
 
 export interface AuthResponse {
-  token: string
-  email: string
-  firstName: string
-  lastName: string
+  token: string | null
   role: UserRole
-  status: UserStatus
+  status: AccountStatus
+  message: string | null
 }
-
-// ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface UserProfileResponse {
   id: string
@@ -47,7 +40,7 @@ export interface UserProfileResponse {
   firstName: string
   lastName: string
   role: UserRole
-  status: UserStatus
+  status: AccountStatus
 }
 
 export interface InviteCodeResponse {
@@ -60,31 +53,39 @@ export interface InviteCodeResponse {
 export interface MedicalCenterResponse {
   id: string
   name: string
-  type: CenterType
+  description: string | null
   address: string
   city: string
-  phone: string
-  email: string
-  description: string | null
+  phone: string | null
+  email: string | null
+  website: string | null
+  logoUrl: string | null
+  type: CenterType
   status: CenterStatus
+  createdAt: string
+}
+
+export interface CenterMemberSummary {
+  firstName: string
+  lastName: string
+  publicId: string | null
+  specializations: string[] // Kody specjalizacji np. ["CARDIOLOGY"]
+  role: MembershipRole
 }
 
 export interface MembershipResponse {
   id: string
   centerId: string
   centerName: string
+  centerCity: string
   role: MembershipRole
   status: MembershipStatus
+  centerStatus: CenterStatus
+  invitedAt: string
+  joinedAt: string | null
 }
 
-export interface CenterMemberSummary {
-  userId: string
-  firstName: string
-  lastName: string
-  role: MembershipRole
-}
-
-// ─── Doctor ───────────────────────────────────────────────────────────────────
+// ─── Doctor & Specializations ─────────────────────────────────────────────────
 
 export interface SpecializationDto {
   id: string
@@ -97,10 +98,14 @@ export interface DoctorProfileResponse {
   publicId: string
   firstName: string
   lastName: string
+  email: string
+  specializations: string[] // Kody, np. ["CARDIOLOGY", "NEUROLOGY"]
   bio: string | null
-  city: string | null
-  specializations: SpecializationDto[]
-  centers: MedicalCenterResponse[]
+  licenseNumber: string | null
+  photoUrl: string | null
+  public: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
@@ -111,4 +116,14 @@ export interface PendingDoctorResponse {
   firstName: string
   lastName: string
   createdAt: string // ISO-8601
+}
+
+// ─── Pagination (Spring Data) ─────────────────────────────────────────────────
+
+export interface SpringPage<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  size: number
+  number: number
 }

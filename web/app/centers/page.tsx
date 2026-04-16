@@ -3,40 +3,14 @@ import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-import { SPRING_API } from "@/lib/server/spring";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type MedicalCenter = {
-  id: string;
-  name: string;
-  description: string | null;
-  address: string;
-  city: string;
-  phone: string | null;
-  email: string | null;
-  type: string;
-  status: string;
-};
-
-type PageResult = {
-  content: MedicalCenter[];
-  totalElements: number;
-};
-
-// ─── Labels ───────────────────────────────────────────────────────────────────
-
-const TYPE_LABELS: Record<string, string> = {
-  CLINIC: "Clinic",
-  HOSPITAL: "Hospital",
-  PRIVATE_PRACTICE: "Private Practice",
-  DIAGNOSTIC_CENTER: "Diagnostic Center",
-  REHABILITATION_CENTER: "Rehabilitation Center",
-};
+// Używamy naszej akcji i globalnego słownika zamiast powielać kod
+import { getCentersAction } from "@/lib/actions/centers";
+import { TYPE_LABELS } from "@/lib/constants/labels";
+import type { MedicalCenterResponse } from "@/types/api";
 
 // ─── Center card ──────────────────────────────────────────────────────────────
 
-function CenterCard({ center }: { center: MedicalCenter }) {
+function CenterCard({ center }: { center: MedicalCenterResponse }) {
   return (
     <Link
       href={`/centers/${center.id}`}
@@ -99,18 +73,8 @@ export default async function CentersListPage({
 }) {
   const { city = "" } = await searchParams;
 
-  const params = new URLSearchParams({ size: "24" });
-  if (city) params.set("city", city);
-
-  let result: PageResult = { content: [], totalElements: 0 };
-  try {
-    const res = await fetch(`${SPRING_API}/api/centers?${params}`, {
-      cache: "no-store",
-    });
-    if (res.ok) result = await res.json();
-  } catch {
-    // Spring unavailable
-  }
+  // Pobieranie danych przeniesione do bezpiecznej pod kątem typów Server Action
+  const result = await getCentersAction(city);
 
   return (
     <div className="min-h-screen bg-background">

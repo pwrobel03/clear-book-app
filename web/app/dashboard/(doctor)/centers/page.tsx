@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Clock,
 } from "lucide-react";
+
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,27 +37,15 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+// ─── Zaktualizowane importy ───────────────────────────────────────────────────
+import type { MembershipResponse } from "@/types/api"; // Dodano brakujący typ
 import {
   createCenterAction,
   acceptInvitationAction,
   rejectInvitationAction,
-  getMyCentersAction,
+  getMyCentersAction, // Zmieniono z getCentersAction
 } from "@/lib/actions/centers";
 import { CreateCenterData, createCenterSchema } from "@/lib/schemas/center";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Membership = {
-  id: string;
-  centerId: string;
-  centerName: string;
-  centerCity: string;
-  role: "MEMBER" | "ADMIN";
-  status: "INVITED" | "ACTIVE" | "SUSPENDED" | "REJECTED";
-  centerStatus: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED";
-  invitedAt: string;
-  joinedAt: string | null;
-};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -75,7 +64,7 @@ function MembershipCard({
   onAccept,
   onReject,
 }: {
-  membership: Membership;
+  membership: MembershipResponse;
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
 }) {
@@ -189,7 +178,7 @@ function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
 
   async function onSubmit(values: CreateCenterData) {
     const result = await createCenterAction(values);
-    if ("error" in result) {
+    if ("error" in result && result.error) {
       toast.error(result.error);
       return;
     }
@@ -394,7 +383,7 @@ function CreateCenterForm({ onCreated }: { onCreated: () => void }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CentersPage() {
-  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [memberships, setMemberships] = useState<MembershipResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function load() {
