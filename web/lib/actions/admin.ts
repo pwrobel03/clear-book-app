@@ -3,7 +3,7 @@
 import { springFetch } from "@/lib/server/spring";
 import { revalidatePath } from "next/cache";
 
-export async function verifyDoctorAction(userId: string, action: "approve" | "reject") {
+export async function verifyDoctorAction(userId: string, action: "APPROVE" | "REJECT") {
   try {
     const res = await springFetch(`/api/admin/doctors/${userId}/verify`, {
       method: "PATCH",

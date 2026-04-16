@@ -12,6 +12,7 @@ import com.clearbook.api.repository.SpecializationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +28,9 @@ public class DoctorProfileService {
     private final SpecializationRepository specializationRepository;
 
     /** Returns the authenticated doctor's profile. */
+    @PreAuthorize("hasRole('DOCTOR')")
     public DoctorProfileResponse getMyProfile(User user) {
-        assertDoctor(user);
+        // usunięto assertDoctor(user);
         DoctorProfile profile = profileRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Profile not found. Complete your profile setup first."));
         return toResponse(profile);
@@ -36,9 +38,8 @@ public class DoctorProfileService {
 
     /** Creates or updates the profile. */
     @Transactional
+    @PreAuthorize("hasRole('DOCTOR')")
     public DoctorProfileResponse createOrUpdate(User user, DoctorProfileRequest request) {
-        assertDoctor(user);
-
         DoctorProfile profile = profileRepository.findByUser(user)
                 .orElseGet(() -> DoctorProfile.builder()
                         .user(user)
@@ -85,13 +86,6 @@ public class DoctorProfileService {
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
-
-    private void assertDoctor(User user) {
-        if (user.getRole() != Role.DOCTOR) {
-            throw new IllegalArgumentException("Only doctors can manage a doctor profile.");
-        }
-    }
-
     private String generatePublicId(User user) {
         String base = (user.getFirstName() + "-" + user.getLastName())
                 .toLowerCase()

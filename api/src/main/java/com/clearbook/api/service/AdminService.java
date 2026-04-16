@@ -8,6 +8,7 @@ import com.clearbook.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.clearbook.api.dto.VerifyDoctorRequest.Action;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +36,7 @@ public class AdminService {
 
     /** Activates or bans a pending doctor account. */
     @Transactional
-    public void verifyDoctor(UUID userId, String action) {
+    public void verifyDoctor(UUID userId, Action action) {
         User doctor = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found."));
 
@@ -43,10 +44,10 @@ public class AdminService {
             throw new IllegalArgumentException("User is not a doctor.");
         }
 
-        switch (action.toLowerCase()) {
-            case "approve" -> doctor.setStatus(AccountStatus.ACTIVE);
-            case "reject"  -> doctor.setStatus(AccountStatus.BANNED);
-            default -> throw new IllegalArgumentException("Unknown action: " + action);
+        if (action == Action.APPROVE) {
+            doctor.setStatus(AccountStatus.ACTIVE);
+        } else if (action == Action.REJECT) {
+            doctor.setStatus(AccountStatus.BANNED);
         }
 
         userRepository.save(doctor);

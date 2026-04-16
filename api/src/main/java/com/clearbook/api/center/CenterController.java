@@ -1,9 +1,6 @@
 package com.clearbook.api.center;
 
-import com.clearbook.api.dto.CenterMemberSummary;
-import com.clearbook.api.dto.CreateCenterRequest;
-import com.clearbook.api.dto.MedicalCenterResponse;
-import com.clearbook.api.dto.MembershipResponse;
+import com.clearbook.api.dto.*;
 import com.clearbook.api.model.MembershipRole;
 import com.clearbook.api.model.User;
 import com.clearbook.api.service.MedicalCenterService;
@@ -66,19 +63,16 @@ public class CenterController {
     /**
      * POST /api/centers/{id}/invite
      * Body: { "inviteCode": "CB-XXXX-XXXX", "role": "MEMBER" }
-     * Center admin invites a user by their invite code.
      */
     @PostMapping("/{id}/invite")
     public ResponseEntity<MembershipResponse> invite(
             @AuthenticationPrincipal User admin,
             @PathVariable UUID id,
-            @RequestBody Map<String, String> body) {
+            @RequestBody @jakarta.validation.Valid InviteCenterMemberRequest request) {
 
-        String code = body.get("inviteCode");
-        MembershipRole role = MembershipRole.valueOf(
-                body.getOrDefault("role", "MEMBER").toUpperCase());
-
-        return ResponseEntity.ok(centerService.inviteByCode(admin, id, code, role));
+        return ResponseEntity.ok(centerService.inviteByCode(
+                admin, id, request.getInviteCode(), request.getRole()
+        ));
     }
 
     /** POST /api/centers/memberships/{membershipId}/accept */
