@@ -31,12 +31,12 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Użytkownik z tym adresem e-mail już istnieje.");
+            throw new IllegalArgumentException("The re is already an account with that email address.");
         }
 
         // Nie pozwalamy rejestrować kont ADMIN przez publiczny endpoint
         if (request.getRole() == Role.ADMIN) {
-            throw new IllegalArgumentException("Rejestracja konta administratora jest niedozwolona.");
+            throw new IllegalArgumentException("Registration with admin privilege  is not allowed for this account.");
         }
 
         // Każde nowe konto wymaga potwierdzenia e-mail
@@ -74,10 +74,10 @@ public class AuthService {
     @Transactional
     public void verifyEmail(String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Nieprawidłowy token weryfikacyjny."));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid token provided."));
 
         if (verificationToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Link weryfikacyjny wygasł.");
+            throw new IllegalArgumentException("Verification link has expired.");
         }
 
         User user = verificationToken.getUser();

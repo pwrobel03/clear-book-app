@@ -4,7 +4,6 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,20 +18,7 @@ import {
 } from "@/components/ui/form";
 
 import { resetPasswordAction } from "@/lib/actions/auth";
-
-const resetSchema = z
-  .object({
-    newPassword: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string({
-      required_error: "Please confirm your password",
-    }),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type ResetFormData = z.infer<typeof resetSchema>;
+import { resetSchema, type ResetFormData } from "@/lib/schemas/auth";
 
 function ResetPasswordForm() {
   const router = useRouter();

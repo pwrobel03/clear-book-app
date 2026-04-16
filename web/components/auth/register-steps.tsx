@@ -26,7 +26,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import type { RegisterFormData } from "./register-form";
+
+import { type RegisterFormData } from "@/lib/schemas/auth";
 
 // ─── KROK 1: Wybór Roli ────────────────────────────────────────────────────────
 

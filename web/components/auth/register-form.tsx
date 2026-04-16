@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { CheckCircle2 } from "lucide-react";
 
 import { Form } from "@/components/ui/form";
@@ -12,44 +11,10 @@ import {
   RoleSelectionStep,
   PersonalDetailsStep,
   DoctorVerificationStep,
-} from "./register-steps"; // Import naszych kroków
+} from "./register-steps";
 
-interface ApiResponse {
-  ok?: boolean;
-  status?: string | number;
-  message?: string;
-}
-
-// Eksportujemy typy, żeby register-steps.tsx mogło z nich korzystać
-export const registerSchema = z
-  .object({
-    firstName: z.string().min(1, "First name is required").max(50),
-    lastName: z.string().min(1, "Last name is required").max(50),
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string({
-      required_error: "Please confirm your password",
-    }),
-    role: z.enum(["USER", "DOCTOR"], {
-      required_error: "Please select an account type",
-    }),
-    document: z.any().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  })
-  .refine(
-    (data) =>
-      data.role !== "DOCTOR" ||
-      (data.document && (data.document as FileList).length > 0),
-    {
-      message: "Medical license or certification is required for doctors",
-      path: ["document"],
-    },
-  );
-
-export type RegisterFormData = z.infer<typeof registerSchema>;
+import { registerSchema, type RegisterFormData } from "@/lib/schemas/auth";
+import { registerAction } from "@/lib/actions/auth"; // Dodany import akcji serwerowej
 
 export function RegisterForm() {
   const router = useRouter();
@@ -103,43 +68,30 @@ export function RegisterForm() {
     setServerError(null);
     setPendingMessage(null);
 
-    const formData = new FormData();
-    formData.append("firstName", values.firstName);
-    formData.append("lastName", values.lastName);
-    formData.append("email", values.email);
-    formData.append("password", values.password);
-    formData.append("role", values.role);
-    if (selectedFile) formData.append("document", selectedFile);
+    // Przekazujemy czyste dane w formie JSONa do naszej Server Action.
+    // (Zignorowanie pliku na tym etapie jest celowe - backend na razie nie ma go w DTO).
+    const result = await registerAction({
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      password: values.password,
+      role: values.role,
+    });
 
-    try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data: ApiResponse = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setServerError(
-          data.message ?? "Registration failed. Please try again.",
-        );
-        return;
-      }
-
-      if (data.status === "PENDING") {
-        setPendingMessage(
-          data.message ?? "Your account is pending admin verification.",
-        );
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setServerError(
-        "Unable to connect to the server. Please try again later.",
-      );
+    if (result.error) {
+      setServerError(result.error);
+      return;
     }
+
+    if (result.status === "PENDING") {
+      setPendingMessage(
+        result.message ?? "Your account is pending admin verification.",
+      );
+      return;
+    }
+
+    router.push("/dashboard");
+    router.refresh();
   }
 
   // WIDOK SUKCESU (DLA LEKARZA)

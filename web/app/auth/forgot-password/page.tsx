@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,12 +18,7 @@ import {
 } from "@/components/ui/form";
 
 import { forgotPasswordAction } from "@/lib/actions/auth";
-
-const forgotSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-type ForgotFormData = z.infer<typeof forgotSchema>;
+import { forgotSchema, type ForgotFormData } from "@/lib/schemas/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
