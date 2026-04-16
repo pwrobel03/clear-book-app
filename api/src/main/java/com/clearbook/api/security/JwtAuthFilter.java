@@ -21,7 +21,7 @@ import java.io.IOException;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService; // Przywracamy dostęp do bazy
 
     @Override
     protected void doFilterInternal(
@@ -32,26 +32,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
-        // Brak nagłówka lub nieprawidłowy format → przepuszczamy dalej bez uwierzytelniania
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7); // Wycinamy prefix "Bearer "
+        final String jwt = authHeader.substring(7);
         final String userEmail = jwtService.extractUsername(jwt);
 
-        // Uwierzytelniamy tylko gdy mamy email i kontekst jest jeszcze pusty
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+
+            // Pobieramy pełnego użytkownika z bazy, aby @AuthenticationPrincipal działało w kontrolerach
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
 
             if (jwtService.isTokenValid(jwt, userDetails)) {
-                // Tworzymy obiekt uwierzytelnienia i wstrzykujemy do kontekstu Springa
+                // Wrzucamy pełny obiekt encji (userDetails) jako Principal
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         null,
                         userDetails.getAuthorities()
                 );
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
