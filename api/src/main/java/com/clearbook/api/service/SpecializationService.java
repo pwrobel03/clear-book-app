@@ -1,6 +1,8 @@
 package com.clearbook.api.service;
 
 import com.clearbook.api.dto.SpecializationDto;
+import com.clearbook.api.exception.ConflictException;
+import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.Specialization;
 import com.clearbook.api.repository.SpecializationRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,7 @@ public class SpecializationService {
     public SpecializationDto create(String code, String name) {
         String normalizedCode = code.toUpperCase().replaceAll("[^A-Z0-9_]", "_");
         if (repository.existsByCode(normalizedCode)) {
-            throw new IllegalArgumentException("Specialization with code '" + normalizedCode + "' already exists.");
+            throw new ConflictException("Specialization with code '" + normalizedCode + "' already exists.");
         }
         Specialization spec = Specialization.builder()
                 .code(normalizedCode)
@@ -42,7 +44,7 @@ public class SpecializationService {
     @Transactional
     public void deactivate(UUID id) {
         Specialization spec = repository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Specialization not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Specialization not found."));
         spec.setActive(false);
         repository.save(spec);
     }

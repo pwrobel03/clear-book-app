@@ -4,6 +4,10 @@ import com.clearbook.api.dto.CenterMemberSummary;
 import com.clearbook.api.dto.CreateCenterRequest;
 import com.clearbook.api.dto.MedicalCenterResponse;
 import com.clearbook.api.dto.MembershipResponse;
+import com.clearbook.api.exception.ConflictException;
+import com.clearbook.api.exception.ForbiddenException;
+import com.clearbook.api.exception.ResourceNotFoundException;
+import com.clearbook.api.mapper.CenterMapper;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.CenterMembershipRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
@@ -26,6 +30,7 @@ public class MedicalCenterService {
     private final CenterMembershipRepository membershipRepository;
     private final DoctorProfileRepository profileRepository;
     private final InviteCodeService inviteCodeService;
+    private final CenterMapper centerMapper;
 
     /**
      * Creates a new medical center and automatically makes the creator its ADMIN.
@@ -58,14 +63,14 @@ public class MedicalCenterService {
                 .build();
 
         membershipRepository.save(adminMembership);
-        return toResponse(center);
+        return centerMapper.toResponse(center);
     }
 
     /** Returns a single center by ID (accessible to anyone). */
     public MedicalCenterResponse findById(UUID id) {
         MedicalCenter center = centerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
-        return toResponse(center);
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+        return centerMapper.toResponse(center);
     }
 
     /** Lists active centers, optionally filtered by city. */
@@ -73,9 +78,9 @@ public class MedicalCenterService {
         if (city != null && !city.isBlank()) {
             return centerRepository
                     .findByStatusAndCityIgnoreCase(CenterStatus.ACTIVE, city, pageable)
-                    .map(this::toResponse);
+                    .map(centerMapper::toResponse);
         }
-        return centerRepository.findByStatus(CenterStatus.ACTIVE, pageable).map(this::toResponse);
+        return centerRepository.findByStatus(CenterStatus.ACTIVE, pageable).map(centerMapper::toResponse);
     }
 
     /** Returns all memberships (INVITED + ACTIVE) for the authenticated user. */
@@ -92,15 +97,15 @@ public class MedicalCenterService {
     @Transactional
     public MembershipResponse inviteByCode(User admin, UUID centerId, String rawCode, MembershipRole role) {
         MedicalCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
 
         assertCenterAdmin(admin, center);
 
         User target = inviteCodeService.resolveUser(rawCode)
-                .orElseThrow(() -> new IllegalArgumentException("Invite code is invalid or expired."));
+                .orElseThrow(() -> new ResourceNotFoundException("Invite code is invalid or expired."));
 
         if (membershipRepository.existsByUserAndCenter(target, center)) {
-            throw new IllegalArgumentException("User is already a member or has a pending invitation.");
+            throw new ConflictException("User is already a member or has a pending invitation.");
         }
 
         CenterMembership membership = CenterMembership.builder()
@@ -123,7 +128,7 @@ public class MedicalCenterService {
         CenterMembership membership = getMembershipForUser(user, membershipId);
 
         if (membership.getStatus() != MembershipStatus.INVITED) {
-            throw new IllegalArgumentException("Invitation is no longer pending.");
+            throw new ConflictException("Invitation is no longer pending.");
         }
 
         membership.setStatus(MembershipStatus.ACTIVE);
@@ -139,7 +144,7 @@ public class MedicalCenterService {
         CenterMembership membership = getMembershipForUser(user, membershipId);
 
         if (membership.getStatus() != MembershipStatus.INVITED) {
-            throw new IllegalArgumentException("Invitation is no longer pending.");
+            throw new ConflictException("Invitation is no longer pending.");
         }
 
         membership.setStatus(MembershipStatus.REJECTED);
@@ -149,7 +154,7 @@ public class MedicalCenterService {
     /** Returns active members of a center (publicly accessible). */
     public List<CenterMemberSummary> getCenterMembers(UUID centerId) {
         MedicalCenter center = centerRepository.findById(centerId)
-                .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
 
         return membershipRepository.findByCenterAndStatus(center, MembershipStatus.ACTIVE)
                 .stream()
@@ -178,9 +183,9 @@ public class MedicalCenterService {
 
     private CenterMembership getMembershipForUser(User user, UUID membershipId) {
         CenterMembership membership = membershipRepository.findById(membershipId)
-                .orElseThrow(() -> new IllegalArgumentException("Membership not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Membership not found."));
         if (!membership.getUser().getId().equals(user.getId())) {
-            throw new IllegalArgumentException("Access denied.");
+            throw new ForbiddenException("Access denied.");
         }
         return membership;
     }
@@ -188,24 +193,7 @@ public class MedicalCenterService {
     private void assertCenterAdmin(User user, MedicalCenter center) {
         membershipRepository.findByUserAndCenter(user, center)
                 .filter(m -> m.getRole() == MembershipRole.ADMIN && m.getStatus() == MembershipStatus.ACTIVE)
-                .orElseThrow(() -> new IllegalArgumentException("You are not an admin of this center."));
-    }
-
-    private MedicalCenterResponse toResponse(MedicalCenter c) {
-        return MedicalCenterResponse.builder()
-                .id(c.getId())
-                .name(c.getName())
-                .description(c.getDescription())
-                .address(c.getAddress())
-                .city(c.getCity())
-                .phone(c.getPhone())
-                .email(c.getEmail())
-                .website(c.getWebsite())
-                .logoUrl(c.getLogoUrl())
-                .type(c.getType())
-                .status(c.getStatus())
-                .createdAt(c.getCreatedAt())
-                .build();
+                .orElseThrow(() -> new ForbiddenException("You are not an admin of this center."));
     }
 
     private MembershipResponse toMembershipResponse(CenterMembership m) {

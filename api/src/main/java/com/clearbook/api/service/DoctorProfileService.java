@@ -2,6 +2,7 @@ package com.clearbook.api.service;
 
 import com.clearbook.api.dto.DoctorProfileRequest;
 import com.clearbook.api.dto.DoctorProfileResponse;
+import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.DoctorProfile;
 import com.clearbook.api.model.MembershipStatus;
 import com.clearbook.api.model.Role;
@@ -32,7 +33,7 @@ public class DoctorProfileService {
     public DoctorProfileResponse getMyProfile(User user) {
         // usunięto assertDoctor(user);
         DoctorProfile profile = profileRepository.findByUser(user)
-                .orElseThrow(() -> new IllegalStateException("Profile not found. Complete your profile setup first."));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found. Complete your profile setup first."));
         return toResponse(profile);
     }
 
@@ -64,7 +65,7 @@ public class DoctorProfileService {
     public DoctorProfileResponse getPublicProfile(String publicId) {
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
                 .filter(DoctorProfile::isPublic)
-                .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
         return toResponse(profile);
     }
 

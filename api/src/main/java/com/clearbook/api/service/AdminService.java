@@ -2,6 +2,9 @@ package com.clearbook.api.service;
 
 import com.clearbook.api.dto.MedicalCenterResponse;
 import com.clearbook.api.dto.PendingDoctorResponse;
+import com.clearbook.api.exception.ConflictException;
+import com.clearbook.api.exception.ResourceNotFoundException;
+import com.clearbook.api.mapper.CenterMapper;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.MedicalCenterRepository;
 import com.clearbook.api.repository.UserRepository;
@@ -19,6 +22,7 @@ public class AdminService {
 
     private final UserRepository userRepository;
     private final MedicalCenterRepository centerRepository;
+    private final CenterMapper centerMapper;
 
     /** Returns all doctor accounts awaiting platform verification. */
     public List<PendingDoctorResponse> getPendingDoctors() {
@@ -38,10 +42,10 @@ public class AdminService {
     @Transactional
     public void verifyDoctor(UUID userId, Action action) {
         User doctor = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
         if (doctor.getRole() != Role.DOCTOR) {
-            throw new IllegalArgumentException("User is not a doctor.");
+            throw new ConflictException("User is not a doctor.");
         }
 
         if (action == Action.APPROVE) {
@@ -58,7 +62,7 @@ public class AdminService {
         return centerRepository
                 .findByStatus(CenterStatus.PENDING_APPROVAL, org.springframework.data.domain.Pageable.unpaged())
                 .stream()
-                .map(this::toCenterResponse)
+                .map(centerMapper::toResponse)
                 .toList();
     }
 
@@ -67,7 +71,7 @@ public class AdminService {
     public MedicalCenterResponse approveCenter(UUID centerId) {
         MedicalCenter center = getCenter(centerId);
         center.setStatus(CenterStatus.ACTIVE);
-        return toCenterResponse(centerRepository.save(center));
+        return centerMapper.toResponse(centerRepository.save(center));
     }
 
     /** Rejects / suspends a medical center. */
@@ -82,23 +86,6 @@ public class AdminService {
 
     private MedicalCenter getCenter(UUID id) {
         return centerRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
-    }
-
-    private MedicalCenterResponse toCenterResponse(MedicalCenter c) {
-        return MedicalCenterResponse.builder()
-                .id(c.getId())
-                .name(c.getName())
-                .description(c.getDescription())
-                .address(c.getAddress())
-                .city(c.getCity())
-                .phone(c.getPhone())
-                .email(c.getEmail())
-                .website(c.getWebsite())
-                .logoUrl(c.getLogoUrl())
-                .type(c.getType())
-                .status(c.getStatus())
-                .createdAt(c.getCreatedAt())
-                .build();
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
     }
 }

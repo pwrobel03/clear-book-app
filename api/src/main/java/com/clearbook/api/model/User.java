@@ -3,8 +3,11 @@ package com.clearbook.api.model;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,11 +17,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-@Data // Lombok: generuje gettery, settery, toString, equals i hashCode
-@Builder // Lombok: ułatwia tworzenie obiektów (tzw. wzorzec Builder)
-@NoArgsConstructor // Lombok: pusty konstruktor (wymagany przez Hibernate)
-@AllArgsConstructor // Lombok: konstruktor ze wszystkimi polami
-@Entity // Deklaracja tabeli
+@Getter
+@Setter
+// equals/hashCode tylko po kluczu głównym — bezpieczne dla Hibernate i kolekcji
+@EqualsAndHashCode(of = "id")
+// password wykluczony z logów ze względów bezpieczeństwa
+@ToString(exclude = "password")
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 @Table(name = "users")
 public class User implements UserDetails {
 

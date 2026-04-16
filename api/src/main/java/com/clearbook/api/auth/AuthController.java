@@ -7,9 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
- import java.util.Map;
- import java.util.HashMap;
-
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -20,19 +17,19 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
-        // Jeśli brak tokenu (konto PENDING) → 202 Accepted zamiast 200 OK
+        // Jeśli brak tokenu (konto PENDING/UNVERIFIED) → 202 Accepted zamiast 200 OK
         HttpStatus status = response.getToken() == null ? HttpStatus.ACCEPTED : HttpStatus.OK;
         return ResponseEntity.status(status).body(response);
     }
 
+    /**
+     * GET /api/auth/verify-email?token=...
+     * Wyjątki (ResourceNotFoundException, TokenExpiredException) propagują do GlobalExceptionHandler.
+     */
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
-        try {
-            authService.verifyEmail(token);
-            return ResponseEntity.ok().body("{\"message\": \"Address email was verified successfully\"}");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("{\"message\": \"" + e.getMessage() + "\"}");
-        }
+    public ResponseEntity<MessageResponse> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(new MessageResponse("Email address verified successfully."));
     }
 
     @PostMapping("/login")
@@ -41,15 +38,15 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
-        // Zawsze zwracamy 200 OK z powodów bezpieczeństwa
-        return ResponseEntity.ok().body("{\"message\": \"If account is linked with email the reqest was send.\"}");
+        // Zawsze zwracamy 200 OK z powodów bezpieczeństwa (nie ujawniamy czy e-mail istnieje)
+        return ResponseEntity.ok(new MessageResponse("If an account is linked to this email, a reset link has been sent."));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok().body("{\"message\": \"Your password has been changed.\"}");
+        return ResponseEntity.ok(new MessageResponse("Your password has been changed successfully."));
     }
 }
