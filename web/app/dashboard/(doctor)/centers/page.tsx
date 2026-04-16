@@ -1,15 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  createCenterAction,
-  acceptInvitationAction,
-  rejectInvitationAction,
-  getMyCentersAction,
-} from "@/lib/actions/centers";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Building2,
   Plus,
@@ -40,7 +33,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+// --- Custom Actions ───────────────────────────────────────────────────────────
 import { cn } from "@/lib/utils";
+
+import {
+  createCenterAction,
+  acceptInvitationAction,
+  rejectInvitationAction,
+  getMyCentersAction,
+} from "@/lib/actions/centers";
+
+import {
+  createCenterSchema,
+  type CreateCenterData,
+} from "@/lib/schemas/center";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,25 +72,6 @@ const CENTER_TYPES = [
   { value: "DIAGNOSTIC_CENTER", label: "Diagnostic Center" },
   { value: "REHABILITATION_CENTER", label: "Rehabilitation Center" },
 ];
-
-const createCenterSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  phone: z.string().optional(),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  website: z.string().url("Invalid URL").optional().or(z.literal("")),
-  type: z.enum([
-    "CLINIC",
-    "HOSPITAL",
-    "PRIVATE_PRACTICE",
-    "DIAGNOSTIC_CENTER",
-    "REHABILITATION_CENTER",
-  ]),
-});
-
-type CreateCenterData = z.infer<typeof createCenterSchema>;
 
 // ─── Membership Card ──────────────────────────────────────────────────────────
 

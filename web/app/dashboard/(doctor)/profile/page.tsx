@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Save, UserCircle } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -27,20 +25,13 @@ import {
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
 import { forbidden } from "next/navigation";
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
-
-const schema = z.object({
-  specializations: z
-    .array(z.string())
-    .min(1, "Select at least one specialization"),
-  bio: z.string().max(1000, "Bio must be under 1000 characters").optional(),
-  licenseNumber: z.string().optional(),
-  isPublic: z.boolean(),
-});
-
-type FormData = z.infer<typeof schema>;
-
-type SpecOption = { code: string; name: string };
+import {
+  doctorProfileSchema,
+  type DoctorProfileFormData,
+  type SpecOption,
+} from "@/lib/schemas/doctor";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -51,8 +42,8 @@ export default function DoctorProfilePage() {
   const [profileExists, setProfileExists] = useState(false);
   const [specsList, setSpecsList] = useState<SpecOption[]>([]);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const form = useForm<DoctorProfileFormData>({
+    resolver: zodResolver(doctorProfileSchema),
     defaultValues: {
       specializations: [],
       bio: "",
@@ -95,7 +86,7 @@ export default function DoctorProfilePage() {
     load();
   }, [form]);
 
-  async function onSubmit(values: FormData) {
+  async function onSubmit(values: DoctorProfileFormData) {
     setServerError(null);
     setSuccess(false);
 
