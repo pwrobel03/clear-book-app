@@ -1,6 +1,7 @@
 package com.clearbook.api.auth;
 
-import com.clearbook.api.dto.*;
+import com.clearbook.api.auth.dto.*;
+import com.clearbook.api.shared.dto.MessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

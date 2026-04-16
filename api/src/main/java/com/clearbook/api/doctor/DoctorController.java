@@ -1,9 +1,8 @@
 package com.clearbook.api.doctor;
 
-import com.clearbook.api.dto.DoctorProfileRequest;
-import com.clearbook.api.dto.DoctorProfileResponse;
+import com.clearbook.api.doctor.dto.DoctorProfileRequest;
+import com.clearbook.api.doctor.dto.DoctorProfileResponse;
 import com.clearbook.api.model.User;
-import com.clearbook.api.service.DoctorProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

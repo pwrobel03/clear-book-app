@@ -1,9 +1,8 @@
 package com.clearbook.api.center;
 
-import com.clearbook.api.dto.*;
+import com.clearbook.api.center.dto.*;
 import com.clearbook.api.model.MembershipRole;
 import com.clearbook.api.model.User;
-import com.clearbook.api.service.MedicalCenterService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,7 +14,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -68,8 +66,7 @@ public class CenterController {
     public ResponseEntity<MembershipResponse> invite(
             @AuthenticationPrincipal User admin,
             @PathVariable UUID id,
-            @RequestBody @jakarta.validation.Valid InviteCenterMemberRequest request) {
-
+            @Valid @RequestBody InviteCenterMemberRequest request) {
         return ResponseEntity.ok(centerService.inviteByCode(
                 admin, id, request.getInviteCode(), request.getRole()
         ));

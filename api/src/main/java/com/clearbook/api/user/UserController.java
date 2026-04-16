@@ -1,9 +1,8 @@
 package com.clearbook.api.user;
 
-import com.clearbook.api.dto.InviteCodeResponse;
-import com.clearbook.api.dto.UserProfileResponse;
 import com.clearbook.api.model.User;
-import com.clearbook.api.service.InviteCodeService;
+import com.clearbook.api.user.dto.InviteCodeResponse;
+import com.clearbook.api.user.dto.UserProfileResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,7 +45,6 @@ public class UserController {
     /**
      * POST /api/users/me/invite-code/refresh
      * Invalidates the current code and issues a new one immediately.
-     * Use this if the code has been shared unintentionally.
      */
     @PostMapping("/me/invite-code/refresh")
     public ResponseEntity<InviteCodeResponse> refreshInviteCode(

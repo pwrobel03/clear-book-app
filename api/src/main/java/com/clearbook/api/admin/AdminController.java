@@ -1,14 +1,11 @@
 package com.clearbook.api.admin;
 
-import com.clearbook.api.dto.MedicalCenterResponse;
-import com.clearbook.api.dto.PendingDoctorResponse;
-import com.clearbook.api.dto.VerifyDoctorRequest; // Zakładam, że masz już to DTO z poprzedniego kroku
-import com.clearbook.api.model.User;
-import com.clearbook.api.service.AdminService;
+import com.clearbook.api.admin.dto.PendingDoctorResponse;
+import com.clearbook.api.admin.dto.VerifyDoctorRequest;
+import com.clearbook.api.center.dto.MedicalCenterResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')") // DODANE: Chroni wszystkie metody w tej klasie
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final AdminService adminService;
@@ -50,6 +47,4 @@ public class AdminController {
         adminService.rejectCenter(id);
         return ResponseEntity.noContent().build();
     }
-
-    // USUNIĘTO: prywatną metodę assertAdmin(user)
 }

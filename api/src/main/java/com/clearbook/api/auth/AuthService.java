@@ -1,6 +1,6 @@
 package com.clearbook.api.auth;
 
-import com.clearbook.api.dto.*;
+import com.clearbook.api.auth.dto.*;
 import com.clearbook.api.exception.ConflictException;
 import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
@@ -10,7 +10,7 @@ import com.clearbook.api.repository.PasswordResetTokenRepository;
 import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.VerificationTokenRepository;
 import com.clearbook.api.security.JwtService;
-import com.clearbook.api.service.EmailService;
+import com.clearbook.api.shared.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;

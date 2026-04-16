@@ -1,7 +1,6 @@
 package com.clearbook.api.specialization;
 
-import com.clearbook.api.dto.SpecializationDto;
-import com.clearbook.api.service.SpecializationService;
+import com.clearbook.api.specialization.dto.SpecializationDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
