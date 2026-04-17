@@ -11,23 +11,10 @@ import {
   HeroSearch,
   type SpecializationOption,
 } from "@/components/landing/hero-search";
-import { SPRING_API } from "@/lib/server/spring";
 
-async function fetchSpecializations(): Promise<SpecializationOption[]> {
-  try {
-    const res = await fetch(`${SPRING_API}/api/specializations`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    return ((await res.json()) as { code: string; name: string }[]).map(
-      (s) => ({ code: s.code, name: s.name }),
-    );
-  } catch {
-    return [];
-  }
-}
 import { Navbar } from "@/components/navbar";
 import { getServerSession } from "@/lib/server/session";
+import { getSpecializationsAction } from "@/lib/actions/doctor";
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -265,11 +252,18 @@ function Footer() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function LandingPage() {
-  const [session, specializations] = await Promise.all([
+  const [session, specResult] = await Promise.all([
     getServerSession(),
-    fetchSpecializations(),
+    getSpecializationsAction(),
   ]);
+
+  // Mapujemy wynik z akcji na format obsługiwany przez wyszukiwarkę na stronie głównej
+  const specializations: SpecializationOption[] = specResult.data
+    ? specResult.data.map((s) => ({ code: s.code, name: s.name }))
+    : [];
 
   return (
     <div className="min-h-screen">

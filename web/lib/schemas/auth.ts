@@ -18,7 +18,7 @@ export const registerSchema = z
     confirmPassword: z.string({
       required_error: "Please confirm your password",
     }),
-    role: z.enum(["USER", "DOCTOR"], {
+    role: z.enum(["USER", "DOCTOR", "MANAGER"], {
       required_error: "Please select an account type",
     }),
     document: z.any().optional(),
@@ -27,7 +27,7 @@ export const registerSchema = z
     message: "Passwords do not match",
     path: ["confirmPassword"],
   })
-  .refine(
+.refine(
     (data) =>
       data.role !== "DOCTOR" ||
       (data.document && (data.document as FileList).length > 0),

@@ -1,6 +1,6 @@
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "USER" | "DOCTOR" | "ADMIN"
+export type UserRole = "USER" | "DOCTOR" | "MANAGER" | "ADMIN";
 export type AccountStatus = "UNVERIFIED" | "PENDING" | "ACTIVE" | "BANNED" | "DELETED"
 
 export type CenterType =

@@ -1,4 +1,4 @@
-export type UserRole = "USER" | "DOCTOR" | "ADMIN";
+export type UserRole = "USER" | "DOCTOR" | "MANAGER" | "ADMIN";
 export type UserStatus = "ACTIVE" | "PENDING" | "BANNED" | "DELETED" | "UNVERIFIED";
 
 export interface SessionUser {
