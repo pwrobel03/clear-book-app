@@ -66,6 +66,7 @@ export interface MedicalCenterResponse {
 }
 
 export interface CenterMemberSummary {
+  membershipId: string
   firstName: string
   lastName: string
   publicId: string | null

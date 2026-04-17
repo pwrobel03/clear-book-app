@@ -105,4 +105,14 @@ public class CenterController {
         centerService.rejectInvitation(user, membershipId);
         return ResponseEntity.noContent().build();
     }
+
+    /** DELETE /api/centers/{id}/members/{membershipId} */
+    @DeleteMapping("/{id}/members/{membershipId}")
+    public ResponseEntity<Void> removeMember(
+            @AuthenticationPrincipal User admin,
+            @PathVariable UUID id,
+            @PathVariable UUID membershipId) {
+        centerService.removeMember(admin, id, membershipId);
+        return ResponseEntity.noContent().build();
+    }
 }

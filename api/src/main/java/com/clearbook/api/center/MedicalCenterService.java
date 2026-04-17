@@ -209,6 +209,7 @@ public class MedicalCenterService {
                     User user = m.getUser();
                     return profileRepository.findByUser(user)
                             .map(p -> CenterMemberSummary.builder()
+                                    .membershipId(m.getId())
                                     .firstName(user.getFirstName())
                                     .lastName(user.getLastName())
                                     .publicId(p.getPublicId())
@@ -218,12 +219,39 @@ public class MedicalCenterService {
                                     .role(m.getRole())
                                     .build())
                             .orElseGet(() -> CenterMemberSummary.builder()
+                                    .membershipId(m.getId())
                                     .firstName(user.getFirstName())
                                     .lastName(user.getLastName())
                                     .role(m.getRole())
                                     .build());
                 })
                 .toList();
+    }
+
+    /**
+     * Removes a member from the center (soft delete by setting status to SUSPENDED or hard delete).
+     * Caller must be an ADMIN member of the center.
+     */
+    @Transactional
+    public void removeMember(User admin, UUID centerId, UUID membershipId) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        assertCenterAdmin(admin, center);
+
+        CenterMembership membership = membershipRepository.findById(membershipId)
+                .orElseThrow(() -> new ResourceNotFoundException("Membership not found."));
+
+        if (!membership.getCenter().getId().equals(centerId)) {
+            throw new ConflictException("Membership does not belong to this center.");
+        }
+
+        if (membership.getUser().getId().equals(admin.getId())) {
+            throw new ConflictException("You cannot remove yourself from the center.");
+        }
+
+        membership.setStatus(MembershipStatus.SUSPENDED);
+        membershipRepository.save(membership);
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

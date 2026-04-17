@@ -2,13 +2,13 @@ package com.clearbook.api.doctor;
 
 import com.clearbook.api.doctor.dto.DoctorProfileRequest;
 import com.clearbook.api.doctor.dto.DoctorProfileResponse;
+import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
-import com.clearbook.api.model.DoctorProfile;
-import com.clearbook.api.model.MembershipStatus;
-import com.clearbook.api.model.Specialization;
-import com.clearbook.api.model.User;
+import com.clearbook.api.model.*;
+import com.clearbook.api.repository.CenterMembershipRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.SpecializationRepository;
+import com.clearbook.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +26,7 @@ public class DoctorProfileService {
 
     private final DoctorProfileRepository profileRepository;
     private final SpecializationRepository specializationRepository;
+    private final CenterMembershipRepository centerMembershipRepository;
 
     /** Returns the authenticated doctor's profile. */
     @PreAuthorize("hasRole('DOCTOR')")
@@ -65,6 +66,36 @@ public class DoctorProfileService {
                 .filter(DoctorProfile::isPublic)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
         return toResponse(profile);
+    }
+
+    /** * Get profile by publicId.
+     * Allows access if profile is public OR if requester is an ADMIN in any center where the doctor works.
+     */
+    public DoctorProfileResponse getPublicProfile(String publicId, User requester) {
+        DoctorProfile profile = profileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
+
+        if (profile.isPublic()) {
+            return toResponse(profile);
+        }
+
+        if (requester != null) {
+            boolean hasAccess = centerMembershipRepository.findByUserAndStatus(requester, MembershipStatus.ACTIVE)
+                    .stream()
+                    .filter(reqM -> reqM.getRole() == MembershipRole.ADMIN)
+                    .anyMatch(reqM -> {
+                        // Active membership
+                        return centerMembershipRepository.findByUserAndCenter(profile.getUser(), reqM.getCenter())
+                                .filter(docM -> docM.getStatus() == MembershipStatus.ACTIVE) // <-- KRYTYCZNY FILTR
+                                .isPresent();
+                    });
+
+            if (hasAccess) {
+                return toResponse(profile);
+            }
+        }
+
+        throw new ForbiddenException("PRIVATE_PROFILE");
     }
 
     /** Public search — filterable by specialization code and/or city. */

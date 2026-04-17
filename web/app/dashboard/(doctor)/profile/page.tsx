@@ -27,6 +27,10 @@ import {
 } from "@/lib/actions/doctor";
 import { forbidden } from "next/navigation";
 
+// TODO: We should split this page into multiple subpages (profile management, invite management, etc.) but for now we will keep everything in one place to speed up development.
+
+// TODO: We should also add some kind of notification system to notify doctor when they receive a new invitation, but for now they will have to check the "My Centers" page manually to see if they received any new invitations.
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 import {
   doctorProfileSchema,

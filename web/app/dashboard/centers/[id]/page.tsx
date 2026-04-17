@@ -10,6 +10,10 @@ import {
 
 import { CenterSettingsClient } from "./settings-client";
 import { InviteClient } from "./invite-client";
+import { RemoveMemberButton } from "./remove-member-button";
+
+// TODO: This page is currently very basic and only shows the staff list. We will add more features to it in the future (appointments management, center settings, etc.). For now, it's mostly a placeholder to build upon.
+// TODO: We should let user to quit the center as well, but we need to implement that in the backend first (we need to add "quit" functionality to the membership management endpoints, currently we only have "remove" which is for admins to remove other members, but we also need "quit" for regular members to quit on their own).
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -98,13 +102,22 @@ export default async function CenterDashboardPage({ params }: Props) {
                               )}
                           </div>
                         </div>
-                        <Badge
-                          variant={
-                            member.role === "ADMIN" ? "default" : "muted"
-                          }
-                        >
-                          {member.role === "ADMIN" ? "Admin" : "Doctor"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              member.role === "ADMIN" ? "default" : "muted"
+                            }
+                          >
+                            {member.role === "ADMIN" ? "Admin" : "Doctor"}
+                          </Badge>
+                          {isCenterAdmin && member.role !== "ADMIN" && (
+                            <RemoveMemberButton
+                              centerId={id}
+                              membershipId={member.membershipId}
+                              memberName={`Dr. ${member.lastName}`}
+                            />
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -149,3 +149,17 @@ export async function inviteByCodeAction(
     "Failed to send invitation."
   )
 }
+
+export async function removeCenterMemberAction(centerId: string, membershipId: string): Promise<VoidResult> {
+  const result = await callApiVoid(
+    () => springFetch(`/api/centers/${centerId}/members/${membershipId}`, { method: "DELETE" }),
+    "Failed to remove member."
+  );
+
+  if (!result.error) {
+    revalidatePath(`/dashboard/centers/${centerId}`); // To update the members list on the center details page
+    revalidatePath("/dashboard/centers"); // In case the removed member was the last one, we might want to update the listing page as well
+  }
+
+  return result;
+}

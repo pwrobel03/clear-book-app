@@ -29,6 +29,8 @@ import {
 import type { CreateCenterData } from "@/lib/schemas/center";
 import { CenterForm } from "@/components/centers/center-form";
 
+// TODO: We should split this page into multiple subpages (invitations management, center management, etc.) but for now we will keep everything in one place to speed up development.
+
 // ─── Create Center Form (Wrapper) ─────────────────────────────────────────────
 
 function CreateCenterFormWrapper({ onCreated }: { onCreated: () => void }) {

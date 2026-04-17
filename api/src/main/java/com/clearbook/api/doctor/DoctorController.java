@@ -46,10 +46,11 @@ public class DoctorController {
         return ResponseEntity.ok(profileService.createOrUpdate(user, request));
     }
 
-    /** GET /api/doctors/{publicId} — public profile (no auth required) */
+    /** GET /api/doctors/{publicId} — public profile */
     @GetMapping("/{publicId}")
     public ResponseEntity<DoctorProfileResponse> getPublicProfile(
-            @PathVariable String publicId) {
-        return ResponseEntity.ok(profileService.getPublicProfile(publicId));
+            @PathVariable String publicId,
+            @AuthenticationPrincipal User user) { // DODANE
+        return ResponseEntity.ok(profileService.getPublicProfile(publicId, user));
     }
 }

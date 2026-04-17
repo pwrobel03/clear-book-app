@@ -15,6 +15,8 @@ import {
 import { inviteByCodeAction } from "@/lib/actions/centers";
 import type { MembershipRole } from "@/types/api";
 
+// TODO: This component is currently very basic and only allows to invite a doctor by code. In the future, we might want to add more features to it (like inviting by email, managing pending invitations, etc.) but for now it's just a simple form to send an invitation by code.
+
 export function InviteClient({ centerId }: { centerId: string }) {
   const [code, setCode] = useState("");
   const [role, setRole] = useState<MembershipRole>("MEMBER");
