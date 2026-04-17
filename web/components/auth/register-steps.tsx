@@ -30,7 +30,7 @@ import {
 
 import { type RegisterFormData } from "@/lib/schemas/auth";
 
-// ─── KROK 1: Wybór Roli ────────────────────────────────────────────────────────
+// ─── Role Selection Step ──────────────────────────────────────────────────────
 
 export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
   const { control } = useFormContext<RegisterFormData>();
@@ -150,7 +150,7 @@ export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── KROK 2: Dane Osobowe ──────────────────────────────────────────────────────
+// ─── Personal Details ──────────────────────────────────────────────────────
 
 interface PersonalDetailsStepProps {
   onNext: () => void;
@@ -337,7 +337,7 @@ export function PersonalDetailsStep({
   );
 }
 
-// ─── KROK 3: Weryfikacja Lekarza ──────────────────────────────────────────────
+// --- ─── Doctor Verification Step ──────────────────────────────────────────────
 
 interface DoctorVerificationStepProps {
   onBack: () => void;

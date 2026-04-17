@@ -116,10 +116,27 @@ public class MedicalCenterService {
         User target = inviteCodeService.resolveUser(rawCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Invite code is invalid or expired."));
 
-        if (membershipRepository.existsByUserAndCenter(target, center)) {
-            throw new ConflictException("User is already a member or has a pending invitation.");
+        var existingMembershipOpt = membershipRepository.findByUserAndCenter(target, center);
+
+        if (existingMembershipOpt.isPresent()) {
+            CenterMembership existing = existingMembershipOpt.get();
+
+            // Block only if user is member or have a pending request
+            if (existing.getStatus() == MembershipStatus.ACTIVE || existing.getStatus() == MembershipStatus.INVITED) {
+                throw new ConflictException("User is already a member or has a pending invitation.");
+            }
+
+            // Renew Invite
+            existing.setRole(role);
+            existing.setStatus(MembershipStatus.INVITED);
+            existing.setInvitedBy(admin);
+            existing.setInvitedAt(LocalDateTime.now());
+            existing.setJoinedAt(null);
+
+            return toMembershipResponse(membershipRepository.save(existing));
         }
 
+        // First touch
         CenterMembership membership = CenterMembership.builder()
                 .user(target)
                 .center(center)

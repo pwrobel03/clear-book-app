@@ -40,11 +40,11 @@ export function LoginForm() {
       return;
     }
 
-    if (result.status === "PENDING") {
+    if (result.data?.status === "PENDING") {
       toast.warning("Your account is awaiting admin verification.");
       return;
     }
-    if (result.status === "BANNED") {
+    if (result.data?.status === "BANNED") {
       toast.error("Your account has been suspended. Please contact support.");
       return;
     }

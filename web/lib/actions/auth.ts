@@ -5,7 +5,7 @@ import { redirect } from "next/navigation"
 
 import { SPRING_API } from "@/lib/server/spring"
 import { callApi, callApiVoid } from "@/lib/server/api-action"
-import type { AuthResponse, VoidResult } from "@/types/api"
+import type { AccountStatus, ActionResult, AuthResponse, UserRole, VoidResult } from "@/types/api"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +22,10 @@ async function setAuthCookie(token: string) {
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export async function loginAction(email: string, password: string) {
+export async function loginAction(
+  email: string, 
+  password: string
+): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
   const result = await callApi<AuthResponse>(
     () =>
       fetch(`${SPRING_API}/api/auth/login`, {
@@ -33,11 +36,11 @@ export async function loginAction(email: string, password: string) {
     "Invalid credentials."
   )
 
-  if (result.error) return result
+  if (result.error || !result.data) return result
 
   if (result.data.token) await setAuthCookie(result.data.token)
 
-  return { role: result.data.role, status: result.data.status }
+  return { data: { role: result.data.role, status: result.data.status } }
 }
 
 export async function registerAction(payload: {
@@ -46,7 +49,7 @@ export async function registerAction(payload: {
   firstName: string
   lastName: string
   role: string
-}) {
+}): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
   const result = await callApi<AuthResponse>(
     () =>
       fetch(`${SPRING_API}/api/auth/register`, {
@@ -57,11 +60,11 @@ export async function registerAction(payload: {
     "Registration failed."
   )
 
-  if (result.error) return result
+  if (result.error || !result.data) return result
 
   if (result.data.token) await setAuthCookie(result.data.token)
 
-  return { role: result.data.role, status: result.data.status }
+  return { data: { role: result.data.role, status: result.data.status } }
 }
 
 export async function forgotPasswordAction(email: string): Promise<VoidResult> {
