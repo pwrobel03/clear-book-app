@@ -1,0 +1,226 @@
+openapi: "3.0.3"
+
+info:
+  title: ClearBook API
+  description: |
+    System Rezerwacji Wizyt Lekarskich — kolekcja endpointów.
+    Autorzy: Piotr Wróbel, Bartosz Kozyra.
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8080
+    description: Serwer lokalny
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Token JWT — ważny 24h, algorytm HS256"
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName, role]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "jan.kowalski@example.com"
+        password:
+          type: string
+          minLength: 6
+          example: "haslo123"
+        firstName:
+          type: string
+          example: "Jan"
+        lastName:
+          type: string
+          example: "Kowalski"
+        role:
+          type: string
+          enum: [USER, DOCTOR]
+          description: "Rejestracja z rolą ADMIN jest zablokowana"
+          example: "USER"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "jan.kowalski@example.com"
+        password:
+          type: string
+          example: "haslo123"
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          nullable: true
+          description: "Token JWT (null dla kont PENDING)"
+          example: "eyJhbGciOiJIUzI1NiJ9..."
+        role:
+          type: string
+          enum: [USER, DOCTOR, ADMIN]
+          example: "USER"
+        status:
+          type: string
+          enum: [ACTIVE, PENDING, BANNED, DELETED]
+          example: "ACTIVE"
+        message:
+          type: string
+          nullable: true
+          description: "Opcjonalna wiadomość, np. informacja o weryfikacji"
+          example: null
+
+paths:
+  # ===========================================================
+  # REJESTRACJA
+  # ===========================================================
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Rejestracja nowego użytkownika
+      description: |
+        Rejestruje pacjenta (USER) lub lekarza (DOCTOR).
+        - USER → konto ACTIVE, token zwracany od razu (HTTP 200).
+        - DOCTOR → konto PENDING, wymaga weryfikacji admina (HTTP 202).
+        - ADMIN → rejestracja zablokowana (HTTP 400).
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            examples:
+              pacjent:
+                summary: Rejestracja pacjenta
+                value:
+                  email: "jan.kowalski@example.com"
+                  password: "haslo123"
+                  firstName: "Jan"
+                  lastName: "Kowalski"
+                  role: "USER"
+              lekarz:
+                summary: Rejestracja lekarza
+                value:
+                  email: "dr.nowak@example.com"
+                  password: "haslo123"
+                  firstName: "Anna"
+                  lastName: "Nowak"
+                  role: "DOCTOR"
+              admin_zablokowany:
+                summary: Próba rejestracji admina (zablokowana)
+                value:
+                  email: "hacker@example.com"
+                  password: "haslo123"
+                  firstName: "Evil"
+                  lastName: "Admin"
+                  role: "ADMIN"
+              duplikat_email:
+                summary: Duplikat adresu e-mail
+                value:
+                  email: "jan.kowalski@example.com"
+                  password: "haslo123"
+                  firstName: "Jan"
+                  lastName: "Duplikat"
+                  role: "USER"
+      responses:
+        "200":
+          description: "Rejestracja pacjenta udana — konto aktywne"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                role: "USER"
+                status: "ACTIVE"
+                message: null
+        "202":
+          description: "Rejestracja lekarza udana — konto oczekuje na weryfikację"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              example:
+                token: null
+                role: "DOCTOR"
+                status: "PENDING"
+                message: "Twoje konto oczekuje na weryfikację przez administratora."
+        "400":
+          description: "Błąd walidacji, duplikat e-mail lub próba rejestracji admina"
+
+  # ===========================================================
+  # LOGOWANIE
+  # ===========================================================
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Logowanie użytkownika
+      description: |
+        Uwierzytelnia użytkownika i zwraca token JWT (ważny 24h).
+        Logowanie możliwe tylko dla kont ze statusem ACTIVE.
+        Konta PENDING, BANNED i DELETED są odrzucane.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              pacjent:
+                summary: Logowanie pacjenta
+                value:
+                  email: "jan.kowalski@example.com"
+                  password: "haslo123"
+              administrator:
+                summary: Logowanie administratora
+                value:
+                  email: "admin@clearbook.com"
+                  password: "tajne"
+              lekarz_pending:
+                summary: Logowanie lekarza (konto PENDING)
+                value:
+                  email: "dr.nowak@example.com"
+                  password: "haslo123"
+              bledne_haslo:
+                summary: Błędne hasło
+                value:
+                  email: "jan.kowalski@example.com"
+                  password: "zle_haslo"
+      responses:
+        "200":
+          description: "Logowanie udane — token JWT w odpowiedzi"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+              examples:
+                pacjent:
+                  summary: Odpowiedź dla pacjenta
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiJ9..."
+                    role: "USER"
+                    status: "ACTIVE"
+                    message: null
+                administrator:
+                  summary: Odpowiedź dla administratora
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiJ9..."
+                    role: "ADMIN"
+                    status: "ACTIVE"
+                    message: null
+        "401":
+          description: "Nieprawidłowe dane lub konto nieaktywne"
+          content:
+            application/json:
+              example:
+                message: "Konto nie jest aktywne lub podane dane są nieprawidłowe."
