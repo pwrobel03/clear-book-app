@@ -71,6 +71,11 @@ const navByRole: Record<UserRole, NavItem[]> = {
       soon: true,
     },
   ],
+  MANAGER: [
+    { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
+    { href: "/dashboard/centers", icon: Building2, label: "My Centers" },
+    { href: "/dashboard/profile", icon: User, label: "Profile", soon: true },
+  ],
 };
 
 // ─── Nav item ─────────────────────────────────────────────────────────────────

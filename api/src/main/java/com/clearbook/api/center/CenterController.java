@@ -58,6 +58,23 @@ public class CenterController {
         return ResponseEntity.ok(centerService.getMyMemberships(user));
     }
 
+    /** GET /api/centers/{id}/my-membership — get user's role/status in a specific center */
+    @GetMapping("/{id}/my-membership")
+    public ResponseEntity<MembershipResponse> getMyMembership(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(centerService.getMyMembershipInCenter(user, id));
+    }
+
+    /** PUT /api/centers/{id} — update center details */
+    @PutMapping("/{id}")
+    public ResponseEntity<MedicalCenterResponse> update(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateCenterRequest request) {
+        return ResponseEntity.ok(centerService.update(user, id, request));
+    }
+
     /**
      * POST /api/centers/{id}/invite
      * Body: { "inviteCode": "CB-XXXX-XXXX", "role": "MEMBER" }

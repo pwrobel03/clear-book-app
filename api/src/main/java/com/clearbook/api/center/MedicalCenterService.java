@@ -91,6 +91,17 @@ public class MedicalCenterService {
                 .toList();
     }
 
+    /** Returns membership details for a specific center for the authenticated user. */
+    public MembershipResponse getMyMembershipInCenter(User user, UUID centerId) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        CenterMembership membership = membershipRepository.findByUserAndCenter(user, center)
+                .orElseThrow(() -> new ForbiddenException("You are not a member of this center."));
+
+        return toMembershipResponse(membership);
+    }
+
     /**
      * Invites a user to a center using their invite code.
      * Caller must be an ADMIN member of the center.
@@ -148,6 +159,26 @@ public class MedicalCenterService {
 
         membership.setStatus(MembershipStatus.REJECTED);
         membershipRepository.save(membership);
+    }
+
+    /** Updates an existing medical center. Caller must be an ADMIN of the center. */
+    @Transactional
+    public MedicalCenterResponse update(User admin, UUID centerId, CreateCenterRequest request) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        assertCenterAdmin(admin, center);
+
+        center.setName(request.getName());
+        center.setDescription(request.getDescription());
+        center.setAddress(request.getAddress());
+        center.setCity(request.getCity());
+        center.setPhone(request.getPhone());
+        center.setEmail(request.getEmail());
+        center.setWebsite(request.getWebsite());
+        center.setType(request.getType());
+
+        return centerMapper.toResponse(centerRepository.save(center));
     }
 
     /** Returns active members of a center (publicly accessible). */
