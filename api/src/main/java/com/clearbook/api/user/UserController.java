@@ -1,6 +1,7 @@
 package com.clearbook.api.user;
 
 import com.clearbook.api.dto.InviteCodeResponse;
+import com.clearbook.api.dto.UserProfileResponse;
 import com.clearbook.api.model.User;
 import com.clearbook.api.service.InviteCodeService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,22 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final InviteCodeService inviteCodeService;
+
+    /**
+     * GET /api/users/me
+     * Returns the authenticated user's profile.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileResponse> getMe(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(UserProfileResponse.builder()
+                .id(user.getId())
+                .email(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(user.getRole().name())
+                .status(user.getStatus().name())
+                .build());
+    }
 
     /**
      * GET /api/users/me/invite-code
