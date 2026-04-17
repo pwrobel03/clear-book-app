@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// TODO: Fix the email verification flow. Currently, when user clicks the verification link in the email, they are redirected to this page with the token in the URL. We should verify the token on the server and show a success or error message based on the result. Right now, we are just showing a loading state and not actually verifying the token, which is not ideal.
+
 import { verifyEmailAction } from "@/lib/actions/auth";
 
 function VerificationManager() {
@@ -32,9 +34,7 @@ function VerificationManager() {
         setMessage(result.error);
       } else {
         setStatus("success");
-        setMessage(
-          result.message ?? "Your email has been successfully verified.",
-        );
+        setMessage("Your email has been successfully verified.");
       }
     });
   }, [token]);

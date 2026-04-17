@@ -16,6 +16,10 @@ import { Navbar } from "@/components/navbar";
 import { getServerSession } from "@/lib/server/session";
 import { getSpecializationsAction } from "@/lib/actions/doctor";
 
+// TODO: This is the main landing page of the application. It should be a marketing page that explains the value proposition of the app and encourages users to sign up. It should also have a search bar to search for doctors by specialization and city. The search bar should be prominently displayed on the page to encourage users to use it. We should also have some sections that explain how the app works, what features it has, etc. The design should be clean and modern, with a focus on usability and conversion.
+
+// TODO: We should split this page into multiple sections (hero, how it works, for doctors/clinics, etc.) but for now we will keep everything in one place to speed up development.
+
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 function Hero({

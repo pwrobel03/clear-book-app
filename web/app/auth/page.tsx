@@ -6,6 +6,10 @@ import { RegisterForm } from "@/components/auth/register-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Star } from "lucide-react";
 
+// TODO: We should split this page into multiple subpages (login, register, etc.) but for now we will keep everything in one place to speed up development.
+
+// TODO: This page is currently just a simple form to login or register. In the future, we might want to add some additional features to it (like social login, etc.) but for now it's just a simple form to login or register.
+
 // ─── Left Branding Panel (Redesigned) ─────────────────────────────────────────
 
 function BrandPanel() {

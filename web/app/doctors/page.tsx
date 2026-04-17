@@ -13,6 +13,14 @@ import {
 } from "@/lib/actions/doctor";
 import type { DoctorProfileResponse } from "@/types/api";
 
+// TODO: This page is the main public directory of doctors. It shows a list of all doctors registered in the system with basic information about them (name, specializations, bio). Users can search for doctors by specialization and city. Each doctor card links to the doctor's public profile page.
+
+// TODO: We should split this page into multiple subpages (search results, doctor profile, etc.) but for now we will keep everything in one place to speed up development.
+
+// TODO: We should also add some filters to the search (like filtering by medical center, filtering by availability, etc.) but for now we will just have a simple search by specialization and city to speed up development.
+
+// TODO: We should also add pagination to the search results, but for now we will just show all doctors in one page to speed up development.
+
 // ─── Doctor card ──────────────────────────────────────────────────────────────
 function DoctorCard({
   doctor,

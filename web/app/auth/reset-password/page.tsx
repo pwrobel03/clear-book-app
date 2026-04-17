@@ -18,6 +18,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+// TODO: This page is currently just a simple form to reset the password using the token from the email. In the future, we might want to add some additional features to it (like password strength meter, etc.) but for now it's just a simple form to reset the password.
+
+// TODO: We should also handle the case when the token is invalid or expired and show a proper message to the user, but for now we will just show a generic error message if the reset action fails.
+
+// TODO: We should also add some kind of notification system to notify user when their password has been successfully reset, but for now we will just show a success message and redirect them to the sign in page. Email notification is not critical in this case since user will see the success message immediately after resetting the password, but we might want to add it in the future for better user experience.
+
+// TODO: We should also add some loading state to the form to prevent multiple submissions and show the user that the action is being processed, but for now we will just disable the submit button while the form is submitting.
+
 import { resetPasswordAction } from "@/lib/actions/auth";
 import { resetSchema, type ResetFormData } from "@/lib/schemas/auth";
 

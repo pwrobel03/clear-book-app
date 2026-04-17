@@ -9,6 +9,18 @@ import {
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
 
+// TODO: This page is the public profile of a doctor. It shows basic information about the doctor (name, specializations, bio) and a CTA to book an appointment (which leads to the auth page for now, since only authenticated users will be able to book appointments). If the doctor has chosen to keep their profile private, we show a message saying that the profile is private and they should contact the medical facility directly.
+
+// TODO: We should also add some kind of notification system to notify doctor when they receive a new invitation, but for now they will have to check the "My Centers" page manually to see if they received any new invitations.
+
+// TODO: We should also add some kind of "Share this doctor" functionality to this page (like sharing the doctor profile link on social media, etc.) but we will implement that in the future, so for now it's just a simple page without any sharing features.
+
+// TODO: We should also add some kind of "Write a review" functionality to this page, so users can share their experience with the doctor and help other users make informed decisions, but we will implement that in the future, so for now it's just a simple page without any review features. User have to had a verified appointment with the doctor to be able to write a review, but we will implement that in the future, so for now it's just a simple page without any review features.
+
+// TODO: We should also add some kind of "View on map" functionality to this page, so users can see the location of the medical facilities where the doctor works on a map and get directions to them, but we will implement that in the future, so for now it's just a simple page without any map features.
+
+// TODO: We should split this page into multiple subpages (public profile, reviews, etc.) but for now we will keep everything in one place to speed up development.
+
 export default async function DoctorPublicProfile({
   params,
 }: {

@@ -23,6 +23,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
+// TODO: We should split this page into multiple subpages (doctors verification, centers verification, etc.) but for now we will keep everything in one place to speed up development.
+
+// TODO: We should also add some kind of notification system to notify admin when they receive new verification requests, but for now they will have to check this page manually to see if they received any new requests.
+
+// TODO: We should add pagination to this page as well, but for now we will just load all pending verifications at once since we don't expect to have a lot of them.
+
+// TODO: We should also add some filters and search functionality to this page, but for now we will just show all pending verifications in a simple list.
+
+// TODO: We should also add a way to see more details about each doctor/center (like their profile, submitted documents, etc.) but for now we will just show basic information in the list and have approve/reject buttons.
+
+// TODOL We should also add some kind of confirmation dialog before approving/rejecting a doctor/center, to prevent accidental clicks, but for now we will just have the buttons without confirmation to speed up development.
+
+// TODO: We should also add some kind of "reason for rejection" input when rejecting a doctor/center, to provide feedback to the applicants, but for now we will just have a simple reject button without reason input to speed up development.
+
+// TODO: We should also add some kind of "notes" functionality for admin to add internal notes about each doctor/center (like why they were rejected, what issues they had with their application, etc.) but for now we will not have notes functionality to speed up development.
+
+
+// TODO: We should also add some kind of "analytics" functionality to show some statistics about the pending verifications (like how many doctors/centers are pending, how long they have been pending, etc.) but for now we will not have analytics functionality to speed up development.
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type PendingDoctor = {
