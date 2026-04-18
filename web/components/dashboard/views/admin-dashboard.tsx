@@ -1,16 +1,7 @@
 import { Users, ShieldCheck, Building2 } from "lucide-react";
 import type { SessionUser } from "@/types/session";
-
-// ─── Glass Card Class ───
-const glassCardClass = `
-  group relative overflow-hidden rounded-3xl p-6 transition-all duration-300
-  border border-white/20 border-t-white/40 dark:border-white/5 dark:border-t-white/10 
-  bg-gradient-to-br from-white/10 to-white/5 dark:from-white/[0.04] dark:to-transparent 
-  backdrop-blur-xl 
-  shadow-lg shadow-black/5 dark:shadow-black/20 
-  hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 
-  hover:from-white/20 hover:to-white/10 dark:hover:from-white/[0.06] dark:hover:to-white/[0.01]
-`;
+import { PageHeader } from "../page-header";
+import { GlassCard } from "@/components/ui/glass";
 
 const placeholderStats = [
   {
@@ -32,19 +23,14 @@ const placeholderStats = [
 export function AdminDashboard({ user }: { user: SessionUser }) {
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground tracking-tight">
-          Admin Panel
-        </h2>
-        <p className="mt-2 text-base text-muted-foreground">
-          Hello, {user.firstName}. Manage platform users, doctors, and medical
-          centers.
-        </p>
-      </div>
+      <PageHeader
+        title="Admin Panel"
+        description={`Hello, ${user.firstName}. Manage platform users, doctors, and medical centers.`}
+      />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {placeholderStats.map(({ icon: Icon, label, value, sub, urgent }) => (
-          <div key={label} className={glassCardClass}>
+          <GlassCard key={label} className="p-6">
             <div className="flex items-center gap-4">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-inner transition-transform group-hover:scale-110 ${
@@ -68,16 +54,16 @@ export function AdminDashboard({ user }: { user: SessionUser }) {
             </div>
             <p className="mt-5 text-4xl font-black text-foreground">{value}</p>
             <p className="mt-2 text-sm text-muted-foreground">{sub}</p>
-          </div>
+          </GlassCard>
         ))}
       </div>
 
-      <div className={glassCardClass}>
+      <GlassCard className="p-6">
         <p className="text-lg font-bold text-foreground">Recent Activity</p>
         <p className="mt-3 text-base text-muted-foreground">
           Activity feed will appear here once data is available.
         </p>
-      </div>
+      </GlassCard>
     </div>
   );
 }
