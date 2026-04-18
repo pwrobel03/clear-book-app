@@ -53,4 +53,11 @@ public class DoctorController {
             @AuthenticationPrincipal User user) { // DODANE
         return ResponseEntity.ok(profileService.getPublicProfile(publicId, user));
     }
+
+    /** GET /api/doctors/{publicId}/centers — get affiliated centers */
+    @GetMapping("/{publicId}/centers")
+    public ResponseEntity<java.util.List<com.clearbook.api.center.dto.MedicalCenterResponse>> getAffiliatedCenters(
+            @PathVariable String publicId) {
+        return ResponseEntity.ok(profileService.getAffiliatedCenters(publicId));
+    }
 }

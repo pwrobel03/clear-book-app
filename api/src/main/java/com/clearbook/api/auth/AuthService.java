@@ -130,14 +130,20 @@ public class AuthService {
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
-            passwordResetTokenRepository.deleteByUser(user);
-
             String token = UUID.randomUUID().toString();
-            PasswordResetToken resetToken = PasswordResetToken.builder()
-                    .token(token)
-                    .user(user)
-                    .expiryDate(LocalDateTime.now().plusHours(1))
-                    .build();
+            LocalDateTime expiryDate = LocalDateTime.now().plusHours(1);
+
+            PasswordResetToken resetToken = passwordResetTokenRepository.findByUser(user)
+                    .map(existingToken -> {
+                        existingToken.setToken(token);
+                        existingToken.setExpiryDate(expiryDate);
+                        return existingToken;
+                    })
+                    .orElseGet(() -> PasswordResetToken.builder()
+                            .token(token)
+                            .user(user)
+                            .expiryDate(expiryDate)
+                            .build());
 
             passwordResetTokenRepository.save(resetToken);
             emailService.sendPasswordResetEmail(user.getEmail(), token);

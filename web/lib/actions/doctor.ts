@@ -109,16 +109,17 @@ export async function getDoctorsAction(specialization?: string, city?: string): 
 export async function getDoctorAffiliatedCentersAction(publicId: string): Promise<MedicalCenterResponse[]> {
   try {
     const res = await springFetch(`/api/doctors/${publicId}/centers`, { 
-      cache: "no-store" // Zawsze aktualne dane
+      cache: "no-store" 
     });
     
     if (!res.ok) {
       return [];
     }
     
-    return await res.json() as MedicalCenterResponse[];
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data?.content || []);
   } catch (error) {
-    console.error(`Failed to fetch affiliated centers for doctor ${publicId}:`, error);
+    console.error("Failed to fetch affiliated centers:", error);
     return [];
   }
 }
