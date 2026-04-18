@@ -43,10 +43,10 @@ export function InviteClient({ centerId }: { centerId: string }) {
   return (
     <form
       onSubmit={handleInvite}
-      className="flex flex-col gap-4 sm:flex-row sm:items-end"
+      className="flex flex-col gap-5 sm:flex-row sm:items-end"
     >
       <div className="flex-1 space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">
+        <label className="text-sm font-semibold text-foreground ml-1">
           Invite Code
         </label>
         <Input
