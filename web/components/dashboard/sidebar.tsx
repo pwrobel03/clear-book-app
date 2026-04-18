@@ -124,7 +124,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col bg-primary-dark">
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden rounded-3xl bg-primary-dark shadow-glass">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">

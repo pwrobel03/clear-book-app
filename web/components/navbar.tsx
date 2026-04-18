@@ -13,8 +13,10 @@ export async function Navbar() {
           href="/"
           className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#102240]">
-            <span className="text-xs font-black text-[#36A372]">CB</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <span className="text-xs font-black text-primary-foreground">
+              CB
+            </span>
           </div>
           <span className="font-bold text-foreground">ClearBook</span>
         </Link>

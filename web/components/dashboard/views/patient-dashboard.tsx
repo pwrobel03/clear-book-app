@@ -1,6 +1,17 @@
 import { Calendar, Stethoscope, Clock, ArrowRight } from "lucide-react";
 import type { SessionUser } from "@/types/session";
 
+// ─── Glass Card Class ───
+const glassCardClass = `
+  group relative overflow-hidden rounded-3xl p-6 transition-all duration-300
+  border border-white/20 border-t-white/40 dark:border-white/5 dark:border-t-white/10 
+  bg-gradient-to-br from-white/10 to-white/5 dark:from-white/[0.04] dark:to-transparent 
+  backdrop-blur-xl 
+  shadow-lg shadow-black/5 dark:shadow-black/20 
+  hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 
+  hover:from-white/20 hover:to-white/10 dark:hover:from-white/[0.06] dark:hover:to-white/[0.01]
+`;
+
 const placeholderCards = [
   {
     icon: Calendar,
@@ -18,54 +29,62 @@ const placeholderCards = [
 
 export function PatientDashboard({ user }: { user: SessionUser }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Welcome */}
       <div>
-        <h2 className="text-2xl font-bold text-foreground">
+        <h2 className="text-3xl font-bold text-foreground tracking-tight">
           Good to see you, {user.firstName}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           Manage your appointments and find the right doctor for you.
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {placeholderCards.map(({ icon: Icon, label, value, sub }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-border bg-card p-5"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
-                <Icon size={18} className="text-accent" />
+          <div key={label} className={glassCardClass}>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner transition-transform group-hover:scale-110">
+                <Icon
+                  size={22}
+                  className="text-accent dark:text-accent-light"
+                />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-semibold text-muted-foreground">
                 {label}
               </span>
             </div>
-            <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+            <p className="mt-5 text-4xl font-black text-foreground">{value}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{sub}</p>
           </div>
         ))}
       </div>
 
-      {/* CTA */}
-      <div className="flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 p-5">
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/15">
-            <Stethoscope size={20} className="text-accent" />
+      {/* CTA - Glass Card */}
+      <div
+        className={`${glassCardClass} flex cursor-pointer items-center justify-between`}
+      >
+        <div className="flex items-center gap-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner transition-transform group-hover:rotate-12">
+            <Stethoscope
+              size={26}
+              className="text-accent dark:text-accent-light"
+            />
           </div>
           <div>
-            <p className="font-semibold text-foreground">Find a Doctor</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-lg font-bold text-foreground">Find a Doctor</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Browse verified doctors and book an appointment instantly.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-sm font-medium text-accent opacity-50">
+        <div className="flex items-center gap-2 text-sm font-bold text-accent dark:text-accent-light opacity-50 transition-opacity group-hover:opacity-100">
           Coming soon
-          <ArrowRight size={14} />
+          <ArrowRight
+            size={18}
+            className="transition-transform group-hover:translate-x-1"
+          />
         </div>
       </div>
     </div>

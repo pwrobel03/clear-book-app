@@ -15,7 +15,6 @@ const config: Config = {
       screens: { "2xl": "1400px" },
     },
     extend: {
-      // ─── Kolory mapowane na CSS variables (shadcn-compatible) ───────────
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -64,15 +63,17 @@ const config: Config = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
       },
-
-      // ─── Border radius ───────────────────────────────────────────────────
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
       },
-
-      // ─── Animacje (shadcn) ───────────────────────────────────────────────
+      // ─── NOWE MIĘKKIE CIENIE DLA GLASSMORPHISM/CLAYMORPHISM ───
+      boxShadow: {
+        'soft': '0 20px 40px -15px rgba(0,0,0,0.05)',
+        'glass': '0 8px 32px 0 rgba(28, 57, 53, 0.08)',
+        'glow': '0 0 24px rgba(36, 107, 80, 0.25)',
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -83,14 +84,14 @@ const config: Config = {
           to: { height: "0" },
         },
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(4px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.25s ease-out",
+        "fade-in": "fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },

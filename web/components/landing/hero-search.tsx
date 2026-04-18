@@ -39,7 +39,7 @@ export function HeroSearch({
         <select
           value={specialization}
           onChange={(e) => setSpecialization(e.target.value)}
-          className="w-full appearance-none rounded-xl border-0 bg-white px-4 py-3.5 text-sm text-[#102240] shadow-sm ring-1 ring-inset ring-gray-200 focus:outline-none focus:ring-2 focus:ring-[#36A372]"
+          className="w-full appearance-none rounded-xl border-0 bg-background px-4 py-3.5 text-sm text-foreground shadow-sm ring-1 ring-inset ring-input focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All specializations</option>
           {specializations.map((s) => (
@@ -48,7 +48,7 @@ export function HeroSearch({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
           <svg
             className="h-4 w-4"
             fill="none"
@@ -72,14 +72,14 @@ export function HeroSearch({
           value={city}
           onChange={(e) => setCity(e.target.value)}
           placeholder="City (e.g. Warsaw)"
-          className="w-full rounded-xl border-0 bg-white px-4 py-3.5 text-sm text-[#102240] shadow-sm ring-1 ring-inset ring-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#36A372]"
+          className="w-full rounded-xl border-0 bg-background px-4 py-3.5 text-sm text-foreground shadow-sm ring-1 ring-inset ring-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </div>
 
       {/* Submit */}
       <button
         type="submit"
-        className="flex items-center justify-center gap-2 rounded-xl bg-[#36A372] px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#297A56] focus:outline-none focus:ring-2 focus:ring-[#36A372] focus:ring-offset-2 focus:ring-offset-[#102240]"
+        className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-sm font-semibold text-accent-foreground shadow-sm transition-colors hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background"
       >
         <Search size={16} />
         Search

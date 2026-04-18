@@ -17,7 +17,16 @@ import {
   refreshInviteCodeAction,
 } from "@/lib/actions/doctor";
 
-// ─── Invite Code Card ─────────────────────────────────────────────────────────
+// ─── Glass Card Class ───
+const glassCardClass = `
+  group relative overflow-hidden rounded-3xl p-6 transition-all duration-300
+  border border-white/20 border-t-white/40 dark:border-white/5 dark:border-t-white/10 
+  bg-gradient-to-br from-white/10 to-white/5 dark:from-white/[0.04] dark:to-transparent 
+  backdrop-blur-xl 
+  shadow-lg shadow-black/5 dark:shadow-black/20 
+  hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30 
+  hover:from-white/20 hover:to-white/10 dark:hover:from-white/[0.06] dark:hover:to-white/[0.01]
+`;
 
 function InviteCodeCard() {
   const [code, setCode] = useState<string | null>(null);
@@ -67,62 +76,59 @@ function InviteCodeCard() {
     : null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
-          <Key size={18} className="text-accent" />
+    <div className={glassCardClass}>
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner transition-transform group-hover:scale-110">
+          <Key size={22} className="text-accent dark:text-accent-light" />
         </div>
-        <span className="text-sm font-medium text-muted-foreground">
+        <span className="text-sm font-semibold text-muted-foreground">
           Invite Code
         </span>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-5">
         {loading ? (
-          <div className="h-8 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-10 w-48 animate-pulse rounded-lg bg-black/5 dark:bg-white/10" />
         ) : (
-          <p className="font-mono text-2xl font-bold tracking-widest text-foreground">
+          <p className="font-mono text-3xl font-black tracking-widest text-foreground">
             {code ?? "—"}
           </p>
         )}
         {expiryLabel && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock size={11} />
-            {expiryLabel}
+          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Clock size={14} /> {expiryLabel}
           </p>
         )}
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">
-        Share this code so a medical center can invite you. Valid for 72 hours.
+      <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
+        Share this code so a medical center can invite you.
       </p>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-5 flex gap-3">
         <Button
           size="sm"
           onClick={handleCopy}
           disabled={!code || loading}
-          className="gap-1.5"
+          className="gap-2 rounded-xl"
         >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? <Check size={16} /> : <Copy size={16} />}
           {copied ? "Copied!" : "Copy"}
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={handleRefresh}
           disabled={refreshing || loading}
-          className="gap-1.5"
+          className="gap-2 rounded-xl bg-secondary/50 backdrop-blur-sm hover:bg-secondary"
         >
-          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           Refresh
         </Button>
       </div>
     </div>
   );
 }
-
-// ─── Doctor Dashboard ─────────────────────────────────────────────────────────
 
 const placeholderCards = [
   {
@@ -141,35 +147,34 @@ const placeholderCards = [
 
 export function DoctorDashboard({ user }: { user: SessionUser }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">
+        <h2 className="text-3xl font-bold text-foreground tracking-tight">
           Welcome, Dr. {user.lastName}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-base text-muted-foreground">
           Manage your schedule, affiliated centers, and availability.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {placeholderCards.map(({ icon: Icon, label, value, sub }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-border bg-card p-5"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
-                <Icon size={18} className="text-accent" />
+          <div key={label} className={glassCardClass}>
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner transition-transform group-hover:scale-110">
+                <Icon
+                  size={22}
+                  className="text-accent dark:text-accent-light"
+                />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">
+              <span className="text-sm font-semibold text-muted-foreground">
                 {label}
               </span>
             </div>
-            <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+            <p className="mt-5 text-4xl font-black text-foreground">{value}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{sub}</p>
           </div>
         ))}
-
         <InviteCodeCard />
       </div>
     </div>
