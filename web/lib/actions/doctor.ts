@@ -9,7 +9,8 @@ import type {
   DoctorProfileResponse,
   InviteCodeResponse,
   SpecializationDto,
-  SpringPage
+  SpringPage,
+  MedicalCenterResponse
 } from "@/types/api"
 
 /**
@@ -97,6 +98,28 @@ export async function getDoctorsAction(specialization?: string, city?: string): 
   } catch (error) {
     // Prawidłowy pusty fallback SpringPage
     return { content: [], totalElements: 0, totalPages: 0, size: 12, number: 0 };
+  }
+}
+
+/**
+ * Fetches the public list of medical centers a doctor is affiliated with.
+ * Returns an empty array if the doctor has no centers or if an error occurs,
+ * to easily render the public profile without throwing exceptions.
+ */
+export async function getDoctorAffiliatedCentersAction(publicId: string): Promise<MedicalCenterResponse[]> {
+  try {
+    const res = await springFetch(`/api/doctors/${publicId}/centers`, { 
+      cache: "no-store" // Zawsze aktualne dane
+    });
+    
+    if (!res.ok) {
+      return [];
+    }
+    
+    return await res.json() as MedicalCenterResponse[];
+  } catch (error) {
+    console.error(`Failed to fetch affiliated centers for doctor ${publicId}:`, error);
+    return [];
   }
 }
 
