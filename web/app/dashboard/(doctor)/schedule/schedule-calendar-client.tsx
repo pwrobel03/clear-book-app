@@ -1,28 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, addDays, startOfDay, endOfDay, isSameDay } from "date-fns";
-import { Loader2, CalendarX, MapPin, Clock } from "lucide-react";
+import {
+  format,
+  addDays,
+  startOfDay,
+  endOfDay,
+  isSameDay,
+  startOfWeek,
+} from "date-fns";
+import {
+  Loader2,
+  MapPin,
+  Clock,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   getWorkingBlocksAction,
   type AvailabilityBlock,
 } from "@/lib/actions/schedule";
 import { GlassPanel } from "@/components/ui/glass";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export function ScheduleCalendarClient() {
   const [blocks, setBlocks] = useState<AvailabilityBlock[]>([]);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState(() => startOfDay(new Date()));
 
-  const endDate = addDays(startDate, 6); // 7 days view
+  const [startDate, setStartDate] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+  );
 
-  // Generate an array of 7 days for the UI
+  const endDate = addDays(startDate, 6);
   const days = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
   const fetchBlocks = async () => {
     setLoading(true);
-
     const startStr = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
     const endStr = format(endOfDay(endDate), "yyyy-MM-dd'T'HH:mm:ss");
 
@@ -38,104 +59,178 @@ export function ScheduleCalendarClient() {
     fetchBlocks();
   }, [startDate]);
 
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setStartDate(startOfWeek(date, { weekStartsOn: 1 }));
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-foreground">
-          {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
-        </h3>
-        <div className="flex gap-2">
+    <GlassPanel className="p-6 md:p-8">
+      {/* ─── HEADER ─── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h3 className="text-2xl font-black text-foreground tracking-tight">
+            {format(startDate, "MMMM yyyy")}
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {format(startDate, "MMM d")} — {format(endDate, "MMM d")}
+          </p>
+        </div>
+
+        {/* Nawigacja — w trybie ciemnym nieco jaśniejsza ramka */}
+        <div className="flex items-center gap-1 rounded-2xl bg-black/5 dark:bg-white/10 p-1 backdrop-blur-sm border border-black/5 dark:border-white/10 shadow-inner">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl hover:bg-white/50 dark:hover:bg-white/20"
             onClick={() => setStartDate(addDays(startDate, -7))}
           >
-            Previous
+            <ChevronLeft size={18} />
           </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-8 px-4 text-xs font-bold hover:bg-white/50 dark:hover:bg-white/20 rounded-xl"
+              >
+                <CalendarIcon size={14} className="mr-2 opacity-50" />
+                Select Week
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0 border-none shadow-2xl rounded-3xl"
+              align="end"
+            >
+              <GlassPanel className="p-2 border-none">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={handleDateSelect}
+                  initialFocus
+                  className="bg-transparent"
+                />
+              </GlassPanel>
+            </PopoverContent>
+          </Popover>
+
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setStartDate(startOfDay(new Date()))}
-          >
-            Today
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl hover:bg-white/50 dark:hover:bg-white/20"
             onClick={() => setStartDate(addDays(startDate, 7))}
           >
-            Next
+            <ChevronRight size={18} />
+          </Button>
+
+          <div className="w-px h-4 bg-black/10 dark:bg-white/20 mx-1" />
+
+          <Button
+            variant="ghost"
+            className="h-8 px-4 text-xs font-bold underline text-foreground dark:text-accent-light hover:bg-accent/10 dark:hover:bg-white/10 rounded-xl"
+            onClick={() =>
+              setStartDate(startOfWeek(new Date(), { weekStartsOn: 1 }))
+            }
+          >
+            Today
           </Button>
         </div>
       </div>
 
-      {/* Calendar Grid / List */}
-      <div className="grid gap-4">
-        {loading ? (
-          <div className="flex justify-center items-center h-48">
-            <Loader2 size={32} className="animate-spin text-primary/50" />
-          </div>
-        ) : (
-          days.map((day) => {
+      {/* ─── LISTA DNI ─── */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2
+            size={32}
+            className="animate-spin text-muted-foreground/50"
+          />
+        </div>
+      ) : (
+        <div className="flex flex-col relative">
+          {days.map((day, index) => {
             const dayBlocks = blocks.filter((b) =>
               isSameDay(new Date(b.startTime), day),
             );
-
             const isToday = isSameDay(day, new Date());
+            const hasBlocks = dayBlocks.length > 0;
 
             return (
-              <GlassPanel
+              <div
                 key={day.toISOString()}
-                className={`p-4 transition-all ${
-                  isToday ? "ring-2 ring-primary/50 bg-primary/5" : ""
-                }`}
+                className={cn(
+                  "group relative flex flex-col md:flex-row md:items-center gap-4 py-5 transition-all",
+                  index !== 0 && "border-t border-black/5 dark:border-white/10",
+                  // Jaśniejsze, szklane tło dla "dzisiaj" w dark mode
+                  isToday &&
+                    "bg-accent/5 dark:bg-white/5 -mx-6 px-6 rounded-2xl border-transparent",
+                )}
               >
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                  {/* Date Column */}
-                  <div className="w-24 shrink-0">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {format(day, "EEEE")}
-                    </p>
-                    <p
-                      className={`text-2xl font-bold ${isToday ? "text-primary" : "text-foreground"}`}
-                    >
-                      {format(day, "dd MMM")}
-                    </p>
-                  </div>
-
-                  {/* Blocks Column */}
-                  <div className="flex-1 flex flex-wrap gap-3">
-                    {dayBlocks.length > 0 ? (
-                      dayBlocks.map((block) => (
-                        <div
-                          key={block.id}
-                          className="flex flex-col gap-1 rounded-xl bg-background/50 border border-border/50 p-3 shadow-sm"
-                        >
-                          <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                            <Clock size={14} className="text-primary" />
-                            {format(new Date(block.startTime), "HH:mm")} -{" "}
-                            {format(new Date(block.endTime), "HH:mm")}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <MapPin size={12} />
-                            {block.centerName}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground italic">
-                        <CalendarX size={16} className="opacity-50" />
-                        No working blocks scheduled
-                      </div>
+                <div className="w-28 shrink-0 flex flex-row md:flex-col items-baseline md:items-start gap-2 md:gap-0">
+                  <p
+                    className={cn(
+                      "text-xs font-bold uppercase tracking-widest",
+                      // Rozjaśniony akcent w dark mode dla czytelności
+                      isToday
+                        ? "text-accent dark:text-accent-light"
+                        : "text-muted-foreground/70 dark:text-muted-foreground/60",
                     )}
-                  </div>
+                  >
+                    {format(day, "EEE")}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-2xl font-black",
+                      // Biel dla dzisiejszego dnia w dark mode
+                      isToday
+                        ? "text-accent dark:text-white"
+                        : hasBlocks
+                          ? "text-foreground"
+                          : "text-foreground/40 dark:text-white/30",
+                    )}
+                  >
+                    {format(day, "dd")}
+                  </p>
                 </div>
-              </GlassPanel>
+
+                <div className="flex-1 flex flex-wrap gap-2 md:gap-3">
+                  {hasBlocks ? (
+                    dayBlocks.map((block) => (
+                      <div
+                        key={block.id}
+                        // Zmiana tła pigułki w dark mode na półprzezroczystą biel
+                        className="flex items-center gap-3 rounded-2xl bg-background/60 dark:bg-white/5 border border-black/5 dark:border-white/10 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-primary/30 dark:hover:border-white/20"
+                      >
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                          {/* Ikona zegara jaśniejsza w dark mode */}
+                          <Clock
+                            size={14}
+                            className="text-primary dark:text-accent-light"
+                          />
+                          {format(new Date(block.startTime), "HH:mm")} -{" "}
+                          {format(new Date(block.endTime), "HH:mm")}
+                        </div>
+                        <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                          <MapPin size={12} className="opacity-70" />
+                          {block.centerName}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center h-full">
+                      {/* Czytelniejsza kreska dla pustych dni w trybie ciemnym */}
+                      <p className="text-sm font-medium text-muted-foreground/40 dark:text-white/20 italic">
+                        —
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
-          })
-        )}
-      </div>
-    </div>
+          })}
+        </div>
+      )}
+    </GlassPanel>
   );
 }
