@@ -9,7 +9,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @EqualsAndHashCode(of = "id")
-@ToString(exclude = {"slot", "patient"})
+@ToString(exclude = {"block", "patient", "service"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,25 +22,37 @@ public class Appointment {
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private UUID id;
 
-    // One-To-One Relationship with a Time Window
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "slot_id", nullable = false, unique = true)
-    private AvailabilitySlot slot;
+    // We link the appointment to the overall work block
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "block_id", nullable = false)
+    private AvailabilityBlock block;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
+
+    // Which service was chosen?
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id", nullable = false)
+    private DoctorService service;
+
+    // Exact times calculated during booking: e.g., 09:15 and 10:00 (for a 45min service)
+    @Column(nullable = false)
+    private LocalDateTime startTime;
+
+    @Column(nullable = false)
+    private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
 
-    @Column(columnDefinition = "TEXT")
-    private String patientNotes;
+    // Soft lock logic: If the status is RESERVED, it's valid only until this time
+    private LocalDateTime reservedUntil;
 
     @Column(columnDefinition = "TEXT")
-    private String cancellationReason;
+    private String patientNotes;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

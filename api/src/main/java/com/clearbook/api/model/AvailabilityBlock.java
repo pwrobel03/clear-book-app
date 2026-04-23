@@ -14,8 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "availability_slots")
-public class AvailabilitySlot {
+@Table(name = "availability_blocks")
+public class AvailabilityBlock {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -24,30 +24,19 @@ public class AvailabilitySlot {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
-    private User doctor; // Linked with doctor
+    private User doctor;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "center_id", nullable = false)
-    private MedicalCenter center; // Center, linked with slot
+    private MedicalCenter center;
 
-    // e.g., "Consultation", "USG", "Checkup"
-    @Column(nullable = false)
-    @Builder.Default
-    private String visitType = "Consultation";
-
+    // e.g., 08:00
     @Column(nullable = false)
     private LocalDateTime startTime;
 
+    // e.g., 16:00
     @Column(nullable = false)
     private LocalDateTime endTime;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private SlotStatus status = SlotStatus.AVAILABLE;
-
-    // Temporary block (Soft Lock)
-    private LocalDateTime lockedUntil;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -55,12 +44,5 @@ public class AvailabilitySlot {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-    }
-
-    /** Lazy Release Logic - Is the slot considered available? */
-    public boolean isActuallyAvailable() {
-        if (status == SlotStatus.AVAILABLE) return true;
-        // If it has RESERVED status but the lock time has already passed, it is considered free
-        return status == SlotStatus.RESERVED && lockedUntil != null && lockedUntil.isBefore(LocalDateTime.now());
     }
 }
