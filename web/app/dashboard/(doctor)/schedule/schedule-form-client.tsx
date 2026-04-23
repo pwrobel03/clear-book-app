@@ -30,7 +30,6 @@ const generateTimeOptions = () => {
     options.push(`${hours}:${minutes}`);
   }
 
-  // 8 godzin * 4 kwadranse = 32. Tniemy tablicę i zamieniamy kolejność!
   const startIndex = 32;
   return [...options.slice(startIndex), ...options.slice(0, startIndex)];
 };
@@ -51,8 +50,8 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
       return;
     }
 
-    const startIso = new Date(`${date}T${startTime}:00`).toISOString();
-    const endIso = new Date(`${date}T${endTime}:00`).toISOString();
+    const startIso = `${date}T${startTime}:00`;
+    const endIso = `${date}T${endTime}:00`;
 
     setLoading(true);
     const result = await createWorkingBlockAction({

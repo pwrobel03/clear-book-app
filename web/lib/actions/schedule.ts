@@ -26,3 +26,27 @@ export async function createWorkingBlockAction(data: {
 
   return result
 }
+
+export type AvailabilityBlock = {
+  id: string;
+  centerId: string;
+  centerName: string;
+  startTime: string;
+  endTime: string;
+};
+
+export async function getWorkingBlocksAction(
+  startIso: string,
+  endIso: string
+): Promise<ActionResult<AvailabilityBlock[]>> {
+  return callApi<AvailabilityBlock[]>(
+    () =>
+      springFetch(
+        `/api/schedule/blocks?start=${encodeURIComponent(startIso)}&end=${encodeURIComponent(endIso)}`,
+        {
+          method: "GET",
+        }
+      ),
+    "Failed to fetch working blocks."
+  );
+}

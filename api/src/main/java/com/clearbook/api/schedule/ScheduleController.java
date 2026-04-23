@@ -3,18 +3,18 @@ package com.clearbook.api.schedule;
 import com.clearbook.api.model.Appointment;
 import com.clearbook.api.model.AvailabilityBlock;
 import com.clearbook.api.model.User;
-import com.clearbook.api.schedule.dto.BookAppointmentRequest;
-import com.clearbook.api.schedule.dto.ConfirmAppointmentRequest;
-import com.clearbook.api.schedule.dto.CreateBlockRequest;
-import com.clearbook.api.schedule.dto.ReserveSlotRequest;
+import com.clearbook.api.schedule.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -44,7 +44,7 @@ public class ScheduleController {
     }
 
     /**
-     * PATIENT LOGIC STEP 1: Holds a time slot for 15 minutes.
+     * PATIENT LOGIC: Holds a time slot for 15 minutes.
      * Only users with the PATIENT role can access this.
      */
     @PostMapping("/reserve")
@@ -63,7 +63,7 @@ public class ScheduleController {
     }
 
     /**
-     * PATIENT LOGIC STEP 2: Confirms the reserved appointment.
+     * PATIENT LOGIC: Confirms the reserved appointment.
      */
     @PostMapping("/confirm")
     @PreAuthorize("hasRole('PATIENT')")
@@ -78,5 +78,19 @@ public class ScheduleController {
                 "appointmentId", confirmedAppointment.getId(),
                 "status", confirmedAppointment.getStatus()
         ));
+    }
+
+    /**
+     * DOCTOR: Fetches the doctor's working blocks in a given timeframe.
+     */
+    @GetMapping("/blocks")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<List<AvailabilityBlockResponse>> getDoctorBlocks(
+            @AuthenticationPrincipal User doctor,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+
+        List<AvailabilityBlockResponse> blocks = scheduleService.getDoctorBlocks(doctor, start, end);
+        return ResponseEntity.ok(blocks);
     }
 }

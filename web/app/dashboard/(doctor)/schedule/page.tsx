@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { Calendar as CalendarIcon, Clock, Building2 } from "lucide-react";
 import { getMyCentersAction } from "@/lib/actions/centers";
+import { ScheduleCalendarClient } from "./schedule-calendar-client";
 import { ScheduleFormClient } from "./schedule-form-client";
 
 export default async function SchedulePage() {
@@ -47,7 +48,7 @@ export default async function SchedulePage() {
             </div>
 
             {/* Right column: Calendar preview (placeholder for now) */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* <div className="lg:col-span-2 space-y-6">
               <GlassPanel className="p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
                 <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/5 border border-primary/10 shadow-inner mb-6">
                   <CalendarIcon size={32} className="text-primary/40" />
@@ -59,6 +60,12 @@ export default async function SchedulePage() {
                   Your upcoming working blocks and appointments will appear
                   here. Currently, we are building the calendar visualization.
                 </p>
+              </GlassPanel>
+            </div> */}
+            {/* Prawa kolumna: Podgląd kalendarza */}
+            <div className="lg:col-span-2 space-y-6">
+              <GlassPanel className="p-6">
+                <ScheduleCalendarClient />
               </GlassPanel>
             </div>
           </div>

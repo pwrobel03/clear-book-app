@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -46,6 +47,23 @@ public class ScheduleService {
 
         log.info("Doctor {} created a working block from {} to {}", doctor.getId(), request.getStartTime(), request.getEndTime());
         return blockRepository.save(block);
+    }
+
+    /**
+     * DOCTOR LOGIC: Fetches working blocks for a specific timeframe.
+     */
+    @Transactional(readOnly = true)
+    public List<AvailabilityBlockResponse> getDoctorBlocks(User doctor, LocalDateTime start, LocalDateTime end) {
+        return blockRepository.findByDoctorAndStartTimeBetweenOrderByStartTimeAsc(doctor, start, end)
+                .stream()
+                .map(block -> AvailabilityBlockResponse.builder()
+                        .id(block.getId())
+                        .centerId(block.getCenter().getId())
+                        .centerName(block.getCenter().getName())
+                        .startTime(block.getStartTime())
+                        .endTime(block.getEndTime())
+                        .build())
+                .toList();
     }
 
     /**
