@@ -93,4 +93,20 @@ public class ScheduleController {
         List<AvailabilityBlockResponse> blocks = scheduleService.getDoctorBlocks(doctor, start, end);
         return ResponseEntity.ok(blocks);
     }
+
+    /**
+     * 5. DOCTOR: Copies schedule from one week to future weeks.
+     */
+    @PostMapping("/blocks/copy")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> copyWeekSchedule(
+            @AuthenticationPrincipal User doctor,
+            @Valid @RequestBody CopyWeekRequest request) {
+
+        scheduleService.copyWeekSchedule(doctor, request);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Schedule copied successfully for " + request.getWeeksToCopy() + " weeks"
+        ));
+    }
 }

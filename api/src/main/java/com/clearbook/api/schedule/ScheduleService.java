@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,6 +65,54 @@ public class ScheduleService {
                         .endTime(block.getEndTime())
                         .build())
                 .toList();
+    }
+
+    /**
+     * DOCTOR LOGIC: Copies the working blocks from a specific week to future weeks.
+     */
+    @Transactional
+    public void copyWeekSchedule(User doctor, CopyWeekRequest request) {
+        LocalDateTime sourceStart = request.getSourceWeekStart();
+        LocalDateTime sourceEnd = sourceStart.plusDays(7);
+
+        // Download all blocks from the base week
+        List<AvailabilityBlock> sourceBlocks = blockRepository.findByDoctorAndStartTimeBetweenOrderByStartTimeAsc(
+                doctor, sourceStart, sourceEnd);
+
+        if (sourceBlocks.isEmpty()) {
+            throw new IllegalArgumentException("No working blocks found in the source week to copy.");
+        }
+
+        List<AvailabilityBlock> newBlocks = new ArrayList<>();
+
+        // Create duplicates for each subsequent week
+        for (int i = 1; i <= request.getWeeksToCopy(); i++) {
+            long daysToAdd = i * 7L;
+
+            for (AvailabilityBlock originalBlock : sourceBlocks) {
+                LocalDateTime newStartTime = originalBlock.getStartTime().plusDays(daysToAdd);
+                LocalDateTime newEndTime = originalBlock.getEndTime().plusDays(daysToAdd);
+
+                // Check if there is no block already in this new time (to avoid duplicates/conflicts)
+                boolean isOverlapping = blockRepository.existsOverlappingBlock(doctor, newStartTime, newEndTime);
+
+                if (!isOverlapping) {
+                    AvailabilityBlock clonedBlock = AvailabilityBlock.builder()
+                            .doctor(doctor)
+                            .center(originalBlock.getCenter())
+                            .startTime(newStartTime)
+                            .endTime(newEndTime)
+                            .build();
+                    newBlocks.add(clonedBlock);
+                }
+            }
+        }
+
+        // We save all generated blocks at once (Batch Insert)
+        if (!newBlocks.isEmpty()) {
+            blockRepository.saveAll(newBlocks);
+            log.info("Doctor {} copied {} blocks to {} future weeks.", doctor.getId(), sourceBlocks.size(), request.getWeeksToCopy());
+        }
     }
 
     /**

@@ -50,3 +50,19 @@ export async function getWorkingBlocksAction(
     "Failed to fetch working blocks."
   );
 }
+
+export async function copyWeekAction(data: {
+  sourceWeekStart: string;
+  weeksToCopy: number;
+}): Promise<ActionResult<{ message: string }>> {
+  const result = await callApi<{ message: string }>(
+    () =>
+      springFetch("/api/schedule/blocks/copy", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    "Failed to copy schedule."
+  );
+
+  return result;
+}
