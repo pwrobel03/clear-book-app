@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   format,
   addDays,
@@ -39,13 +39,19 @@ export function ScheduleCalendarClient() {
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
 
+  // Zostawiamy te zmienne do renderowania widoku
   const endDate = addDays(startDate, 6);
   const days = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
-  const fetchBlocks = async () => {
+  // POPRAWKA: Używamy startDate.getTime() w tablicy zależności,
+  // co daje 100% gwarancji, że funkcja odświeży się TYLKO gdy użytkownik zmieni tydzień.
+  const fetchBlocks = useCallback(async () => {
     setLoading(true);
+
+    // Obliczamy koniec tygodnia lokalnie, by nie polegać na zmiennych renderowanych z zewnątrz
+    const currentEndDate = addDays(startDate, 6);
     const startStr = format(startDate, "yyyy-MM-dd'T'HH:mm:ss");
-    const endStr = format(endOfDay(endDate), "yyyy-MM-dd'T'HH:mm:ss");
+    const endStr = format(endOfDay(currentEndDate), "yyyy-MM-dd'T'HH:mm:ss");
 
     const result = await getWorkingBlocksAction(startStr, endStr);
 
@@ -53,11 +59,20 @@ export function ScheduleCalendarClient() {
       setBlocks(result.data);
     }
     setLoading(false);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate.getTime()]); // Zależnością jest tylko prymitywna liczba (timestamp), co ucina nieskończoną pętlę!
 
+  // Pierwsze pobranie i reakcja na zmianę tygodnia
   useEffect(() => {
     fetchBlocks();
-  }, [startDate]);
+  }, [fetchBlocks]);
+
+  // Nasłuchiwanie na event z formularza ("Create Block")
+  useEffect(() => {
+    const handleRefresh = () => fetchBlocks();
+    window.addEventListener("refresh-schedule", handleRefresh);
+    return () => window.removeEventListener("refresh-schedule", handleRefresh);
+  }, [fetchBlocks]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {

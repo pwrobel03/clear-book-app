@@ -65,6 +65,8 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
     } else {
       toast.success("Working block created successfully!");
       setDate("");
+
+      window.dispatchEvent(new Event("refresh-schedule"));
     }
     setLoading(false);
   }
