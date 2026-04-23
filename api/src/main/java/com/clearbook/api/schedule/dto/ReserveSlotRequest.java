@@ -7,8 +7,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class CreateBlockRequest {
-    @NotNull private UUID centerId;
+public class ReserveSlotRequest {
+    @NotNull private UUID blockId;
+    @NotNull private UUID serviceId;
     @NotNull @Future private LocalDateTime startTime;
-    @NotNull @Future private LocalDateTime endTime;
 }
