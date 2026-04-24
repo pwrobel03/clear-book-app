@@ -1,11 +1,15 @@
 package com.clearbook.api.schedule;
 
+import com.clearbook.api.model.AppointmentStatus;
 import com.clearbook.api.model.User;
 import com.clearbook.api.schedule.dto.*;
 import com.clearbook.api.shared.dto.MessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,7 +47,7 @@ public class ScheduleController {
      * Only users with the PATIENT role can access this.
      */
     @PostMapping("/reserve")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> reserveSlot(
             @AuthenticationPrincipal User patient,
             @Valid @RequestBody ReserveSlotRequest request) {
@@ -56,7 +60,7 @@ public class ScheduleController {
      * PATIENT LOGIC: Confirms the reserved appointment.
      */
     @PostMapping("/confirm")
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<?> confirmAppointment(
             @AuthenticationPrincipal User patient,
             @Valid @RequestBody ConfirmAppointmentRequest request) {
@@ -132,5 +136,81 @@ public class ScheduleController {
 
         ClearScheduleResponse result = scheduleService.clearSchedule(doctor, request);
         return ResponseEntity.ok(result);
+    }
+
+    // ── PUBLIC ENDPOINTS (no authentication required) ──
+
+    /**
+     * PUBLIC: Returns available time slots for a specific doctor and service.
+     * These are virtual slots dynamically calculated from AvailabilityBlocks minus existing appointments.
+     * No authentication required — this is what the patient sees on the booking page.
+     */
+    @GetMapping("/doctors/{doctorId}/slots")
+    public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
+            @PathVariable UUID doctorId,
+            @RequestParam UUID serviceId) {
+
+        List<AvailableSlotResponse> slots = scheduleService.getAvailableSlots(doctorId, serviceId);
+        return ResponseEntity.ok(slots);
+    }
+
+    /**
+     * PUBLIC: Returns all active services offered by a specific doctor.
+     * Used by patients to choose a service before seeing available time slots.
+     */
+    @GetMapping("/doctors/{doctorId}/services")
+    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(
+            @PathVariable UUID doctorId) {
+
+        List<DoctorServiceResponse> services = scheduleService.getDoctorServices(doctorId);
+        return ResponseEntity.ok(services);
+    }
+
+    // ── PATIENT ENDPOINTS ──
+
+    /**
+     * PATIENT: Returns paginated list of the patient's appointments.
+     * Optionally filtered by status query param (e.g., ?status=SCHEDULED).
+     */
+    @GetMapping("/my-appointments")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<Page<AppointmentResponse>> getMyAppointments(
+            @AuthenticationPrincipal User patient,
+            @RequestParam(required = false) AppointmentStatus status,
+            @PageableDefault(size = 10) Pageable pageable) {
+
+        Page<AppointmentResponse> appointments = scheduleService.getPatientAppointments(patient, status, pageable);
+        return ResponseEntity.ok(appointments);
+    }
+
+    /**
+     * PATIENT: Cancels an appointment.
+     * Only SCHEDULED or RESERVED appointments can be cancelled.
+     */
+    @PostMapping("/my-appointments/{appointmentId}/cancel")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> cancelAppointment(
+            @AuthenticationPrincipal User patient,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse cancelled = scheduleService.cancelAppointment(patient, appointmentId);
+        return ResponseEntity.ok(cancelled);
+    }
+
+    // ── DOCTOR APPOINTMENT ENDPOINTS ──
+
+    /**
+     * DOCTOR: Returns paginated list of all appointments across the doctor's blocks.
+     * Optionally filtered by status.
+     */
+    @GetMapping("/doctor-appointments")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<Page<AppointmentResponse>> getDoctorAppointments(
+            @AuthenticationPrincipal User doctor,
+            @RequestParam(required = false) AppointmentStatus status,
+            @PageableDefault(size = 20) Pageable pageable) {
+
+        Page<AppointmentResponse> appointments = scheduleService.getDoctorAppointments(doctor, status, pageable);
+        return ResponseEntity.ok(appointments);
     }
 }

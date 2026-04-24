@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +26,7 @@ public class ScheduleService {
     private final DoctorServiceRepository doctorServiceRepository;
     private final MedicalCenterRepository centerRepository;
     private final CenterMembershipRepository membershipRepository;
+    private final UserRepository userRepository;
 
     /**
      * DOCTOR LOGIC: Creates a new working block for the doctor.
@@ -396,6 +400,160 @@ public class ScheduleService {
         }
 
         return cancelled;
+    }
+
+    // ── PUBLIC ENDPOINTS (no auth required) ──
+
+    /**
+     * PUBLIC: Returns all available time slots for a given doctor and service.
+     *
+     * Algorithm:
+     * 1. Fetch all future AvailabilityBlocks for the doctor.
+     * 2. For each block, fetch existing appointments (the "occupied" ranges).
+     * 3. Walk through the block in increments of serviceDuration, checking each
+     *    potential slot against the occupied ranges.
+     * 4. Return only the slots that fit without overlapping any existing appointment.
+     *
+     * This is a read-only operation — no locking needed.
+     * The actual race condition protection happens at reservation time (pessimistic lock).
+     */
+    @Transactional(readOnly = true)
+    public List<AvailableSlotResponse> getAvailableSlots(UUID doctorId, UUID serviceId) {
+        DoctorService service = doctorServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.isActive() || !service.getDoctor().getId().equals(doctorId)) {
+            throw new IllegalArgumentException("Invalid service for this doctor.");
+        }
+
+        int duration = service.getDurationMinutes();
+        List<AvailabilityBlock> futureBlocks = blockRepository.findFutureBlocksByDoctorId(
+                doctorId, LocalDateTime.now());
+
+        List<AvailableSlotResponse> slots = new ArrayList<>();
+
+        for (AvailabilityBlock block : futureBlocks) {
+            List<Appointment> occupied = appointmentRepository.findActiveAppointmentsByBlock(block);
+
+            LocalDateTime cursor = block.getStartTime();
+
+            // If the block has already started, snap cursor to next clean interval
+            if (cursor.isBefore(LocalDateTime.now())) {
+                cursor = LocalDateTime.now().plusMinutes(1);
+                // Round up to next 5-minute mark for clean UX
+                int minute = cursor.getMinute();
+                int roundedUp = ((minute / 5) + 1) * 5;
+                cursor = cursor.withMinute(0).withSecond(0).withNano(0).plusMinutes(roundedUp);
+            }
+
+            while (!cursor.plusMinutes(duration).isAfter(block.getEndTime())) {
+                LocalDateTime slotEnd = cursor.plusMinutes(duration);
+
+                // Check if this candidate slot overlaps with any occupied appointment
+                boolean isOccupied = false;
+                for (Appointment app : occupied) {
+                    // Expired RESERVED appointments don't count as occupied
+                    if (app.getStatus() == AppointmentStatus.RESERVED &&
+                            app.getReservedUntil() != null &&
+                            app.getReservedUntil().isBefore(LocalDateTime.now())) {
+                        continue;
+                    }
+
+                    if (cursor.isBefore(app.getEndTime()) && slotEnd.isAfter(app.getStartTime())) {
+                        isOccupied = true;
+                        break;
+                    }
+                }
+
+                if (!isOccupied) {
+                    slots.add(AvailableSlotResponse.builder()
+                            .blockId(block.getId())
+                            .centerId(block.getCenter().getId())
+                            .centerName(block.getCenter().getName())
+                            .startTime(cursor)
+                            .endTime(slotEnd)
+                            .build());
+                }
+
+                cursor = cursor.plusMinutes(duration);
+            }
+        }
+
+        return slots;
+    }
+
+    /**
+     * PUBLIC: Returns all active services offered by a specific doctor.
+     */
+    @Transactional(readOnly = true)
+    public List<DoctorServiceResponse> getDoctorServices(UUID doctorId) {
+        User doctor = findDoctorById(doctorId);
+        return doctorServiceRepository.findAllByDoctorAndActiveTrue(doctor).stream()
+                .map(s -> DoctorServiceResponse.builder()
+                        .id(s.getId())
+                        .name(s.getName())
+                        .durationMinutes(s.getDurationMinutes())
+                        .price(s.getPrice())
+                        .build())
+                .toList();
+    }
+
+    // ── PATIENT ENDPOINTS ──
+
+    /**
+     * PATIENT: Returns paginated list of the patient's appointments.
+     * Optionally filtered by status (SCHEDULED, COMPLETED, CANCELLED, etc.)
+     */
+    @Transactional(readOnly = true)
+    public Page<AppointmentResponse> getPatientAppointments(User patient, AppointmentStatus status, Pageable pageable) {
+        return appointmentRepository.findByPatient(patient, status, pageable)
+                .map(this::toResponse);
+    }
+
+    /**
+     * PATIENT: Cancels a scheduled appointment.
+     * Only the owning patient can cancel, and only if the appointment is SCHEDULED or RESERVED.
+     */
+    @Transactional
+    public AppointmentResponse cancelAppointment(User patient, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        if (!appointment.getPatient().equals(patient)) {
+            throw new IllegalStateException("You do not have permission to cancel this appointment.");
+        }
+
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED &&
+                appointment.getStatus() != AppointmentStatus.RESERVED) {
+            throw new IllegalStateException(
+                    "Cannot cancel appointment with status: " + appointment.getStatus() + ".");
+        }
+
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointment.setReservedUntil(null);
+
+        log.info("Patient {} cancelled appointment {}.", patient.getId(), appointmentId);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    // ── DOCTOR ENDPOINTS ──
+
+    /**
+     * DOCTOR: Returns paginated list of the doctor's appointments (across all blocks).
+     * Optionally filtered by status.
+     */
+    @Transactional(readOnly = true)
+    public Page<AppointmentResponse> getDoctorAppointments(User doctor, AppointmentStatus status, Pageable pageable) {
+        return appointmentRepository.findByDoctor(doctor, status, pageable)
+                .map(this::toResponse);
+    }
+
+    // ── Private helpers ──
+
+    private User findDoctorById(UUID doctorId) {
+        return userRepository.findById(doctorId)
+                .filter(u -> u.getRole() == Role.DOCTOR)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor not found."));
     }
 
     // ── Mapping helper ──
