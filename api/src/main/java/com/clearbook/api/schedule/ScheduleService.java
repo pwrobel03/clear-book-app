@@ -500,6 +500,10 @@ public class ScheduleService {
                 .toList();
     }
 
+    /**
+     * DOCTOR LOGIC: Returns all services offered by the doctor, including inactive ones.
+     * Inactive services are needed to show the history of appointments that were booked with them.
+     */
     @Transactional(readOnly = true)
     public List<DoctorServiceResponse> getMyServices(User doctor) {
         return doctorServiceRepository.findByDoctor(doctor).stream()
@@ -513,6 +517,9 @@ public class ScheduleService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * DOCTOR LOGIC: Creates a new doctor service.
+     */
     @Transactional
     public DoctorServiceResponse createDoctorService(User doctor, CreateDoctorServiceRequest request) {
         DoctorService service = DoctorService.builder()
@@ -533,7 +540,10 @@ public class ScheduleService {
                 .active(service.isActive())
                 .build();
     }
-
+    
+    /**
+     * DOCTOR LOGIC: Updates an existing doctor service.
+     */
     @Transactional
     public DoctorServiceResponse updateDoctorService(User doctor, UUID serviceId, CreateDoctorServiceRequest request) {
         DoctorService service = doctorServiceRepository.findById(serviceId)
@@ -543,14 +553,39 @@ public class ScheduleService {
             throw new IllegalStateException("You do not have permission to edit this service.");
         }
 
-        // Aktualizujemy dane
+        // Check if there are any appointments booked with this service
+        if (appointmentRepository.existsByService(service)) {
+            // (Copy-on-Write)
+            service.setActive(false);
+            doctorServiceRepository.save(service);
+
+            // Create a new service with the updated details, linked to the same doctor
+            DoctorService newVersion = DoctorService.builder()
+                    .doctor(doctor)
+                    .name(request.getName())
+                    .durationMinutes(request.getDurationMinutes())
+                    .price(request.getPrice())
+                    .active(true)
+                    .build();
+
+            newVersion = doctorServiceRepository.save(newVersion);
+
+            return DoctorServiceResponse.builder()
+                    .id(newVersion.getId())
+                    .name(newVersion.getName())
+                    .durationMinutes(newVersion.getDurationMinutes())
+                    .price(newVersion.getPrice())
+                    .active(newVersion.isActive())
+                    .build();
+        }
+
+        // If no appointments are linked, we can safely update the existing service
         service.setName(request.getName());
         service.setDurationMinutes(request.getDurationMinutes());
         service.setPrice(request.getPrice());
-
-        // Zapisujemy zmiany
         service = doctorServiceRepository.save(service);
 
+        // Return the updated service details
         return DoctorServiceResponse.builder()
                 .id(service.getId())
                 .name(service.getName())
@@ -560,6 +595,11 @@ public class ScheduleService {
                 .build();
     }
 
+    /**
+     * DOCTOR LOGIC: Deactivates a doctor service.
+     * If there are any appointments booked with this service, it cannot be deleted but will be marked as inactive (soft delete).
+     * Inactive services won't appear in the booking form for new appointments, but historical appointments remain linked to them for reporting.
+     */
     @Transactional
     public void deactivateDoctorService(User doctor, UUID serviceId) {
         DoctorService service = doctorServiceRepository.findById(serviceId)
@@ -638,6 +678,9 @@ public class ScheduleService {
 
     // ── Mapping helpers ──
 
+    /**
+     * Converts a DoctorService entity to a DoctorServiceResponse DTO.
+     */
     private DoctorServiceResponse toServiceResponse(DoctorService s) {
         return DoctorServiceResponse.builder()
                 .id(s.getId())
@@ -647,6 +690,9 @@ public class ScheduleService {
                 .build();
     }
 
+    /**
+     * Converts an Appointment entity to an AppointmentResponse DTO.
+     */
     private AppointmentResponse toResponse(Appointment a) {
         return AppointmentResponse.builder()
                 .id(a.getId())
