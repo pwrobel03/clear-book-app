@@ -51,6 +51,7 @@ export async function getWorkingBlocksAction(
   );
 }
 
+/* Duplicate Week to fill the schedule */
 export async function copyWeekAction(data: {
   sourceWeekStart: string;
   weeksToCopy: number;
@@ -62,6 +63,21 @@ export async function copyWeekAction(data: {
         body: JSON.stringify(data),
       }),
     "Failed to copy schedule."
+  );
+
+  return result;
+}
+
+/* Delete a working block to handle deletion, updates, free slots */
+export async function deleteWorkingBlockAction(
+  blockId: string
+): Promise<ActionResult<{ message: string }>> {
+  const result = await callApi<{ message: string }>(
+    () =>
+      springFetch(`/api/schedule/blocks/${blockId}`, {
+        method: "DELETE",
+      }),
+    "Failed to delete working block."
   );
 
   return result;

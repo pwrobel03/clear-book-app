@@ -17,10 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Trash2,
 } from "lucide-react";
 import {
   getWorkingBlocksAction,
   copyWeekAction,
+  deleteWorkingBlockAction,
   type AvailabilityBlock,
 } from "@/lib/actions/schedule";
 import { toast } from "sonner";
@@ -40,6 +42,7 @@ export function ScheduleCalendarClient() {
   const [loading, setLoading] = useState(true);
   const [isCopying, setIsCopying] = useState(false);
   const [weeksToCopy, setWeeksToCopy] = useState("4");
+  const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null);
 
   const [startDate, setStartDate] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -48,6 +51,7 @@ export function ScheduleCalendarClient() {
   const endDate = addDays(startDate, 6);
   const days = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
+  // Function to fetch working blocks for the current week
   const fetchBlocks = useCallback(async () => {
     setLoading(true);
 
@@ -63,12 +67,12 @@ export function ScheduleCalendarClient() {
     setLoading(false);
   }, [startDate.getTime()]);
 
-  // Pierwsze pobranie i reakcja na zmianę tygodnia
+  // First fetch when component mounts and whenever startDate changes
   useEffect(() => {
     fetchBlocks();
   }, [fetchBlocks]);
 
-  // Nasłuchiwanie na event z formularza ("Create Block")
+  // Listener for "refresh-schedule" event to allow external triggers to refresh the schedule
   useEffect(() => {
     const handleRefresh = () => fetchBlocks();
     window.addEventListener("refresh-schedule", handleRefresh);
@@ -81,6 +85,7 @@ export function ScheduleCalendarClient() {
     }
   };
 
+  // Function to handle copying the week's schedule with user feedback
   const handleCopyWeek = async () => {
     const weeks = parseInt(weeksToCopy, 10);
     if (isNaN(weeks) || weeks < 1 || weeks > 12) {
@@ -106,6 +111,24 @@ export function ScheduleCalendarClient() {
     setIsCopying(false);
   };
 
+  // Function to handle deleting a working block with user feedback
+  const handleDeleteBlock = async (blockId: string) => {
+    setDeletingBlockId(blockId);
+
+    const result = await deleteWorkingBlockAction(blockId);
+
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(
+        result.data?.message || "Working block deleted successfully",
+      );
+      fetchBlocks();
+      window.dispatchEvent(new Event("refresh-schedule"));
+    }
+    setDeletingBlockId(null);
+  };
+
   return (
     <GlassPanel className="p-6 md:p-8">
       {/* ─── HEADER ─── */}
@@ -119,9 +142,7 @@ export function ScheduleCalendarClient() {
           </p>
         </div>
 
-        {/* Kontrolki po prawej stronie */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Nawigacja — w trybie ciemnym nieco jaśniejsza ramka */}
           <div className="flex items-center gap-1 rounded-2xl bg-black/5 dark:bg-white/10 p-1 backdrop-blur-sm border border-black/5 dark:border-white/10 shadow-inner">
             <Button
               variant="ghost"
@@ -180,7 +201,7 @@ export function ScheduleCalendarClient() {
             </Button>
           </div>
 
-          {/* NOWE: Przycisk Copy Week z popoverem */}
+          {/* Copy week button with popover */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -252,7 +273,6 @@ export function ScheduleCalendarClient() {
                 className={cn(
                   "group relative flex flex-col md:flex-row md:items-center gap-4 py-5 transition-all",
                   index !== 0 && "border-t border-black/5 dark:border-white/10",
-                  // Jaśniejsze, szklane tło dla "dzisiaj" w dark mode
                   isToday &&
                     "bg-accent/5 dark:bg-white/5 -mx-6 px-6 rounded-2xl border-transparent",
                 )}
@@ -261,7 +281,6 @@ export function ScheduleCalendarClient() {
                   <p
                     className={cn(
                       "text-xs font-bold uppercase tracking-widest",
-                      // Rozjaśniony akcent w dark mode dla czytelności
                       isToday
                         ? "text-accent dark:text-accent-light"
                         : "text-muted-foreground/70 dark:text-muted-foreground/60",
@@ -272,7 +291,6 @@ export function ScheduleCalendarClient() {
                   <p
                     className={cn(
                       "text-2xl font-black",
-                      // Biel dla dzisiejszego dnia w dark mode
                       isToday
                         ? "text-accent dark:text-white"
                         : hasBlocks
@@ -287,30 +305,69 @@ export function ScheduleCalendarClient() {
                 <div className="flex-1 flex flex-wrap gap-2 md:gap-3">
                   {hasBlocks ? (
                     dayBlocks.map((block) => (
-                      <div
-                        key={block.id}
-                        // Zmiana tła pigułki w dark mode na półprzezroczystą biel
-                        className="flex items-center gap-3 rounded-2xl bg-background/60 dark:bg-white/5 border border-black/5 dark:border-white/10 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-primary/30 dark:hover:border-white/20"
-                      >
-                        <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                          {/* Ikona zegara jaśniejsza w dark mode */}
-                          <Clock
-                            size={14}
-                            className="text-primary dark:text-accent-light"
-                          />
-                          {format(new Date(block.startTime), "HH:mm")} -{" "}
-                          {format(new Date(block.endTime), "HH:mm")}
-                        </div>
-                        <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
-                          <MapPin size={12} className="opacity-70" />
-                          {block.centerName}
-                        </div>
-                      </div>
+                      <Popover key={block.id}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "flex items-center gap-3 rounded-2xl bg-background/60 dark:bg-white/5 border border-black/5 dark:border-white/10 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-destructive/40 dark:hover:border-destructive/40 outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                              deletingBlockId === block.id &&
+                                "opacity-50 pointer-events-none",
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                              {deletingBlockId === block.id ? (
+                                <Loader2
+                                  size={14}
+                                  className="animate-spin text-destructive"
+                                />
+                              ) : (
+                                <Clock
+                                  size={14}
+                                  className="text-primary dark:text-accent-light"
+                                />
+                              )}
+                              {format(new Date(block.startTime), "HH:mm")} -{" "}
+                              {format(new Date(block.endTime), "HH:mm")}
+                            </div>
+                            <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                              <MapPin size={12} className="opacity-70" />
+                              {block.centerName}
+                            </div>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-64 p-4 rounded-2xl"
+                          align="center"
+                          side="top"
+                        >
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-bold text-sm text-destructive flex items-center gap-2">
+                                <Trash2 size={14} />
+                                Delete Shift
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                Are you sure you want to remove this working
+                                block? Any appointments scheduled in this
+                                timeframe will be automatically cancelled.
+                              </p>
+                            </div>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="w-full gap-2 rounded-xl shadow-sm"
+                              onClick={() => handleDeleteBlock(block.id)}
+                            >
+                              Confirm Deletion
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     ))
                   ) : (
                     <div className="flex items-center h-full">
-                      {/* Czytelniejsza kreska dla pustych dni w trybie ciemnym */}
                       <p className="text-sm font-medium text-muted-foreground/40 dark:text-white/20 italic">
                         —
                       </p>
