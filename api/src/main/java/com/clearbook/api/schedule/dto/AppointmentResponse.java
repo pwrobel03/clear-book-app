@@ -19,8 +19,10 @@ public class AppointmentResponse {
     // Doctor info
     private String doctorFirstName;
     private String doctorLastName;
+    private String doctorPublicId;
     // Center info
     private String centerName;
+    private UUID centerId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private AppointmentStatus status;

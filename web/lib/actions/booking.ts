@@ -39,6 +39,8 @@ export type AppointmentResponse = {
   serviceDurationMinutes: number;
   doctorFirstName: string;
   doctorLastName: string;
+  doctorPublicId: string;
+  centerId: string;
   centerName: string;
   startTime: string;
   endTime: string;

@@ -6,10 +6,8 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Stethoscope,
   MessageSquare,
   ArrowLeft,
-  CheckCircle2,
   AlertCircle,
   Building2,
   Loader2,
@@ -36,7 +34,7 @@ export function AppointmentDetailClient({
   const [isConfirming, setIsConfirming] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  // Logika odliczania 15 minut dla statusu RESERVED
+  // Logic for counting down 15 minutes for RESERVED status
   useEffect(() => {
     if (appointment.status !== "RESERVED" || !appointment.reservedUntil) return;
 
@@ -85,7 +83,7 @@ export function AppointmentDetailClient({
       </Link>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        {/* Lewa kolumna: Informacje o wizycie */}
+        {/* Information about the appointment */}
         <div className="md:col-span-2 space-y-6">
           <GlassPanel className="p-8">
             <div className="flex justify-between items-start mb-6">
@@ -128,7 +126,7 @@ export function AppointmentDetailClient({
               </div>
             </div>
 
-            {/* Sekcja Potwierdzenia dla RESERVED */}
+            {/* Section for reservation completion */}
             {appointment.status === "RESERVED" && (
               <div className="mt-8 p-6 border-2 border-dashed border-accent/30 rounded-2xl bg-accent/5">
                 <div className="flex items-center justify-between mb-4">
@@ -207,11 +205,7 @@ export function AppointmentDetailClient({
             Related pages
           </h3>
 
-          <Link
-            href={
-              `/doctors/${appointment.doctorFirstName}-${appointment.doctorLastName}` /* Tu docelowo publicId */
-            }
-          >
+          <Link href={`/doctors/${appointment.doctorPublicId}`}>
             <GlassCard className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                 <User size={20} />
@@ -226,7 +220,7 @@ export function AppointmentDetailClient({
             </GlassCard>
           </Link>
 
-          <Link href="/centers" /* Tu docelowo ID centrum */>
+          <Link href={`/centers/${appointment.centerId}`}>
             <GlassCard className="p-4 flex items-center gap-4">
               <div className="h-10 w-10 bg-accent/10 rounded-xl flex items-center justify-center text-accent">
                 <Building2 size={20} />

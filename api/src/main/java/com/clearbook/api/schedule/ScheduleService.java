@@ -825,6 +825,10 @@ public class ScheduleService {
      * Converts an Appointment entity to an AppointmentResponse DTO.
      */
     private AppointmentResponse toResponse(Appointment a) {
+        String publicId = doctorProfileRepository.findByUser(a.getBlock().getDoctor())
+                .map(DoctorProfile::getPublicId)
+                .orElse("no-id");
+
         return AppointmentResponse.builder()
                 .id(a.getId())
                 .blockId(a.getBlock().getId())
@@ -834,6 +838,8 @@ public class ScheduleService {
                 .serviceDurationMinutes(a.getService().getDurationMinutes())
                 .doctorFirstName(a.getBlock().getDoctor().getFirstName())
                 .doctorLastName(a.getBlock().getDoctor().getLastName())
+                .doctorPublicId(publicId)
+                .centerId(a.getBlock().getCenter().getId())
                 .centerName(a.getBlock().getCenter().getName())
                 .startTime(a.getStartTime())
                 .endTime(a.getEndTime())

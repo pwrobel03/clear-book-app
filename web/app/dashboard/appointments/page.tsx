@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Link,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   type AppointmentStatus,
 } from "@/lib/actions/booking";
 import { DashboardHeader } from "@/components/dashboard/header";
+import { useRouter } from "next/dist/client/components/navigation";
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -186,7 +188,11 @@ function AppointmentCard({
             size="sm"
             className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10 hover:text-red-600"
             disabled={cancelling}
-            onClick={() => onCancel(appointment.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onCancel(appointment.id);
+            }}
           >
             {cancelling ? (
               <Loader2 size={14} className="animate-spin" />
@@ -206,6 +212,8 @@ function AppointmentCard({
 const PAGE_SIZE = 10;
 
 export default function AppointmentsPage() {
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [appointments, setAppointments] = useState<AppointmentResponse[]>([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -364,13 +372,20 @@ export default function AppointmentsPage() {
             </GlassPanel>
           ) : (
             <div className="space-y-4">
-              {appointments.map((appt) => (
-                <AppointmentCard
-                  key={appt.id}
-                  appointment={appt}
-                  onCancel={handleCancel}
-                  cancelling={cancellingId === appt.id}
-                />
+              {appointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  onClick={() =>
+                    router.push(`/dashboard/appointments/${appointment.id}`)
+                  }
+                  className="block transition-transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                >
+                  <AppointmentCard
+                    appointment={appointment}
+                    onCancel={handleCancel}
+                    cancelling={cancellingId === appointment.id}
+                  />
+                </div>
               ))}
             </div>
           )}
