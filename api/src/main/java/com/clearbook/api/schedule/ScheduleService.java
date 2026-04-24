@@ -1,5 +1,6 @@
 package com.clearbook.api.schedule;
 
+import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.*;
 import com.clearbook.api.schedule.dto.*;
@@ -28,6 +29,7 @@ public class ScheduleService {
     private final MedicalCenterRepository centerRepository;
     private final CenterMembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final DoctorProfileRepository doctorProfileRepository;
 
     /**
      * DOCTOR LOGIC: Creates a new working block for the doctor.
@@ -419,8 +421,17 @@ public class ScheduleService {
      * The actual race condition protection happens at reservation time (pessimistic lock).
      */
     @Transactional(readOnly = true)
-    public List<AvailableSlotResponse> getAvailableSlots(UUID doctorId, UUID serviceId,
-                                                          LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+    public List<AvailableSlotResponse> getAvailableSlots(String publicId, UUID serviceId,
+                                                         LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+
+        // 1. Pobieramy profil lekarza na podstawie publicId
+        DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found for publicId: " + publicId));
+
+        // Z profilu wyciągamy ID użytkownika (lekarza)
+        UUID doctorId = profile.getUser().getId();
+
+        // 2. Walidacja usługi
         DoctorService service = doctorServiceRepository.findById(serviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found."));
 
@@ -429,6 +440,19 @@ public class ScheduleService {
         }
 
         int duration = service.getDurationMinutes();
+        LocalDateTime now = LocalDateTime.now(); // Zmienna 'now', którą już dodaliśmy wcześniej
+
+        // --- DODAJ TEN FRAGMENT ---
+        // Jeśli frontend nie przekazał daty początkowej, szukaj od "teraz"
+        if (rangeStart == null) {
+            rangeStart = now;
+        }
+        // Jeśli frontend nie przekazał daty końcowej, szukaj np. miesiąc do przodu
+        if (rangeEnd == null) {
+            rangeEnd = rangeStart.plusMonths(1);
+        }
+
+        // 3. Pobranie przyszłych bloków dostępności na podstawie wewnętrznego UUID lekarza
         List<AvailabilityBlock> futureBlocks = blockRepository.findFutureBlocksByDoctorId(
                 doctorId, LocalDateTime.now(), rangeStart, rangeEnd);
 
@@ -439,34 +463,43 @@ public class ScheduleService {
 
             LocalDateTime cursor = block.getStartTime();
 
-            // If the block has already started, snap cursor to next clean interval
-            if (cursor.isBefore(LocalDateTime.now())) {
-                cursor = LocalDateTime.now().plusMinutes(1);
-                // Round up to next 5-minute mark for clean UX
+            // Jeśli blok już się rozpoczął, przesuwamy kursor na następny pełny interwał
+            if (cursor.isBefore(now)) {
+                cursor = now.plusMinutes(1);
+
+                // Bezpieczniejsze zaokrąglanie do pełnych 5 minut w górę
                 int minute = cursor.getMinute();
-                int roundedUp = ((minute / 5) + 1) * 5;
-                cursor = cursor.withMinute(0).withSecond(0).withNano(0).plusMinutes(roundedUp);
+                int remainder = minute % 5;
+                if (remainder != 0) {
+                    cursor = cursor.plusMinutes(5 - remainder);
+                }
+                cursor = cursor.withSecond(0).withNano(0);
             }
 
+            // Szukamy wolnych slotów wewnątrz bloku
             while (!cursor.plusMinutes(duration).isAfter(block.getEndTime())) {
                 LocalDateTime slotEnd = cursor.plusMinutes(duration);
 
-                // Check if this candidate slot overlaps with any occupied appointment
+                // Sprawdzamy, czy ten kandydat na slot nie nakłada się na istniejące rezerwacje
                 boolean isOccupied = false;
                 for (Appointment app : occupied) {
-                    // Expired RESERVED appointments don't count as occupied
-                    if (app.getStatus() == AppointmentStatus.RESERVED &&
+                    // Wygasłe (nieopłacone w czasie) rezerwacje ignorujemy
+                    boolean isExpiredReservation = app.getStatus() == AppointmentStatus.RESERVED &&
                             app.getReservedUntil() != null &&
-                            app.getReservedUntil().isBefore(LocalDateTime.now())) {
+                            app.getReservedUntil().isBefore(now);
+
+                    if (isExpiredReservation) {
                         continue;
                     }
 
+                    // Logika nakładania się przedziałów czasowych (overlap)
                     if (cursor.isBefore(app.getEndTime()) && slotEnd.isAfter(app.getStartTime())) {
                         isOccupied = true;
                         break;
                     }
                 }
 
+                // Jeśli slot jest wolny, dodajemy do listy
                 if (!isOccupied) {
                     slots.add(AvailableSlotResponse.builder()
                             .blockId(block.getId())
@@ -477,6 +510,7 @@ public class ScheduleService {
                             .build());
                 }
 
+                // Przesuwamy kursor o czas trwania usługi, aby szukać kolejnego slotu
                 cursor = cursor.plusMinutes(duration);
             }
         }
@@ -488,15 +522,17 @@ public class ScheduleService {
      * PUBLIC: Returns all active services offered by a specific doctor.
      */
     @Transactional(readOnly = true)
-    public List<DoctorServiceResponse> getDoctorServices(UUID doctorId) {
-        User doctor = findDoctorById(doctorId);
-        return doctorServiceRepository.findAllByDoctorAndActiveTrue(doctor).stream()
-                .map(s -> DoctorServiceResponse.builder()
-                        .id(s.getId())
-                        .name(s.getName())
-                        .durationMinutes(s.getDurationMinutes())
-                        .price(s.getPrice())
-                        .build())
+    public List<DoctorServiceResponse> getDoctorServices(String publicId) {
+        // 1. Najpierw znajdujesz profil lekarza po jego publicId
+        DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
+
+        // 2. Z profilu wyciągasz encję User (lekarza) i szukasz jego usług
+        User doctor = profile.getUser();
+
+        return doctorServiceRepository.findAllByDoctorAndActiveTrue(doctor)
+                .stream()
+                .map(this::toServiceResponse)
                 .toList();
     }
 

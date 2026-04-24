@@ -71,9 +71,9 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
      */
     @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor.id = :doctorId " +
             "AND b.endTime > :now " +
-            "AND (:rangeStart IS NULL OR b.endTime > :rangeStart) " +
-            "AND (:rangeEnd IS NULL OR b.startTime < :rangeEnd) " +
-            "ORDER BY b.startTime ASC")
+            "AND b.endTime > :rangeStart " +
+            "AND b.startTime < :rangeEnd " +
+            "ORDER BY b.startTime")
     List<AvailabilityBlock> findFutureBlocksByDoctorId(
             @Param("doctorId") UUID doctorId,
             @Param("now") LocalDateTime now,

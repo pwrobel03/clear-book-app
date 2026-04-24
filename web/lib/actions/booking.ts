@@ -30,15 +30,13 @@ export type AvailableSlotResponse = {
 /**
  * PUBLIC: Fetches all services offered by a specific doctor.
  */
-export async function getDoctorServicesAction(
-  doctorId: string
-): Promise<ActionResult<DoctorServiceResponse[]>> {
-  return callApi<DoctorServiceResponse[]>(
-    () =>
-      springFetch(`/api/schedule/doctors/${doctorId}/services`, {
-        method: "GET",
-      }),
-    "Failed to fetch doctor's services."
+export async function getDoctorServicesAction(identifier: string): Promise<ActionResult<DoctorServiceResponse[]>> {
+  return callApi(
+    () => springFetch(`/api/schedule/doctors/${identifier}/services`, { 
+      method: "GET",
+      cache: "no-store"
+    }),
+    "Failed to fetch doctor services."
   );
 }
 
@@ -63,7 +61,24 @@ export async function getAvailableSlotsAction(
     () =>
       springFetch(`/api/schedule/doctors/${doctorId}/slots?${query}`, {
         method: "GET",
+        cache: "no-store", // Always fetch fresh data for slots in case of recent changes
       }),
     "Failed to fetch available time slots."
+  );
+}
+
+export async function bookAppointmentAction(data: {
+  blockId: string;
+  serviceId: string;
+  startTime: string; // ISO String, np. "2026-05-10T10:00:00"
+  endTime: string;   // ISO String, np. "2026-05-10T10:30:00"
+  patientNotes?: string;
+}): Promise<ActionResult<any>> {
+  return callApi(
+    () => springFetch(`/api/schedule/appointments`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    "Failed to book appointment. The slot might have just been taken!"
   );
 }

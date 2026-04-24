@@ -17,7 +17,6 @@ import {
   getDoctorAffiliatedCentersAction,
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
-import { log } from "node:console";
 import { DoctorBookingClient } from "./booking-client";
 
 // TODO: This page is the public profile of a doctor. It shows basic information about the doctor (name, specializations, bio) and a CTA to book an appointment (which leads to the auth page for now, since only authenticated users will be able to book appointments). If the doctor has chosen to keep their profile private, we show a message saying that the profile is private and they should contact the medical facility directly.
@@ -248,7 +247,7 @@ export default async function DoctorProfilePage({
             </GlassPanel>
           </div>
         </div>
-        <DoctorBookingClient doctorId={doctor.id} />
+        <DoctorBookingClient doctorId={publicId} />
       </main>
     </div>
   );

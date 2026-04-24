@@ -195,31 +195,21 @@ public class ScheduleController {
     // ── PUBLIC ENDPOINTS (no authentication required) ──
 
     /**
-     * PUBLIC: Returns available time slots for a specific doctor and service.
-     * These are virtual slots dynamically calculated from AvailabilityBlocks minus existing appointments.
-     * No authentication required — this is what the patient sees on the booking page.
      */
-    @GetMapping("/doctors/{doctorId}/slots")
+    @GetMapping("/doctors/{publicId}/slots")
     public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
-            @PathVariable UUID doctorId,
+            @PathVariable String publicId,
             @RequestParam UUID serviceId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-
-        List<AvailableSlotResponse> slots = scheduleService.getAvailableSlots(doctorId, serviceId, start, end);
-        return ResponseEntity.ok(slots);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        return ResponseEntity.ok(scheduleService.getAvailableSlots(publicId, serviceId, start, end));
     }
 
     /**
-     * PUBLIC: Returns all active services offered by a specific doctor.
-     * Used by patients to choose a service before seeing available time slots.
      */
-    @GetMapping("/doctors/{doctorId}/services")
-    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(
-            @PathVariable UUID doctorId) {
-
-        List<DoctorServiceResponse> services = scheduleService.getDoctorServices(doctorId);
-        return ResponseEntity.ok(services);
+    @GetMapping("/doctors/{publicId}/services")
+    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(@PathVariable String publicId) {
+        return ResponseEntity.ok(scheduleService.getDoctorServices(publicId));
     }
 
     // ── PATIENT ENDPOINTS ──
