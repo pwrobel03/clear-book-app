@@ -126,4 +126,21 @@ public class ScheduleController {
                 "message", "Working block and associated appointments deleted successfully."
         ));
     }
+
+    /**
+     * DOCTOR: Updates a working block's timeframe (Safe Shrink).
+     */
+    @PutMapping("/blocks/{blockId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> updateWorkingBlockTime(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID blockId,
+            @Valid @RequestBody UpdateWorkingBlockRequest request) {
+
+        scheduleService.updateWorkingBlockTime(doctor, blockId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Working block updated successfully."
+        ));
+    }
 }

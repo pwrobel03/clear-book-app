@@ -82,3 +82,18 @@ export async function deleteWorkingBlockAction(
 
   return result;
 }
+
+/* Update a working block to handle updates, free slots */
+export async function updateWorkingBlockAction(
+  blockId: string,
+  data: { newStartTime: string; newEndTime: string }
+): Promise<ActionResult<{ message: string }>> {
+  return callApi<{ message: string }>(
+    () =>
+      springFetch(`/api/schedule/blocks/${blockId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    "Failed to update working block."
+  );
+}

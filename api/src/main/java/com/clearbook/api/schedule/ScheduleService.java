@@ -150,6 +150,60 @@ public class ScheduleService {
     }
 
     /**
+     * DOCTOR LOGIC: Updates a working block's time bounds.
+     * Safely cancels ONLY the appointments that fall completely or partially outside the new time window.
+     */
+    @Transactional
+    public void updateWorkingBlockTime(User doctor, UUID blockId, UpdateWorkingBlockRequest request) {
+        AvailabilityBlock block = blockRepository.findById(blockId)
+                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+
+        if (!block.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to edit this block.");
+        }
+
+        LocalDateTime newStart = request.getNewStartTime();
+        LocalDateTime newEnd = request.getNewEndTime();
+
+        if (!newStart.isBefore(newEnd)) {
+            throw new IllegalArgumentException("Start time must be before end time.");
+        }
+
+        // Check if the updated time overlaps with ANOTHER block for this doctor
+        boolean isOverlapping = blockRepository.existsOverlappingBlockExcludingId(doctor, blockId, newStart, newEnd);
+        if (isOverlapping) {
+            throw new IllegalStateException("The updated time overlaps with another working block.");
+        }
+
+        // --- SAFE SHRINK LOGIC ---
+        List<Appointment> appointments = appointmentRepository.findByBlock(block);
+        int cancelledCount = 0;
+
+        for (Appointment app : appointments) {
+            // Skip appointments that are already cancelled or completed
+            if (app.getStatus() == AppointmentStatus.CANCELLED || app.getStatus() == AppointmentStatus.COMPLETED) {
+                continue;
+            }
+
+            // Cancel the appointment if it falls outside the new time boundaries
+            if (app.getStartTime().isBefore(newStart) || app.getEndTime().isAfter(newEnd)) {
+                app.setStatus(AppointmentStatus.CANCELLED);
+                cancelledCount++;
+            }
+        }
+
+        if (cancelledCount > 0) {
+            appointmentRepository.saveAll(appointments);
+            log.info("Cancelled {} appointments out of bounds due to shrink on block {}", cancelledCount, blockId);
+        }
+
+        // Update the block's time boundaries
+        block.setStartTime(newStart);
+        block.setEndTime(newEnd);
+        blockRepository.save(block);
+    }
+
+    /**
      * PATIENT LOGIC STEP 1: Locks the specific time frame for 15 minutes.
      * Uses PESSIMISTIC LOCKING on the entire block to prevent Race Conditions.
      */

@@ -39,6 +39,23 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     );
 
     /**
+     *
+     * @param doctor
+     * @param blockId
+     * @param startTime
+     * @param endTime
+     * @return
+     */
+    @Query("SELECT COUNT(b) > 0 FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
+            "AND b.id != :blockId " +
+            "AND b.startTime < :endTime AND b.endTime > :startTime")
+    boolean existsOverlappingBlockExcludingId(
+            @Param("doctor") User doctor,
+            @Param("blockId") UUID blockId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
+
+    /**
      * Used by the doctor's calendar to fetch their working blocks in a given timeframe.
      */
     List<AvailabilityBlock> findByDoctorAndStartTimeBetweenOrderByStartTimeAsc(

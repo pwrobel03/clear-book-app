@@ -23,6 +23,7 @@ import {
   getWorkingBlocksAction,
   copyWeekAction,
   deleteWorkingBlockAction,
+  updateWorkingBlockAction,
   type AvailabilityBlock,
 } from "@/lib/actions/schedule";
 import { toast } from "sonner";
@@ -30,6 +31,14 @@ import { GlassPanel } from "@/components/ui/glass";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
@@ -301,70 +310,19 @@ export function ScheduleCalendarClient() {
                     {format(day, "dd")}
                   </p>
                 </div>
-
                 <div className="flex-1 flex flex-wrap gap-2 md:gap-3">
                   {hasBlocks ? (
                     dayBlocks.map((block) => (
-                      <Popover key={block.id}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className={cn(
-                              "flex items-center gap-3 rounded-2xl bg-background/60 dark:bg-white/5 border border-black/5 dark:border-white/10 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-destructive/40 dark:hover:border-destructive/40 outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                              deletingBlockId === block.id &&
-                                "opacity-50 pointer-events-none",
-                            )}
-                          >
-                            <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
-                              {deletingBlockId === block.id ? (
-                                <Loader2
-                                  size={14}
-                                  className="animate-spin text-destructive"
-                                />
-                              ) : (
-                                <Clock
-                                  size={14}
-                                  className="text-primary dark:text-accent-light"
-                                />
-                              )}
-                              {format(new Date(block.startTime), "HH:mm")} -{" "}
-                              {format(new Date(block.endTime), "HH:mm")}
-                            </div>
-                            <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
-                              <MapPin size={12} className="opacity-70" />
-                              {block.centerName}
-                            </div>
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="w-64 p-4 rounded-2xl"
-                          align="center"
-                          side="top"
-                        >
-                          <div className="space-y-3">
-                            <div>
-                              <h4 className="font-bold text-sm text-destructive flex items-center gap-2">
-                                <Trash2 size={14} />
-                                Delete Shift
-                              </h4>
-                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                Are you sure you want to remove this working
-                                block? Any appointments scheduled in this
-                                timeframe will be automatically cancelled.
-                              </p>
-                            </div>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="w-full gap-2 rounded-xl shadow-sm"
-                              onClick={() => handleDeleteBlock(block.id)}
-                            >
-                              Confirm Deletion
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <WorkingBlockItem
+                        key={block.id}
+                        block={block}
+                        deletingBlockId={deletingBlockId}
+                        setDeletingBlockId={setDeletingBlockId}
+                        onRefresh={() => {
+                          fetchBlocks();
+                          window.dispatchEvent(new Event("refresh-schedule"));
+                        }}
+                      />
                     ))
                   ) : (
                     <div className="flex items-center h-full">
@@ -380,5 +338,196 @@ export function ScheduleCalendarClient() {
         </div>
       )}
     </GlassPanel>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// Single working block with Time slot edit and delete logic
+// ─────────────────────────────────────────────────────────────────────────────
+
+const generateTimeOptions = () => {
+  const options = [];
+  for (let i = 0; i < 24 * 4; i++) {
+    const hours = Math.floor(i / 4)
+      .toString()
+      .padStart(2, "0");
+    const minutes = ((i % 4) * 15).toString().padStart(2, "0");
+    options.push(`${hours}:${minutes}`);
+  }
+
+  const startIndex = 32;
+  return [...options.slice(startIndex), ...options.slice(0, startIndex)];
+};
+
+const TIME_SLOTS = generateTimeOptions();
+
+function WorkingBlockItem({
+  block,
+  onRefresh,
+  deletingBlockId,
+  setDeletingBlockId,
+}: {
+  block: AvailabilityBlock;
+  onRefresh: () => void;
+  deletingBlockId: string | null;
+  setDeletingBlockId: (id: string | null) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // States for the edit form (default to fetched block hours)
+  const [editStart, setEditStart] = useState(
+    format(new Date(block.startTime), "HH:mm"),
+  );
+  const [editEnd, setEditEnd] = useState(
+    format(new Date(block.endTime), "HH:mm"),
+  );
+
+  const handleDelete = async () => {
+    setDeletingBlockId(block.id);
+    const result = await deleteWorkingBlockAction(block.id);
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success(result.data?.message || "Working block deleted.");
+      onRefresh();
+    }
+    setDeletingBlockId(null);
+    setIsOpen(false);
+  };
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+
+    // Construct full date ISO strings based on the selected day from the block
+    const datePart = format(new Date(block.startTime), "yyyy-MM-dd");
+    const newStartIso = `${datePart}T${editStart}:00`;
+    const newEndIso = `${datePart}T${editEnd}:00`;
+
+    const result = await updateWorkingBlockAction(block.id, {
+      newStartTime: newStartIso,
+      newEndTime: newEndIso,
+    });
+
+    if (result.error) toast.error(result.error);
+    else {
+      toast.success(result.data?.message || "Working block updated.");
+      onRefresh();
+      setIsOpen(false);
+    }
+    setIsUpdating(false);
+  };
+
+  const isDeleting = deletingBlockId === block.id;
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex items-center gap-3 rounded-2xl bg-background/60 dark:bg-white/5 border border-black/5 dark:border-white/10 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-primary/40 dark:hover:border-primary/40 outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+            (isDeleting || isUpdating) && "opacity-50 pointer-events-none",
+          )}
+        >
+          <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            {isDeleting || isUpdating ? (
+              <Loader2 size={14} className="animate-spin text-primary" />
+            ) : (
+              <Clock
+                size={14}
+                className="text-primary dark:text-accent-light"
+              />
+            )}
+            {format(new Date(block.startTime), "HH:mm")} -{" "}
+            {format(new Date(block.endTime), "HH:mm")}
+          </div>
+          <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+            <MapPin size={12} className="opacity-70" />
+            {block.centerName}
+          </div>
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-72 p-4 rounded-2xl"
+        align="center"
+        side="top"
+      >
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
+              Edit Shift Hours
+            </h4>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Appointments falling completely outside the new hours will be
+              safely cancelled.
+            </p>
+          </div>
+
+          {/* REPLACED: Native inputs swapped for Custom Selects */}
+          <div className="flex items-center gap-2">
+            <Select value={editStart} onValueChange={setEditStart}>
+              <SelectTrigger className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <SelectValue placeholder="Start" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px] rounded-xl shadow-glass border-border/50">
+                <SelectGroup>
+                  {TIME_SLOTS.map((time) => (
+                    <SelectItem
+                      key={time}
+                      value={time}
+                      className="rounded-lg text-sm"
+                    >
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <span className="text-muted-foreground text-xs font-bold">TO</span>
+
+            <Select value={editEnd} onValueChange={setEditEnd}>
+              <SelectTrigger className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                <SelectValue placeholder="End" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px] rounded-xl shadow-glass border-border/50">
+                <SelectGroup>
+                  {TIME_SLOTS.map((time) => (
+                    <SelectItem
+                      key={time}
+                      value={time}
+                      className="rounded-lg text-sm"
+                    >
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
+            <Button
+              size="sm"
+              className="w-full rounded-xl shadow-sm font-bold"
+              onClick={handleUpdate}
+              disabled={isUpdating}
+            >
+              Save Changes
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl text-xs font-bold"
+              onClick={handleDelete}
+            >
+              Delete Entire Shift
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
