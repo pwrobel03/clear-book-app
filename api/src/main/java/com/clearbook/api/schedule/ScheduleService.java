@@ -656,6 +656,67 @@ public class ScheduleService {
         return toResponse(appointmentRepository.save(appointment));
     }
 
+    @Transactional
+    public AppointmentResponse bookAppointment(User patient, BookAppointmentRequest request) {
+        AvailabilityBlock block = blockRepository.findById(request.getBlockId())
+                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+
+        DoctorService service = doctorServiceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.isActive()) {
+            throw new IllegalStateException("This service is no longer active.");
+        }
+
+        if (!service.getDoctor().equals(block.getDoctor())) {
+            throw new IllegalArgumentException("This service does not belong to the block's doctor.");
+        }
+
+        LocalDateTime start = request.getStartTime();
+        LocalDateTime end = request.getEndTime();
+
+        // Check if the requested time slot fits within the block's time boundaries
+        if (start.isBefore(block.getStartTime()) || end.isAfter(block.getEndTime())) {
+            throw new IllegalArgumentException("Appointment time is completely or partially outside the working block.");
+        }
+
+        // Overlap check: ensure no existing appointment (except expired RESERVED) overlaps with the requested time slot
+        boolean isOverlapping = appointmentRepository.existsOverlappingAppointment(block, start, end);
+        if (isOverlapping) {
+            throw new IllegalStateException("This time slot has already been taken by someone else.");
+        }
+
+        // Create a new appointment with SCHEDULED status (since we're booking directly, no need for RESERVED state here)
+        Appointment appointment = Appointment.builder()
+                .block(block)
+                .patient(patient)
+                .service(service)
+                .startTime(start)
+                .endTime(end)
+                .status(AppointmentStatus.RESERVED)
+                .reservedUntil(LocalDateTime.now().plusMinutes(15))
+                .patientNotes(request.getPatientNotes())
+                .build();
+
+        appointment = appointmentRepository.save(appointment);
+
+        // Return the appointment details, including doctor and service info for confirmation page
+        return AppointmentResponse.builder()
+                .id(appointment.getId())
+                .blockId(block.getId())
+                .patientId(patient.getId())
+                .serviceId(service.getId())
+                .serviceName(service.getName())
+                .serviceDurationMinutes(service.getDurationMinutes())
+                .startTime(appointment.getStartTime())
+                .endTime(appointment.getEndTime())
+                .status(appointment.getStatus())
+                .reservedUntil(appointment.getReservedUntil())
+                .patientNotes(appointment.getPatientNotes())
+                .createdAt(appointment.getCreatedAt())
+                .build();
+    }
+
     // ── DOCTOR ENDPOINTS ──
 
     /**

@@ -253,6 +253,19 @@ public class ScheduleController {
         return ResponseEntity.ok(cancelled);
     }
 
+    /**
+     * PATIENT: Books an appointment (soft lock for 15 minutes).
+     */
+    @PostMapping("/appointments")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @AuthenticationPrincipal User patient,
+            @Valid @RequestBody BookAppointmentRequest request) {
+
+        AppointmentResponse response = scheduleService.bookAppointment(patient, request);
+        return ResponseEntity.ok(response);
+    }
+
     // ── DOCTOR APPOINTMENT ENDPOINTS ──
 
     /**

@@ -20,11 +20,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     /**
      * VALIDATION FOR OVERLAPPING APPOINTMENTS.
      * Checks if there is any valid appointment.
-     * It ignores CANCELLED appointments and RESERVED appointments whose 'reservedUntil' timer has expired.
+     * Uses explicit inclusion (Whitelist) for safety.
      */
     @Query("SELECT COUNT(a) > 0 FROM Appointment a " +
             "WHERE a.block = :block " +
-            "AND (a.status = 'SCHEDULED' OR a.status = 'COMPLETED' OR (a.status = 'RESERVED' AND a.reservedUntil > CURRENT_TIMESTAMP)) " +
+            "AND (a.status IN ('SCHEDULED', 'COMPLETED') OR (a.status = 'RESERVED' AND a.reservedUntil > CURRENT_TIMESTAMP)) " +
             "AND (a.startTime < :endTime AND a.endTime > :startTime)")
     boolean existsOverlappingAppointment(
             @Param("block") AvailabilityBlock block,
