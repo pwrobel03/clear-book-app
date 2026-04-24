@@ -28,6 +28,10 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     /**
      * VALIDATION: Checks if a doctor is trying to create a working block
      * that overlaps with an already existing working block.
+     *
+     * NOTE: Intentionally does NOT filter by center — a doctor cannot physically
+     * be in two places at the same time, so overlapping blocks are blocked
+     * regardless of which medical center they belong to.
      */
     @Query("SELECT COUNT(b) > 0 FROM AvailabilityBlock b " +
             "WHERE b.doctor = :doctor " +
@@ -39,12 +43,9 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     );
 
     /**
-     *
-     * @param doctor
-     * @param blockId
-     * @param startTime
-     * @param endTime
-     * @return
+     * Same as {@link #existsOverlappingBlock} but excludes a specific block by ID.
+     * Used when updating an existing block's time bounds to avoid false-positive
+     * self-overlap detection.
      */
     @Query("SELECT COUNT(b) > 0 FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
             "AND b.id != :blockId " +

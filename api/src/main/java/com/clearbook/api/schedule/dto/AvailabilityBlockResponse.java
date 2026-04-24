@@ -2,8 +2,6 @@ package com.clearbook.api.schedule.dto;
 
 import lombok.Builder;
 import lombok.Data;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

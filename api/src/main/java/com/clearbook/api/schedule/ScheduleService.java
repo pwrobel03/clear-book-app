@@ -22,12 +22,13 @@ public class ScheduleService {
     private final AppointmentRepository appointmentRepository;
     private final DoctorServiceRepository doctorServiceRepository;
     private final MedicalCenterRepository centerRepository;
+    private final CenterMembershipRepository membershipRepository;
 
     /**
      * DOCTOR LOGIC: Creates a new working block for the doctor.
      */
     @Transactional
-    public AvailabilityBlock createWorkingBlock(User doctor, CreateBlockRequest request) {
+    public AvailabilityBlockResponse createWorkingBlock(User doctor, CreateBlockRequest request) {
         if (!request.getStartTime().isBefore(request.getEndTime())) {
             throw new IllegalArgumentException("Start time must be before end time.");
         }
@@ -39,6 +40,11 @@ public class ScheduleService {
         MedicalCenter center = centerRepository.findById(request.getCenterId())
                 .orElseThrow(() -> new IllegalArgumentException("Medical center not found"));
 
+        // Verify the doctor is an active member of this center
+        if (!membershipRepository.existsByUserAndCenter(doctor, center)) {
+            throw new IllegalStateException("You are not a member of this medical center.");
+        }
+
         AvailabilityBlock block = AvailabilityBlock.builder()
                 .doctor(doctor)
                 .center(center)
@@ -47,7 +53,15 @@ public class ScheduleService {
                 .build();
 
         log.info("Doctor {} created a working block from {} to {}", doctor.getId(), request.getStartTime(), request.getEndTime());
-        return blockRepository.save(block);
+        AvailabilityBlock saved = blockRepository.save(block);
+
+        return AvailabilityBlockResponse.builder()
+                .id(saved.getId())
+                .centerId(saved.getCenter().getId())
+                .centerName(saved.getCenter().getName())
+                .startTime(saved.getStartTime())
+                .endTime(saved.getEndTime())
+                .build();
     }
 
     /**
@@ -208,7 +222,7 @@ public class ScheduleService {
      * Uses PESSIMISTIC LOCKING on the entire block to prevent Race Conditions.
      */
     @Transactional
-    public Appointment reserveSlot(User patient, ReserveSlotRequest request) {
+    public AppointmentResponse reserveSlot(User patient, ReserveSlotRequest request) {
 
         // Pessimistic Lock on the block (other transactions wait here)
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
@@ -246,14 +260,15 @@ public class ScheduleService {
                 .build();
 
         log.info("Patient {} held a slot with Doctor {} at {} for 15 minutes.", patient.getId(), block.getDoctor().getId(), request.getStartTime());
-        return appointmentRepository.save(appointment);
+        return toResponse(appointmentRepository.save(appointment));
     }
 
     /**
      * PATIENT LOGIC STEP 2: Confirms the appointment after filling out the form.
+     * Only appointments with RESERVED status can be confirmed.
      */
     @Transactional
-    public Appointment confirmAppointment(User patient, ConfirmAppointmentRequest request) {
+    public AppointmentResponse confirmAppointment(User patient, ConfirmAppointmentRequest request) {
 
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
@@ -263,10 +278,16 @@ public class ScheduleService {
             throw new IllegalStateException("You do not have permission to confirm this appointment.");
         }
 
+        // Only RESERVED appointments can be confirmed
+        if (appointment.getStatus() != AppointmentStatus.RESERVED) {
+            throw new IllegalStateException("This appointment cannot be confirmed (current status: " + appointment.getStatus() + ").");
+        }
+
         // Check if the hold has expired
-        if (appointment.getStatus() == AppointmentStatus.RESERVED &&
-                appointment.getReservedUntil() != null &&
+        if (appointment.getReservedUntil() != null &&
                 appointment.getReservedUntil().isBefore(LocalDateTime.now())) {
+            appointment.setStatus(AppointmentStatus.CANCELLED);
+            appointmentRepository.save(appointment);
             throw new IllegalStateException("Your reservation time has expired. Please select the time slot again.");
         }
 
@@ -276,6 +297,25 @@ public class ScheduleService {
         appointment.setPatientNotes(request.getPatientNotes());
 
         log.info("Patient {} confirmed appointment {}.", patient.getId(), appointment.getId());
-        return appointmentRepository.save(appointment);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    // ── Mapping helper ──
+
+    private AppointmentResponse toResponse(Appointment a) {
+        return AppointmentResponse.builder()
+                .id(a.getId())
+                .blockId(a.getBlock().getId())
+                .patientId(a.getPatient().getId())
+                .serviceId(a.getService().getId())
+                .serviceName(a.getService().getName())
+                .serviceDurationMinutes(a.getService().getDurationMinutes())
+                .startTime(a.getStartTime())
+                .endTime(a.getEndTime())
+                .status(a.getStatus())
+                .reservedUntil(a.getReservedUntil())
+                .patientNotes(a.getPatientNotes())
+                .createdAt(a.getCreatedAt())
+                .build();
     }
 }

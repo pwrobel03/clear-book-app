@@ -1,9 +1,8 @@
 package com.clearbook.api.schedule;
 
-import com.clearbook.api.model.Appointment;
-import com.clearbook.api.model.AvailabilityBlock;
 import com.clearbook.api.model.User;
 import com.clearbook.api.schedule.dto.*;
+import com.clearbook.api.shared.dto.MessageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -36,12 +34,8 @@ public class ScheduleController {
             @AuthenticationPrincipal User doctor,
             @Valid @RequestBody CreateBlockRequest request) {
 
-        AvailabilityBlock block = scheduleService.createWorkingBlock(doctor, request);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Working block created successfully",
-                "blockId", block.getId()
-        ));
+        AvailabilityBlockResponse block = scheduleService.createWorkingBlock(doctor, request);
+        return ResponseEntity.ok(block);
     }
 
     /**
@@ -54,13 +48,8 @@ public class ScheduleController {
             @AuthenticationPrincipal User patient,
             @Valid @RequestBody ReserveSlotRequest request) {
 
-        Appointment reservation = scheduleService.reserveSlot(patient, request);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Slot reserved for 15 minutes",
-                "appointmentId", reservation.getId(),
-                "reservedUntil", reservation.getReservedUntil()
-        ));
+        AppointmentResponse reservation = scheduleService.reserveSlot(patient, request);
+        return ResponseEntity.ok(reservation);
     }
 
     /**
@@ -72,13 +61,8 @@ public class ScheduleController {
             @AuthenticationPrincipal User patient,
             @Valid @RequestBody ConfirmAppointmentRequest request) {
 
-        Appointment confirmedAppointment = scheduleService.confirmAppointment(patient, request);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Appointment confirmed successfully",
-                "appointmentId", confirmedAppointment.getId(),
-                "status", confirmedAppointment.getStatus()
-        ));
+        AppointmentResponse confirmedAppointment = scheduleService.confirmAppointment(patient, request);
+        return ResponseEntity.ok(confirmedAppointment);
     }
 
     /**
@@ -105,10 +89,8 @@ public class ScheduleController {
             @Valid @RequestBody CopyWeekRequest request) {
 
         scheduleService.copyWeekSchedule(doctor, request);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Schedule copied successfully for " + request.getWeeksToCopy() + " weeks"
-        ));
+        return ResponseEntity.ok(new MessageResponse(
+                "Schedule copied successfully for " + request.getWeeksToCopy() + " weeks"));
     }
 
     /**
@@ -121,10 +103,7 @@ public class ScheduleController {
             @PathVariable UUID blockId) {
 
         scheduleService.deleteWorkingBlock(doctor, blockId);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Working block and associated appointments deleted successfully."
-        ));
+        return ResponseEntity.ok(new MessageResponse("Working block and associated appointments deleted successfully."));
     }
 
     /**
@@ -138,9 +117,6 @@ public class ScheduleController {
             @Valid @RequestBody UpdateWorkingBlockRequest request) {
 
         scheduleService.updateWorkingBlockTime(doctor, blockId, request);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Working block updated successfully."
-        ));
+        return ResponseEntity.ok(new MessageResponse("Working block updated successfully."));
     }
 }

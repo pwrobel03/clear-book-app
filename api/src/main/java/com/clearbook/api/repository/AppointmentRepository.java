@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -39,4 +42,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findActiveAppointmentsByBlock(@Param("block") AvailabilityBlock block);
 
     List<Appointment> findByBlock(AvailabilityBlock block);
+
+    /**
+     * Bulk-cancels all RESERVED appointments whose hold timer has expired.
+     * Used by the scheduled cleanup task to prevent zombie reservations from accumulating.
+     *
+     * @return the number of expired reservations that were cancelled
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Appointment a SET a.status = 'CANCELLED' " +
+            "WHERE a.status = 'RESERVED' AND a.reservedUntil < CURRENT_TIMESTAMP")
+    int cancelExpiredReservations();
 }
