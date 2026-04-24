@@ -51,6 +51,11 @@ const navByRole: Record<UserRole, NavItem[]> = {
       icon: Calendar,
       label: "My Schedule",
     },
+    {
+      label: "Services",
+      href: "/dashboard/services",
+      icon: Stethoscope,
+    },
     { href: "/dashboard/centers", icon: Building2, label: "My Centers" },
     { href: "/dashboard/invite", icon: Key, label: "Invite Code" },
     { href: "/dashboard/profile", icon: User, label: "Profile" },

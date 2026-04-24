@@ -508,6 +508,7 @@ public class ScheduleService {
                         .name(s.getName())
                         .durationMinutes(s.getDurationMinutes())
                         .price(s.getPrice())
+                        .active(s.isActive())
                         .build())
                 .collect(Collectors.toList());
     }

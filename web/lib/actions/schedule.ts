@@ -27,6 +27,8 @@ export async function createWorkingBlockAction(data: {
   return result
 }
 
+/* TYPES */
+
 export type AvailabilityBlock = {
   id: string;
   centerId: string;
@@ -35,6 +37,15 @@ export type AvailabilityBlock = {
   endTime: string;
 };
 
+export type DoctorServiceResponse = {
+  id: string;
+  name: string;
+  durationMinutes: number;
+  price: number;
+  active: boolean;
+};
+
+/* Fetch all working blocks within a date range to populate the schedule view */
 export async function getWorkingBlocksAction(
   startIso: string,
   endIso: string
@@ -95,5 +106,51 @@ export async function updateWorkingBlockAction(
         body: JSON.stringify(data),
       }),
     "Failed to update working block."
+  );
+}
+
+export async function getMyServicesAction(): Promise<ActionResult<DoctorServiceResponse[]>> {
+  return callApi(
+    () => springFetch(`/api/schedule/services`, { 
+      method: "GET",
+      cache: "no-store" // Always fetch fresh data for services in case of recent changes
+    }),
+    "Failed to fetch your services."
+  );
+}
+
+export async function createDoctorServiceAction(data: {
+  name: string;
+  durationMinutes: number;
+  price: number;
+}): Promise<ActionResult<DoctorServiceResponse>> {
+  return callApi(
+    () => springFetch(`/api/schedule/services`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+    "Failed to create service."
+  );
+}
+
+export async function updateDoctorServiceAction(
+  serviceId: string, 
+  data: { name: string; durationMinutes: number; price: number; }
+): Promise<ActionResult<DoctorServiceResponse>> {
+  return callApi(
+    () => springFetch(`/api/schedule/services/${serviceId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+    "Failed to update service."
+  );
+}
+
+export async function deactivateDoctorServiceAction(serviceId: string): Promise<ActionResult<{message: string}>> {
+  return callApi(
+    () => springFetch(`/api/schedule/services/${serviceId}`, {
+      method: "DELETE",
+    }),
+    "Failed to deactivate service."
   );
 }
