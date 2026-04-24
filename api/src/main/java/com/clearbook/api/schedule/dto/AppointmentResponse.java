@@ -16,6 +16,11 @@ public class AppointmentResponse {
     private UUID serviceId;
     private String serviceName;
     private int serviceDurationMinutes;
+    // Doctor info
+    private String doctorFirstName;
+    private String doctorLastName;
+    // Center info
+    private String centerName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private AppointmentStatus status;

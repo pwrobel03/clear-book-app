@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,8 @@ import { loginSchema, type LoginFormData } from "@/lib/schemas/auth";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormData>({
@@ -50,7 +52,7 @@ export function LoginForm() {
     }
 
     toast.success("Signed in successfully!");
-    router.push("/dashboard");
+    router.push(callbackUrl || "/dashboard");
     router.refresh();
   }
 

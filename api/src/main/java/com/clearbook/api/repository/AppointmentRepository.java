@@ -45,11 +45,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     /**
      * PATIENT: Fetches the patient's appointments, optionally filtered by status.
+     * Uses JOIN FETCH to eagerly load block → doctor and block → center,
+     * avoiding N+1 queries when mapping to AppointmentResponse.
      * Ordered by start time descending (most recent first).
      */
-    @Query("SELECT a FROM Appointment a WHERE a.patient = :patient " +
+    @Query(value = "SELECT a FROM Appointment a " +
+            "JOIN FETCH a.block b " +
+            "JOIN FETCH b.doctor " +
+            "JOIN FETCH b.center " +
+            "JOIN FETCH a.service " +
+            "WHERE a.patient = :patient " +
             "AND (:status IS NULL OR a.status = :status) " +
-            "ORDER BY a.startTime DESC")
+            "ORDER BY a.startTime DESC",
+           countQuery = "SELECT COUNT(a) FROM Appointment a " +
+            "WHERE a.patient = :patient " +
+            "AND (:status IS NULL OR a.status = :status)")
     Page<Appointment> findByPatient(
             @Param("patient") User patient,
             @Param("status") AppointmentStatus status,
@@ -58,11 +68,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     /**
      * DOCTOR: Fetches the doctor's appointments (via block ownership), optionally filtered by status.
+     * Uses JOIN FETCH to eagerly load the associated service for DTO mapping.
      * Ordered by start time ascending (chronological order for the day view).
      */
-    @Query("SELECT a FROM Appointment a WHERE a.block.doctor = :doctor " +
+    @Query(value = "SELECT a FROM Appointment a " +
+            "JOIN FETCH a.block b " +
+            "JOIN FETCH b.doctor " +
+            "JOIN FETCH b.center " +
+            "JOIN FETCH a.service " +
+            "JOIN FETCH a.patient " +
+            "WHERE b.doctor = :doctor " +
             "AND (:status IS NULL OR a.status = :status) " +
-            "ORDER BY a.startTime ASC")
+            "ORDER BY a.startTime ASC",
+           countQuery = "SELECT COUNT(a) FROM Appointment a " +
+            "WHERE a.block.doctor = :doctor " +
+            "AND (:status IS NULL OR a.status = :status)")
     Page<Appointment> findByDoctor(
             @Param("doctor") User doctor,
             @Param("status") AppointmentStatus status,

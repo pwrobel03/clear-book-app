@@ -34,7 +34,6 @@ const navByRole: Record<UserRole, NavItem[]> = {
       href: "/dashboard/appointments",
       icon: Calendar,
       label: "Appointments",
-      soon: true,
     },
     {
       href: "/dashboard/doctors",

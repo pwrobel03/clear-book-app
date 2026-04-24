@@ -44,3 +44,4 @@ next-env.d.ts
 .repomixignore
 repomix.config.json
 repomix-output.xml
+repomix-output.md

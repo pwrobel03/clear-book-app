@@ -40,6 +40,10 @@ public class ScheduleService {
             throw new IllegalArgumentException("Start time must be before end time.");
         }
 
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot create a working block in the past.");
+        }
+
         if (blockRepository.existsOverlappingBlock(doctor, request.getStartTime(), request.getEndTime())) {
             throw new IllegalStateException("This working block overlaps with an existing one.");
         }
@@ -230,6 +234,11 @@ public class ScheduleService {
      */
     @Transactional
     public AppointmentResponse reserveSlot(User patient, ReserveSlotRequest request) {
+
+        // Block reservations in the past
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot reserve a time slot in the past.");
+        }
 
         // Pessimistic Lock on the block (other transactions wait here)
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
@@ -694,6 +703,11 @@ public class ScheduleService {
 
     @Transactional
     public AppointmentResponse bookAppointment(User patient, BookAppointmentRequest request) {
+        // Block bookings in the past
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot book an appointment in the past.");
+        }
+
         AvailabilityBlock block = blockRepository.findById(request.getBlockId())
                 .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
 
@@ -744,6 +758,9 @@ public class ScheduleService {
                 .serviceId(service.getId())
                 .serviceName(service.getName())
                 .serviceDurationMinutes(service.getDurationMinutes())
+                .doctorFirstName(block.getDoctor().getFirstName())
+                .doctorLastName(block.getDoctor().getLastName())
+                .centerName(block.getCenter().getName())
                 .startTime(appointment.getStartTime())
                 .endTime(appointment.getEndTime())
                 .status(appointment.getStatus())
@@ -798,6 +815,9 @@ public class ScheduleService {
                 .serviceId(a.getService().getId())
                 .serviceName(a.getService().getName())
                 .serviceDurationMinutes(a.getService().getDurationMinutes())
+                .doctorFirstName(a.getBlock().getDoctor().getFirstName())
+                .doctorLastName(a.getBlock().getDoctor().getLastName())
+                .centerName(a.getBlock().getCenter().getName())
                 .startTime(a.getStartTime())
                 .endTime(a.getEndTime())
                 .status(a.getStatus())

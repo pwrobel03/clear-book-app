@@ -23,6 +23,39 @@ export type AvailableSlotResponse = {
   endTime: string;   // ISO String
 };
 
+export type AppointmentStatus =
+  | "SCHEDULED"
+  | "RESERVED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
+
+export type AppointmentResponse = {
+  id: string;
+  blockId: string;
+  patientId: string;
+  serviceId: string;
+  serviceName: string;
+  serviceDurationMinutes: number;
+  doctorFirstName: string;
+  doctorLastName: string;
+  centerName: string;
+  startTime: string;
+  endTime: string;
+  status: AppointmentStatus;
+  reservedUntil: string | null;
+  patientNotes: string | null;
+  createdAt: string;
+};
+
+export type PageResponse<T> = {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number; // current page (0-indexed)
+  size: number;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,12 +106,52 @@ export async function bookAppointmentAction(data: {
   startTime: string; // ISO String, np. "2026-05-10T10:00:00"
   endTime: string;   // ISO String, np. "2026-05-10T10:30:00"
   patientNotes?: string;
-}): Promise<ActionResult<any>> {
+}): Promise<ActionResult<AppointmentResponse>> {
   return callApi(
     () => springFetch(`/api/schedule/appointments`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
     "Failed to book appointment. The slot might have just been taken!"
+  );
+}
+
+/**
+ * PATIENT: Fetches the current patient's appointments with optional status filter and pagination.
+ */
+export async function getMyAppointmentsAction(params?: {
+  status?: AppointmentStatus;
+  page?: number;
+  size?: number;
+}): Promise<ActionResult<PageResponse<AppointmentResponse>>> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.page !== undefined) query.set("page", String(params.page));
+  if (params?.size !== undefined) query.set("size", String(params.size));
+
+  const qs = query.toString();
+  return callApi<PageResponse<AppointmentResponse>>(
+    () =>
+      springFetch(`/api/schedule/my-appointments${qs ? `?${qs}` : ""}`, {
+        method: "GET",
+        cache: "no-store",
+      }),
+    "Failed to fetch your appointments."
+  );
+}
+
+/**
+ * PATIENT: Cancels an appointment by ID.
+ */
+export async function cancelAppointmentAction(
+  appointmentId: string
+): Promise<ActionResult<{ message: string }>> {
+  return callApi(
+    () =>
+      springFetch(
+        `/api/schedule/my-appointments/${appointmentId}/cancel`,
+        { method: "POST" }
+      ),
+    "Failed to cancel appointment."
   );
 }
