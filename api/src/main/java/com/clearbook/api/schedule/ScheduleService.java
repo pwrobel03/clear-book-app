@@ -799,6 +799,61 @@ public class ScheduleService {
                 .map(this::toResponse);
     }
 
+    /**
+     * DOCTOR: Cancels an appointment and provides a reason.
+     */
+    @Transactional
+    public AppointmentResponse cancelAppointmentByDoctor(User doctor, UUID appointmentId, String reason) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        // Verify that the doctor owns the block to which this appointment belongs
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to modify this appointment.");
+        }
+
+        // Only SCHEDULED or RESERVED appointments can be cancelled by the doctor
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointment.setDoctorNotes(reason); // Save the cancellation reason in doctor notes for future reference
+        appointment.setReservedUntil(null);
+
+        log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    /**
+     * DOCTOR: Marks an appointment as NO_SHOW.
+     */
+    @Transactional
+    public AppointmentResponse markAsNoShow(User doctor, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to modify this appointment.");
+        }
+
+        // Status NO_SHOW is set when the patient did not show up for a SCHEDULED appointment.
+        appointment.setStatus(AppointmentStatus.NO_SHOW);
+        appointment.setReservedUntil(null);
+
+        log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentResponse getDoctorAppointmentDetails(User doctor, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
+
+        // Sprawdzamy, czy lekarz z bloku roboczego to nasz zalogowany lekarz
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to view this appointment.");
+        }
+
+        return toResponse(appointment);
+    }
+
     // ── Private helpers ──
 
     private User findDoctorById(UUID doctorId) {
@@ -846,6 +901,7 @@ public class ScheduleService {
                 .status(a.getStatus())
                 .reservedUntil(a.getReservedUntil())
                 .patientNotes(a.getPatientNotes())
+                .doctorNotes(a.getDoctorNotes())
                 .createdAt(a.getCreatedAt())
                 .build();
     }

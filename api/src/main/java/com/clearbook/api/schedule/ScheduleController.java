@@ -192,6 +192,33 @@ public class ScheduleController {
         return ResponseEntity.ok(new MessageResponse("Service deactivated successfully."));
     }
 
+    /**
+     * DOCTOR: Cancels an appointment with a mandatory reason.
+     */
+    @PostMapping("/doctor-appointments/{appointmentId}/cancel")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> cancelAppointmentByDoctor(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId,
+            @Valid @RequestBody DoctorCancelRequest request) {
+
+        AppointmentResponse response = scheduleService.cancelAppointmentByDoctor(doctor, appointmentId, request.getReason());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DOCTOR: Marks an appointment as a no-show.
+     */
+    @PostMapping("/doctor-appointments/{appointmentId}/no-show")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> markAppointmentAsNoShow(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.markAsNoShow(doctor, appointmentId);
+        return ResponseEntity.ok(response);
+    }
+
     // ── PUBLIC ENDPOINTS (no authentication required) ──
 
     /**
@@ -284,5 +311,18 @@ public class ScheduleController {
 
         Page<AppointmentResponse> appointments = scheduleService.getDoctorAppointments(doctor, status, pageable);
         return ResponseEntity.ok(appointments);
+    }
+
+    /**
+     * DOCTOR: Returns details of a single appointment for the doctor.
+     */
+    @GetMapping("/doctor-appointments/{appointmentId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> getDoctorAppointmentDetails(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.getDoctorAppointmentDetails(doctor, appointmentId);
+        return ResponseEntity.ok(response);
     }
 }

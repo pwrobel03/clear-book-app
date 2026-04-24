@@ -54,6 +54,9 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String patientNotes;
 
+    @Column(columnDefinition = "TEXT")
+    private String doctorNotes;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

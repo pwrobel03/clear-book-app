@@ -47,6 +47,7 @@ export type AppointmentResponse = {
   status: AppointmentStatus;
   reservedUntil: string | null;
   patientNotes: string | null;
+  doctorNotes: string | null;
   createdAt: string;
 };
 
@@ -159,22 +160,6 @@ export async function cancelAppointmentAction(
 }
 
 /**
- * Pobiera szczegóły konkretnej wizyty na podstawie jej ID.
- * (Teraz uderza w nowy endpoint, który dodaliśmy do kontrolera)
- */
-export async function getAppointmentAction(
-  appointmentId: string
-): Promise<ActionResult<AppointmentResponse>> {
-  return callApi<AppointmentResponse>(
-    () => springFetch(`/api/schedule/my-appointments/${appointmentId}`, { 
-      method: "GET",
-      cache: "no-store" 
-    }),
-    "Nie udało się pobrać szczegółów wizyty."
-  );
-}
-
-/**
  * Potwierdza wizytę (zmienia status z RESERVED na SCHEDULED) i zapisuje notatkę pacjenta.
  * (Dopasowane do @PostMapping("/confirm") z Twojego kontrolera)
  */
@@ -189,5 +174,47 @@ export async function confirmAppointmentAction(
       body: JSON.stringify({ appointmentId, patientNotes }),
     }),
     "Nie udało się potwierdzić wizyty. Upewnij się, że czas rezerwacji nie minął."
+  );
+}
+
+// lib/actions/booking.ts
+
+// Zaktualizuj tę funkcję lub upewnij się, że przyjmuje rolę, by wiedzieć, w który endpoint uderzyć
+export async function getAppointmentAction(
+  appointmentId: string,
+  userRole: string = "USER"
+): Promise<ActionResult<AppointmentResponse>> {
+  const endpoint = userRole === "DOCTOR" 
+    ? `/api/schedule/doctor-appointments/${appointmentId}` 
+    : `/api/schedule/my-appointments/${appointmentId}`;
+
+  return callApi<AppointmentResponse>(
+    () => springFetch(endpoint, { method: "GET", cache: "no-store" }),
+    "Nie udało się pobrać szczegółów wizyty."
+  );
+}
+
+// Nowe akcje dla lekarza:
+export async function cancelByDoctorAction(
+  appointmentId: string,
+  reason: string
+): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(
+    () => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+    "Nie udało się odwołać wizyty."
+  );
+}
+
+export async function markAsNoShowAction(
+  appointmentId: string
+): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(
+    () => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/no-show`, {
+      method: "POST",
+    }),
+    "Nie udało się zmienić statusu na nieodbytą."
   );
 }

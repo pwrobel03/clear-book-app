@@ -28,5 +28,6 @@ public class AppointmentResponse {
     private AppointmentStatus status;
     private LocalDateTime reservedUntil;
     private String patientNotes;
+    private String doctorNotes;
     private LocalDateTime createdAt;
 }
