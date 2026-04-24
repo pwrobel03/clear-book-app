@@ -11,8 +11,10 @@ import com.clearbook.api.model.*;
 import com.clearbook.api.repository.CenterMembershipRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.MedicalCenterRepository;
+import com.clearbook.api.schedule.ScheduleService;
 import com.clearbook.api.user.InviteCodeService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MedicalCenterService {
@@ -32,6 +35,7 @@ public class MedicalCenterService {
     private final DoctorProfileRepository profileRepository;
     private final InviteCodeService inviteCodeService;
     private final CenterMapper centerMapper;
+    private final ScheduleService scheduleService;
 
     /**
      * Creates a new medical center and automatically makes the creator its ADMIN.
@@ -229,8 +233,12 @@ public class MedicalCenterService {
     }
 
     /**
-     * Removes a member from the center (soft delete by setting status to SUSPENDED or hard delete).
+     * Removes a member from the center (soft delete by setting status to SUSPENDED).
      * Caller must be an ADMIN member of the center.
+     *
+     * If the removed member is a DOCTOR, all their future working blocks at this center
+     * are deleted and associated appointments are automatically cancelled.
+     * Past (completed) records are preserved for reporting purposes.
      */
     @Transactional
     public void removeMember(User admin, UUID centerId, UUID membershipId) {
@@ -248,6 +256,16 @@ public class MedicalCenterService {
 
         if (membership.getUser().getId().equals(admin.getId())) {
             throw new ConflictException("You cannot remove yourself from the center.");
+        }
+
+        // If the member is a doctor, clean up their future schedule at this center
+        User removedUser = membership.getUser();
+        if (removedUser.getRole() == Role.DOCTOR) {
+            int cancelledAppointments = scheduleService.cancelFutureScheduleForDoctorAtCenter(removedUser, center);
+            if (cancelledAppointments > 0) {
+                log.info("Removed doctor {} from center {}: {} future appointments cancelled.",
+                        removedUser.getId(), centerId, cancelledAppointments);
+            }
         }
 
         membership.setStatus(MembershipStatus.SUSPENDED);

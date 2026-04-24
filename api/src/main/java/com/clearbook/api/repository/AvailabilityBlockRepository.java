@@ -1,6 +1,7 @@
 package com.clearbook.api.repository;
 
 import com.clearbook.api.model.AvailabilityBlock;
+import com.clearbook.api.model.MedicalCenter;
 import com.clearbook.api.model.User;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,5 +62,32 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
      */
     List<AvailabilityBlock> findByDoctorAndStartTimeBetweenOrderByStartTimeAsc(
             User doctor, LocalDateTime from, LocalDateTime to
+    );
+
+    /**
+     * Fetches blocks for a doctor within a date range, optionally filtered by center.
+     * Used by the "Clear Schedule" feature to bulk-delete blocks.
+     */
+    @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
+            "AND b.startTime >= :rangeStart AND b.startTime < :rangeEnd " +
+            "AND (:center IS NULL OR b.center = :center) " +
+            "ORDER BY b.startTime ASC")
+    List<AvailabilityBlock> findBlocksInRange(
+            @Param("doctor") User doctor,
+            @Param("rangeStart") LocalDateTime rangeStart,
+            @Param("rangeEnd") LocalDateTime rangeEnd,
+            @Param("center") MedicalCenter center
+    );
+
+    /**
+     * Fetches all future blocks for a doctor at a specific center.
+     * Used when a doctor leaves a center — all their future availability must be removed.
+     */
+    @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
+            "AND b.center = :center AND b.endTime > :now")
+    List<AvailabilityBlock> findFutureBlocksByDoctorAndCenter(
+            @Param("doctor") User doctor,
+            @Param("center") MedicalCenter center,
+            @Param("now") LocalDateTime now
     );
 }

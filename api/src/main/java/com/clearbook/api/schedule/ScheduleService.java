@@ -300,6 +300,104 @@ public class ScheduleService {
         return toResponse(appointmentRepository.save(appointment));
     }
 
+    /**
+     * DOCTOR LOGIC: Clears all working blocks (and their appointments) within a date range.
+     * Optionally scoped to a specific medical center.
+     * Only future, non-completed appointments are cancelled — historical records are preserved.
+     */
+    @Transactional
+    public ClearScheduleResponse clearSchedule(User doctor, ClearScheduleRequest request) {
+        if (!request.getRangeStart().isBefore(request.getRangeEnd())) {
+            throw new IllegalArgumentException("Range start must be before range end.");
+        }
+
+        MedicalCenter center = null;
+        if (request.getCenterId() != null) {
+            center = centerRepository.findById(request.getCenterId())
+                    .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
+        }
+
+        List<AvailabilityBlock> blocks = blockRepository.findBlocksInRange(
+                doctor, request.getRangeStart(), request.getRangeEnd(), center);
+
+        if (blocks.isEmpty()) {
+            return ClearScheduleResponse.builder()
+                    .blocksDeleted(0)
+                    .appointmentsCancelled(0)
+                    .build();
+        }
+
+        int totalCancelled = 0;
+
+        for (AvailabilityBlock block : blocks) {
+            totalCancelled += cancelFutureAppointmentsOnBlock(block);
+        }
+
+        blockRepository.deleteAll(blocks);
+
+        log.info("Doctor {} cleared {} blocks ({} appointments cancelled) from {} to {}",
+                doctor.getId(), blocks.size(), totalCancelled, request.getRangeStart(), request.getRangeEnd());
+
+        return ClearScheduleResponse.builder()
+                .blocksDeleted(blocks.size())
+                .appointmentsCancelled(totalCancelled)
+                .build();
+    }
+
+    /**
+     * INTERNAL: Called when a doctor's membership in a center is deactivated (suspended/removed).
+     * Cancels all future appointments and removes all future availability blocks
+     * for this doctor at this specific center. Past records are preserved for reporting.
+     *
+     * @return the number of appointments that were cancelled
+     */
+    @Transactional
+    public int cancelFutureScheduleForDoctorAtCenter(User doctor, MedicalCenter center) {
+        List<AvailabilityBlock> futureBlocks = blockRepository.findFutureBlocksByDoctorAndCenter(
+                doctor, center, LocalDateTime.now());
+
+        if (futureBlocks.isEmpty()) {
+            return 0;
+        }
+
+        int totalCancelled = 0;
+
+        for (AvailabilityBlock block : futureBlocks) {
+            totalCancelled += cancelFutureAppointmentsOnBlock(block);
+        }
+
+        blockRepository.deleteAll(futureBlocks);
+
+        log.info("Membership deactivation: cancelled {} appointments and removed {} future blocks " +
+                        "for doctor {} at center {}",
+                totalCancelled, futureBlocks.size(), doctor.getId(), center.getId());
+
+        return totalCancelled;
+    }
+
+    /**
+     * Cancels all non-completed, non-cancelled appointments on a given block.
+     * Returns the count of cancelled appointments.
+     */
+    private int cancelFutureAppointmentsOnBlock(AvailabilityBlock block) {
+        List<Appointment> appointments = appointmentRepository.findByBlock(block);
+        int cancelled = 0;
+
+        for (Appointment app : appointments) {
+            if (app.getStatus() != AppointmentStatus.CANCELLED &&
+                    app.getStatus() != AppointmentStatus.COMPLETED) {
+                app.setStatus(AppointmentStatus.CANCELLED);
+                cancelled++;
+            }
+        }
+
+        if (cancelled > 0) {
+            appointmentRepository.saveAll(appointments);
+        }
+
+        return cancelled;
+    }
+
     // ── Mapping helper ──
 
     private AppointmentResponse toResponse(Appointment a) {

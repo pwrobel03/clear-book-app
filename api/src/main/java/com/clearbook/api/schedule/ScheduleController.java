@@ -119,4 +119,18 @@ public class ScheduleController {
         scheduleService.updateWorkingBlockTime(doctor, blockId, request);
         return ResponseEntity.ok(new MessageResponse("Working block updated successfully."));
     }
+
+    /**
+     * DOCTOR: Clears all working blocks (and cancels their appointments) within a date range.
+     * Optionally scoped to a specific center via centerId in the request body.
+     */
+    @PostMapping("/blocks/clear")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<ClearScheduleResponse> clearSchedule(
+            @AuthenticationPrincipal User doctor,
+            @Valid @RequestBody ClearScheduleRequest request) {
+
+        ClearScheduleResponse result = scheduleService.clearSchedule(doctor, request);
+        return ResponseEntity.ok(result);
+    }
 }
