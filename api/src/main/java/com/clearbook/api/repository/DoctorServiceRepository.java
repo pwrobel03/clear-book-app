@@ -13,6 +13,16 @@ public interface DoctorServiceRepository extends JpaRepository<DoctorService, UU
 
     /**
      * Fetches all active services defined by a specific doctor.
+     * Used by the public-facing booking page.
      */
     List<DoctorService> findAllByDoctorAndActiveTrue(User doctor);
+
+    /**
+     * Fetches ALL services (including inactive) for the doctor's management panel.
+     */
+    List<DoctorService> findAllByDoctor(User doctor);
+
+    List<DoctorService> findByDoctor(User doctor);
+
+    List<DoctorService> findByDoctorAndActiveTrue(User doctor);
 }

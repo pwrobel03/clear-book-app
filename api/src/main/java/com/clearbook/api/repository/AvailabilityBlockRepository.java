@@ -65,15 +65,20 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     );
 
     /**
-     * PUBLIC: Fetches future blocks for a doctor by their user ID.
-     * Used by the patient-facing booking calendar to show available days.
+     * PUBLIC: Fetches future blocks for a doctor by their user ID,
+     * optionally bounded by a date range (for weekly calendar view).
+     * If rangeStart/rangeEnd are null, returns all future blocks.
      */
     @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor.id = :doctorId " +
             "AND b.endTime > :now " +
+            "AND (:rangeStart IS NULL OR b.endTime > :rangeStart) " +
+            "AND (:rangeEnd IS NULL OR b.startTime < :rangeEnd) " +
             "ORDER BY b.startTime ASC")
     List<AvailabilityBlock> findFutureBlocksByDoctorId(
             @Param("doctorId") UUID doctorId,
-            @Param("now") LocalDateTime now
+            @Param("now") LocalDateTime now,
+            @Param("rangeStart") LocalDateTime rangeStart,
+            @Param("rangeEnd") LocalDateTime rangeEnd
     );
 
     /**

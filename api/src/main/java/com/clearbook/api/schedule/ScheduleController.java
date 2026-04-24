@@ -138,6 +138,60 @@ public class ScheduleController {
         return ResponseEntity.ok(result);
     }
 
+    // ── DOCTOR SERVICE MANAGEMENT ──
+
+    /**
+     * DOCTOR: Creates a new service offering.
+     */
+    @PostMapping("/services")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<DoctorServiceResponse> createService(
+            @AuthenticationPrincipal User doctor,
+            @Valid @RequestBody CreateDoctorServiceRequest request) {
+
+        DoctorServiceResponse service = scheduleService.createDoctorService(doctor, request);
+        return ResponseEntity.ok(service);
+    }
+
+    /**
+     * DOCTOR: Returns all services (including inactive) for the authenticated doctor.
+     */
+    @GetMapping("/services")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<List<DoctorServiceResponse>> getMyServices(
+            @AuthenticationPrincipal User doctor) {
+
+        List<DoctorServiceResponse> services = scheduleService.getMyServices(doctor);
+        return ResponseEntity.ok(services);
+    }
+
+    /**
+     * DOCTOR: Updates an existing service.
+     */
+    @PutMapping("/services/{serviceId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<DoctorServiceResponse> updateService(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID serviceId,
+            @Valid @RequestBody CreateDoctorServiceRequest request) {
+
+        DoctorServiceResponse updated = scheduleService.updateDoctorService(doctor, serviceId, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * DOCTOR: Deactivates a service (soft delete).
+     */
+    @DeleteMapping("/services/{serviceId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<MessageResponse> deactivateService(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID serviceId) {
+
+        scheduleService.deactivateDoctorService(doctor, serviceId);
+        return ResponseEntity.ok(new MessageResponse("Service deactivated successfully."));
+    }
+
     // ── PUBLIC ENDPOINTS (no authentication required) ──
 
     /**
@@ -148,9 +202,11 @@ public class ScheduleController {
     @GetMapping("/doctors/{doctorId}/slots")
     public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
             @PathVariable UUID doctorId,
-            @RequestParam UUID serviceId) {
+            @RequestParam UUID serviceId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
 
-        List<AvailableSlotResponse> slots = scheduleService.getAvailableSlots(doctorId, serviceId);
+        List<AvailableSlotResponse> slots = scheduleService.getAvailableSlots(doctorId, serviceId, start, end);
         return ResponseEntity.ok(slots);
     }
 

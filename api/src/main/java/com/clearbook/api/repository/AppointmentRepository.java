@@ -1,9 +1,6 @@
 package com.clearbook.api.repository;
 
-import com.clearbook.api.model.Appointment;
-import com.clearbook.api.model.AppointmentStatus;
-import com.clearbook.api.model.AvailabilityBlock;
-import com.clearbook.api.model.User;
+import com.clearbook.api.model.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -82,4 +79,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     @Query("UPDATE Appointment a SET a.status = 'CANCELLED' " +
             "WHERE a.status = 'RESERVED' AND a.reservedUntil < CURRENT_TIMESTAMP")
     int cancelExpiredReservations();
+
+    boolean existsByService(DoctorService service);
 }

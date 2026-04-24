@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -418,7 +419,8 @@ public class ScheduleService {
      * The actual race condition protection happens at reservation time (pessimistic lock).
      */
     @Transactional(readOnly = true)
-    public List<AvailableSlotResponse> getAvailableSlots(UUID doctorId, UUID serviceId) {
+    public List<AvailableSlotResponse> getAvailableSlots(UUID doctorId, UUID serviceId,
+                                                          LocalDateTime rangeStart, LocalDateTime rangeEnd) {
         DoctorService service = doctorServiceRepository.findById(serviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found."));
 
@@ -428,7 +430,7 @@ public class ScheduleService {
 
         int duration = service.getDurationMinutes();
         List<AvailabilityBlock> futureBlocks = blockRepository.findFutureBlocksByDoctorId(
-                doctorId, LocalDateTime.now());
+                doctorId, LocalDateTime.now(), rangeStart, rangeEnd);
 
         List<AvailableSlotResponse> slots = new ArrayList<>();
 
@@ -498,6 +500,83 @@ public class ScheduleService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<DoctorServiceResponse> getMyServices(User doctor) {
+        return doctorServiceRepository.findByDoctor(doctor).stream()
+                .map(s -> DoctorServiceResponse.builder()
+                        .id(s.getId())
+                        .name(s.getName())
+                        .durationMinutes(s.getDurationMinutes())
+                        .price(s.getPrice())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public DoctorServiceResponse createDoctorService(User doctor, CreateDoctorServiceRequest request) {
+        DoctorService service = DoctorService.builder()
+                .doctor(doctor)
+                .name(request.getName())
+                .durationMinutes(request.getDurationMinutes())
+                .price(request.getPrice())
+                .active(true) // Nowa usługa jest domyślnie aktywna
+                .build();
+
+        service = doctorServiceRepository.save(service);
+
+        return DoctorServiceResponse.builder()
+                .id(service.getId())
+                .name(service.getName())
+                .durationMinutes(service.getDurationMinutes())
+                .price(service.getPrice())
+                .active(service.isActive())
+                .build();
+    }
+
+    @Transactional
+    public DoctorServiceResponse updateDoctorService(User doctor, UUID serviceId, CreateDoctorServiceRequest request) {
+        DoctorService service = doctorServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to edit this service.");
+        }
+
+        // Aktualizujemy dane
+        service.setName(request.getName());
+        service.setDurationMinutes(request.getDurationMinutes());
+        service.setPrice(request.getPrice());
+
+        // Zapisujemy zmiany
+        service = doctorServiceRepository.save(service);
+
+        return DoctorServiceResponse.builder()
+                .id(service.getId())
+                .name(service.getName())
+                .durationMinutes(service.getDurationMinutes())
+                .price(service.getPrice())
+                .active(service.isActive())
+                .build();
+    }
+
+    @Transactional
+    public void deactivateDoctorService(User doctor, UUID serviceId) {
+        DoctorService service = doctorServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to deactivate this service.");
+        }
+
+        if (appointmentRepository.existsByService(service)) {
+            throw new IllegalStateException("Cannot deactivate a service that has booked appointments.");
+        }
+
+        // Zamiast usuwać z bazy, zmieniamy status (Soft Delete)
+        service.setActive(false);
+        doctorServiceRepository.save(service);
+    }
+
     // ── PATIENT ENDPOINTS ──
 
     /**
@@ -556,7 +635,16 @@ public class ScheduleService {
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found."));
     }
 
-    // ── Mapping helper ──
+    // ── Mapping helpers ──
+
+    private DoctorServiceResponse toServiceResponse(DoctorService s) {
+        return DoctorServiceResponse.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .durationMinutes(s.getDurationMinutes())
+                .price(s.getPrice())
+                .build();
+    }
 
     private AppointmentResponse toResponse(Appointment a) {
         return AppointmentResponse.builder()

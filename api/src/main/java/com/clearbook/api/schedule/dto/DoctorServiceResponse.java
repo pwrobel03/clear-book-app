@@ -17,4 +17,5 @@ public class DoctorServiceResponse {
     private String name;
     private int durationMinutes;
     private BigDecimal price;
+    private boolean active;
 }
