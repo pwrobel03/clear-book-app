@@ -37,4 +37,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
             "WHERE a.block = :block AND a.status != 'CANCELLED' " +
             "ORDER BY a.startTime ASC")
     List<Appointment> findActiveAppointmentsByBlock(@Param("block") AvailabilityBlock block);
+
+    List<Appointment> findByBlock(AvailabilityBlock block);
 }

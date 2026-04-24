@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -95,7 +96,7 @@ public class ScheduleController {
     }
 
     /**
-     * 5. DOCTOR: Copies schedule from one week to future weeks.
+     * DOCTOR: Copies schedule from one week to future weeks.
      */
     @PostMapping("/blocks/copy")
     @PreAuthorize("hasRole('DOCTOR')")
@@ -107,6 +108,22 @@ public class ScheduleController {
 
         return ResponseEntity.ok(Map.of(
                 "message", "Schedule copied successfully for " + request.getWeeksToCopy() + " weeks"
+        ));
+    }
+
+    /**
+     * DOCTOR: Deletes a working block and cancels associated appointments.
+     */
+    @DeleteMapping("/blocks/{blockId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> deleteWorkingBlock(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID blockId) {
+
+        scheduleService.deleteWorkingBlock(doctor, blockId);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Working block and associated appointments deleted successfully."
         ));
     }
 }

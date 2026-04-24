@@ -116,6 +116,40 @@ public class ScheduleService {
     }
 
     /**
+     * DOCTOR LOGIC: Deletes a working block.
+     * If there are any appointments scheduled within this block, they are automatically cancelled.
+     */
+    @Transactional
+    public void deleteWorkingBlock(User doctor, UUID blockId) {
+        AvailabilityBlock block = blockRepository.findById(blockId)
+                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+
+        // Security: only the owner of the block can delete it
+        if (!block.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to delete this block.");
+        }
+
+        // Find every visit
+        List<Appointment> appointments = appointmentRepository.findByBlock(block);
+
+        // If there are visits change their status
+        if (!appointments.isEmpty()) {
+            for (Appointment app : appointments) {
+                app.setStatus(AppointmentStatus.CANCELLED);
+                // Here, in the future, we can add the throwing of an asynchronous Event (ApplicationEventPublisher),
+                // which will send emails to patients informing them of their appointment cancellations.
+            }
+            appointmentRepository.saveAll(appointments);
+            log.info("Cancelled {} appointments due to block {} deletion by doctor {}",
+                    appointments.size(), blockId, doctor.getId());
+        }
+
+        // Delete the job block itself
+        blockRepository.delete(block);
+        log.info("Working block {} deleted successfully.", blockId);
+    }
+
+    /**
      * PATIENT LOGIC STEP 1: Locks the specific time frame for 15 minutes.
      * Uses PESSIMISTIC LOCKING on the entire block to prevent Race Conditions.
      */
