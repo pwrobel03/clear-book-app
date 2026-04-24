@@ -317,6 +317,23 @@ public class ScheduleService {
     }
 
     /**
+     * PATIENT: Returns details of a specific appointment.
+     * Ensures that the requesting patient is the owner of the appointment.
+     */
+    @Transactional(readOnly = true)
+    public AppointmentResponse getAppointmentDetails(User patient, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
+
+        // Weryfikacja, czy wizyta faktycznie należy do zalogowanego pacjenta
+        if (!appointment.getPatient().equals(patient)) {
+            throw new IllegalStateException("You do not have permission to view this appointment.");
+        }
+
+        return toResponse(appointment);
+    }
+
+    /**
      * DOCTOR LOGIC: Clears all working blocks (and their appointments) within a date range.
      * Optionally scoped to a specific medical center.
      * Only future, non-completed appointments are cancelled — historical records are preserved.

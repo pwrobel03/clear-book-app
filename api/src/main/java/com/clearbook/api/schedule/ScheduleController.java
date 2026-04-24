@@ -230,6 +230,19 @@ public class ScheduleController {
     }
 
     /**
+     * PATIENT: Returns details of a single appointment by its ID.
+     */
+    @GetMapping("/my-appointments/{appointmentId}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> getAppointmentDetails(
+            @AuthenticationPrincipal User patient,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.getAppointmentDetails(patient, appointmentId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * PATIENT: Cancels an appointment.
      * Only SCHEDULED or RESERVED appointments can be cancelled.
      */

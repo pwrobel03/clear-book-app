@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { format, addDays, startOfWeek, isSameDay, endOfDay } from "date-fns";
 import {
   ChevronLeft,
@@ -8,14 +9,10 @@ import {
   Clock,
   Loader2,
   Calendar as CalendarIcon,
-  CheckCircle2,
-  FileText,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { GlassPanel } from "@/components/ui/glass";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import {
@@ -24,7 +21,6 @@ import {
   bookAppointmentAction,
   type DoctorServiceResponse,
   type AvailableSlotResponse,
-  type AppointmentResponse,
 } from "@/lib/actions/booking";
 
 interface DoctorBookingClientProps {
@@ -40,6 +36,8 @@ export function DoctorBookingClient({
   userRole,
   doctorLastName,
 }: DoctorBookingClientProps) {
+  const router = useRouter();
+
   const [services, setServices] = useState<DoctorServiceResponse[]>([]);
   const [selectedService, setSelectedService] =
     useState<DoctorServiceResponse | null>(null);
@@ -49,14 +47,6 @@ export function DoctorBookingClient({
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
   const [bookingSlotTime, setBookingSlotTime] = useState<string | null>(null);
-
-  // Confirmation state — shown after a successful RESERVED booking
-  const [confirmedAppointment, setConfirmedAppointment] =
-    useState<AppointmentResponse | null>(null);
-
-  // Patient notes input
-  const [patientNotes, setPatientNotes] = useState("");
-  const [showNotes, setShowNotes] = useState(false);
 
   // Calendar state — defaults to current week
   const [weekStart, setWeekStart] = useState(() =>
@@ -112,7 +102,7 @@ export function DoctorBookingClient({
     fetchSlots();
   }, [fetchSlots]);
 
-  // ── 3. Book a slot ────────────────────────────────────────────────────────
+  // ── 3. Book a slot and redirect ───────────────────────────────────────────
   const handleBookSlot = async (slot: AvailableSlotResponse) => {
     if (!selectedService) return;
 
@@ -123,24 +113,17 @@ export function DoctorBookingClient({
       serviceId: selectedService.id,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      patientNotes: patientNotes.trim() || undefined,
+      // Usunęliśmy przekazywanie notatki na tym etapie
     });
 
     if (result.error) {
       toast.error(result.error);
+      setBookingSlotTime(null);
     } else {
-      setConfirmedAppointment(result.data!);
-      fetchSlots(); // remove booked slot from grid
+      // Zamiast pokazywać widok sukcesu, przekierowujemy do dedykowanej strony
+      toast.success("Slot reserved! Please complete your booking.");
+      router.push(`/dashboard/appointments/${result.data!.id}`);
     }
-
-    setBookingSlotTime(null);
-  };
-
-  // ── 4. Reset after success ────────────────────────────────────────────────
-  const handleBookAnother = () => {
-    setConfirmedAppointment(null);
-    setPatientNotes("");
-    setShowNotes(false);
   };
 
   // ── Show no-services state ────────────────────────────────────────────────
@@ -150,80 +133,6 @@ export function DoctorBookingClient({
         <p className="text-muted-foreground text-sm">
           Dr. {doctorLastName} has not listed any services yet.
         </p>
-      </GlassPanel>
-    );
-  }
-
-  // ── Confirmation Screen ───────────────────────────────────────────────────
-  if (confirmedAppointment) {
-    return (
-      <GlassPanel className="p-8 space-y-6 text-center">
-        <div className="flex justify-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 border border-green-500/20">
-            <CheckCircle2 size={40} className="text-green-500" />
-          </div>
-        </div>
-        <div>
-          <h3 className="text-2xl font-black text-foreground">
-            Appointment Reserved!
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            Your slot is held for <span className="font-bold text-primary">15 minutes</span>.
-            You can manage it in your{" "}
-            <a
-              href="/dashboard/appointments"
-              className="font-bold text-accent underline underline-offset-2"
-            >
-              Appointments
-            </a>{" "}
-            dashboard.
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-black/5 dark:bg-white/5 p-5 text-left space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Service</span>
-            <span className="font-bold">{confirmedAppointment.serviceName}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Date</span>
-            <span className="font-bold">
-              {format(new Date(confirmedAppointment.startTime), "EEE, MMM d, yyyy")}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Time</span>
-            <span className="font-bold">
-              {format(new Date(confirmedAppointment.startTime), "HH:mm")} –{" "}
-              {format(new Date(confirmedAppointment.endTime), "HH:mm")}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Location</span>
-            <span className="font-bold">{confirmedAppointment.centerName}</span>
-          </div>
-          <div className="flex justify-between text-sm items-center">
-            <span className="text-muted-foreground">Status</span>
-            <Badge variant="outline" className="text-yellow-600 border-yellow-500/40 bg-yellow-500/10">
-              Reserved (15 min)
-            </Badge>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 rounded-2xl"
-            onClick={handleBookAnother}
-          >
-            Book Another
-          </Button>
-          <a href="/dashboard/appointments" className="flex-1">
-            <Button className="w-full rounded-2xl">
-              View My Appointments
-            </Button>
-          </a>
-        </div>
       </GlassPanel>
     );
   }
@@ -253,7 +162,9 @@ export function DoctorBookingClient({
                     : "bg-background/50 border-black/5 dark:border-white/10 hover:border-primary/40 hover:shadow-md",
                 )}
               >
-                <span className="font-bold text-foreground">{service.name}</span>
+                <span className="font-bold text-foreground">
+                  {service.name}
+                </span>
                 <div className="flex items-center justify-between mt-2 text-sm">
                   <span className="text-muted-foreground">
                     {service.durationMinutes} min
@@ -395,37 +306,6 @@ export function DoctorBookingClient({
             <p className="mt-4 text-center text-sm text-muted-foreground">
               No available slots this week. Try the next week →
             </p>
-          )}
-        </GlassPanel>
-      )}
-
-      {/* ── STEP 3: Notes (optional) ─────────────────────────────────────── */}
-      {selectedService && isAuthenticated && (
-        <GlassPanel className="p-6">
-          <button
-            onClick={() => setShowNotes((v) => !v)}
-            className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-          >
-            <FileText size={16} className="text-primary" />
-            3. Add Notes (optional)
-            {showNotes ? (
-              <X size={14} className="ml-auto" />
-            ) : (
-              <span className="ml-auto text-xs text-muted-foreground/60">
-                Click to expand
-              </span>
-            )}
-          </button>
-
-          {showNotes && (
-            <textarea
-              value={patientNotes}
-              onChange={(e) => setPatientNotes(e.target.value)}
-              maxLength={500}
-              rows={3}
-              placeholder="Describe your symptoms or any relevant information for the doctor..."
-              className="mt-3 w-full rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
           )}
         </GlassPanel>
       )}

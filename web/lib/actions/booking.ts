@@ -155,3 +155,37 @@ export async function cancelAppointmentAction(
     "Failed to cancel appointment."
   );
 }
+
+/**
+ * Pobiera szczegóły konkretnej wizyty na podstawie jej ID.
+ * (Teraz uderza w nowy endpoint, który dodaliśmy do kontrolera)
+ */
+export async function getAppointmentAction(
+  appointmentId: string
+): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(
+    () => springFetch(`/api/schedule/my-appointments/${appointmentId}`, { 
+      method: "GET",
+      cache: "no-store" 
+    }),
+    "Nie udało się pobrać szczegółów wizyty."
+  );
+}
+
+/**
+ * Potwierdza wizytę (zmienia status z RESERVED na SCHEDULED) i zapisuje notatkę pacjenta.
+ * (Dopasowane do @PostMapping("/confirm") z Twojego kontrolera)
+ */
+export async function confirmAppointmentAction(
+  appointmentId: string,
+  patientNotes?: string
+): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(
+    () => springFetch(`/api/schedule/confirm`, {
+      method: "POST",
+      // Zakładam, że Twoja klasa ConfirmAppointmentRequest w Javie przyjmuje te dwa pola
+      body: JSON.stringify({ appointmentId, patientNotes }),
+    }),
+    "Nie udało się potwierdzić wizyty. Upewnij się, że czas rezerwacji nie minął."
+  );
+}
