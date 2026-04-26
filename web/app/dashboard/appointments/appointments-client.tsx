@@ -67,10 +67,12 @@ const STATUS_CONFIG: Record<
   },
 };
 
-type Tab = "upcoming" | "past";
+// --- TRZY ZAKŁADKI ---
+type Tab = "upcoming" | "completed" | "cancelled";
 const TABS: { id: Tab; label: string }[] = [
   { id: "upcoming", label: "Upcoming" },
-  { id: "past", label: "Past & Cancelled" },
+  { id: "completed", label: "Completed" },
+  { id: "cancelled", label: "Cancelled / No Show" },
 ];
 
 function AppointmentCard({
@@ -90,11 +92,19 @@ function AppointmentCard({
   const StatusIcon = cfg.icon;
   const start = new Date(appointment.startTime);
   const end = new Date(appointment.endTime);
+  const now = new Date();
 
+  // Logika widoczności przycisków
   const canCancel =
     appointment.status === "SCHEDULED" ||
     (!isDoctor && appointment.status === "RESERVED");
-  const canNoShow = isDoctor && appointment.status === "SCHEDULED";
+
+  // Weryfikacja okienka 15-minutowego dla lekarza
+  const canNoShow =
+    isDoctor &&
+    appointment.status === "SCHEDULED" &&
+    now >= start &&
+    now <= addMinutes(start, 15);
 
   const reservedUntil = appointment.reservedUntil
     ? new Date(appointment.reservedUntil)
@@ -103,7 +113,7 @@ function AppointmentCard({
     !isDoctor &&
     appointment.status === "RESERVED" &&
     reservedUntil &&
-    isWithinInterval(new Date(), {
+    isWithinInterval(now, {
       start: addMinutes(reservedUntil, -2),
       end: reservedUntil,
     });
@@ -112,7 +122,9 @@ function AppointmentCard({
     <GlassCard
       className={cn(
         "p-5 space-y-4 transition-all",
-        appointment.status === "CANCELLED" && "opacity-60",
+        (appointment.status === "CANCELLED" ||
+          appointment.status === "NO_SHOW") &&
+          "opacity-60",
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -130,7 +142,7 @@ function AppointmentCard({
             </p>
             {isDoctor ? (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Patient:{" "}
+                Pacjent:{" "}
                 {appointment.patientFirstName
                   ? `${appointment.patientFirstName} ${appointment.patientLastName}`
                   : appointment.patientId.substring(0, 8)}
@@ -167,12 +179,6 @@ function AppointmentCard({
         </div>
       </div>
 
-      {/* {appointment.patientNotes && (
-        <p className="text-xs text-muted-foreground bg-black/5 dark:bg-white/5 rounded-xl px-3 py-2 italic">
-          "{appointment.patientNotes}"
-        </p>
-      )} */}
-
       {appointment.status === "RESERVED" && reservedUntil && !isDoctor && (
         <div
           className={cn(
@@ -184,7 +190,7 @@ function AppointmentCard({
         >
           <AlertCircle size={14} />
           {isExpiringSoon
-            ? "Hold expiring soon! Complete your booking."
+            ? "Your reservation is expiring soon!"
             : `Reserved until ${format(reservedUntil, "HH:mm")}`}
         </div>
       )}
@@ -195,7 +201,7 @@ function AppointmentCard({
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10"
+              className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10 hover:text-red-600"
               disabled={cancelling}
               onClick={(e) => {
                 e.stopPropagation();
@@ -208,14 +214,14 @@ function AppointmentCard({
               ) : (
                 <X size={14} />
               )}{" "}
-              Cancel
+              Cancel Reservation
             </Button>
           )}
           {canNoShow && (
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 rounded-xl text-orange-500 border-orange-400/30 hover:bg-orange-500/10"
+              className="gap-2 rounded-xl text-orange-500 border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-600"
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -246,14 +252,11 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
   const fetchAppointments = useCallback(async () => {
     setIsLoading(true);
-
-    // Decydujemy, której akcji użyć na podstawie roli
     const fetchAction = isDoctor
       ? getDoctorAppointmentsListAction
       : getMyAppointmentsAction;
 
     if (activeTab === "upcoming") {
-      // Pobieramy SCHEDULED, a dla pacjenta także RESERVED
       const promises = [
         fetchAction({
           status: "SCHEDULED",
@@ -268,6 +271,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       const results = await Promise.all(promises);
       const all: AppointmentResponse[] = results
         .flatMap((r) => r.data?.content ?? [])
+        // Filtrujemy te, które już się zakończyły. Scheduler za chwilę zmieni im status na backendzie.
         .filter((a) => !isPast(new Date(a.endTime)))
         .sort(
           (a, b) =>
@@ -276,14 +280,17 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
       setAppointments(all);
       setTotalPages(0);
+    } else if (activeTab === "completed") {
+      const result = await fetchAction({
+        status: "COMPLETED",
+        page,
+        size: PAGE_SIZE,
+        sort: "startTime,desc",
+      });
+      setAppointments(result.data?.content ?? []);
+      setTotalPages(result.data?.totalPages ?? 0);
     } else {
-      const [completed, cancelled, noShow] = await Promise.all([
-        fetchAction({
-          status: "COMPLETED",
-          page,
-          size: PAGE_SIZE,
-          sort: "startTime,desc",
-        }),
+      const [cancelled, noShow] = await Promise.all([
         fetchAction({
           status: "CANCELLED",
           page,
@@ -299,7 +306,6 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       ]);
 
       const all: AppointmentResponse[] = [
-        ...(completed.data?.content ?? []),
         ...(cancelled.data?.content ?? []),
         ...(noShow.data?.content ?? []),
       ].sort(
@@ -309,11 +315,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
       setAppointments(all);
       setTotalPages(
-        Math.max(
-          completed.data?.totalPages ?? 0,
-          cancelled.data?.totalPages ?? 0,
-          noShow.data?.totalPages ?? 0,
-        ),
+        Math.max(cancelled.data?.totalPages ?? 0, noShow.data?.totalPages ?? 0),
       );
     }
 
@@ -331,7 +333,9 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
     setActionId(id);
     let result;
     if (isDoctor) {
-      const reason = prompt("Please provide a reason for cancellation:");
+      const reason = prompt(
+        "Provide the reason for cancelling the appointment:",
+      );
       if (!reason) {
         setActionId(null);
         return;
@@ -343,19 +347,24 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
     if (result.error) toast.error(result.error);
     else {
-      toast.success("Appointment cancelled.");
+      toast.success("Appointment cancelled successfully.");
       fetchAppointments();
     }
     setActionId(null);
   };
 
   const handleNoShow = async (id: string) => {
-    if (!confirm("Mark this appointment as a no-show?")) return;
+    if (
+      !confirm(
+        "Oznaczyć tę wizytę jako nieodbytą? Opcja ta jest nieodwracalna.",
+      )
+    )
+      return;
     setActionId(id);
     const result = await markAsNoShowAction(id);
     if (result.error) toast.error(result.error);
     else {
-      toast.success("Marked as no-show.");
+      toast.success("Appointment marked as no-show successfully.");
       fetchAppointments();
     }
     setActionId(null);
@@ -363,18 +372,16 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <DashboardHeader
-        title={isDoctor ? "Patient Appointments" : "Appointments"}
-      />
+      <DashboardHeader title={isDoctor ? "Wizyty pacjentów" : "Moje wizyty"} />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
             <PageHeader
-              title={isDoctor ? "Schedule Overview" : "My Appointments"}
+              title={isDoctor ? "Manage Appointments" : "My Appointments"}
               description={
                 isDoctor
-                  ? "Manage your scheduled visits and patient flow."
-                  : "View and manage your upcoming and past visits."
+                  ? "Check your schedule, cancel appointments or mark patients as no-show."
+                  : "Manage your upcoming appointments and review your treatment history."
               }
             />
             <Button
@@ -391,7 +398,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
             </Button>
           </div>
 
-          <div className="flex gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-fit">
+          <div className="flex flex-wrap gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-fit">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -422,11 +429,13 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
               <p className="font-bold text-foreground">
                 {activeTab === "upcoming"
                   ? "No upcoming appointments"
-                  : "No past appointments"}
+                  : activeTab === "completed"
+                    ? "No completed appointments"
+                    : "No cancelled appointments"}
               </p>
             </GlassPanel>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {appointments.map((appointment) => (
                 <div
                   key={appointment.id}
@@ -447,31 +456,32 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
             </div>
           )}
 
-          {activeTab === "past" && totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-xl"
-                disabled={page === 0 || isLoading}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-              >
-                <ChevronLeft size={16} />
-              </Button>
-              <span className="text-sm font-bold">
-                Page {page + 1} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-xl"
-                disabled={page >= totalPages - 1 || isLoading}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight size={16} />
-              </Button>
-            </div>
-          )}
+          {(activeTab === "completed" || activeTab === "cancelled") &&
+            totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-xl"
+                  disabled={page === 0 || isLoading}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                <span className="text-sm font-bold">
+                  Strona {page + 1} z {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-xl"
+                  disabled={page >= totalPages - 1 || isLoading}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+            )}
         </div>
       </main>
     </div>

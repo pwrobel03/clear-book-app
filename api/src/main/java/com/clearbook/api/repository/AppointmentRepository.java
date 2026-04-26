@@ -101,4 +101,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     int cancelExpiredReservations();
 
     boolean existsByService(DoctorService service);
+
+    List<Appointment> findByStatusAndEndTimeBefore(AppointmentStatus status, LocalDateTime endTime);
 }

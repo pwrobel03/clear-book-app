@@ -833,6 +833,14 @@ public class ScheduleService {
         }
 
         // Status NO_SHOW is set when the patient did not show up for a SCHEDULED appointment.
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(appointment.getStartTime())) {
+            throw new IllegalStateException("You cannot mark an appointment as NO_SHOW before it starts.");
+        }
+        if (now.isAfter(appointment.getStartTime().plusMinutes(15))) {
+            throw new IllegalStateException("You can only mark an appointment as NO_SHOW within 15 minutes of its start time.");
+        }
+
         appointment.setStatus(AppointmentStatus.NO_SHOW);
         appointment.setReservedUntil(null);
 
