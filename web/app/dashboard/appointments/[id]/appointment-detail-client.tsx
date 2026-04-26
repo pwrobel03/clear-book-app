@@ -126,17 +126,13 @@ export function AppointmentDetailClient({
   return (
     <div className="space-y-6">
       <Link
-        href={
-          isDoctor
-            ? "/dashboard/doctor/appointments"
-            : "/dashboard/appointments"
-        }
+        href={"/dashboard/appointments"}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
       >
         <ArrowLeft size={16} className="mr-2" /> Back to appointments list
       </Link>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 xl:grid-cols-3">
         {/* Lewa kolumna: Informacje o wizycie */}
         <div className="md:col-span-2 space-y-6">
           <GlassPanel className="p-8">

@@ -4,10 +4,6 @@ import { springFetch } from "@/lib/server/spring";
 import { callApi } from "@/lib/server/api-action";
 import type { ActionResult } from "@/types/api";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type DoctorServiceResponse = {
   id: string;
   name: string;
@@ -19,21 +15,18 @@ export type AvailableSlotResponse = {
   blockId: string;
   centerId: string;
   centerName: string;
-  startTime: string; // ISO String
-  endTime: string;   // ISO String
+  startTime: string; 
+  endTime: string;   
 };
 
-export type AppointmentStatus =
-  | "SCHEDULED"
-  | "RESERVED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "NO_SHOW";
+export type AppointmentStatus = "SCHEDULED" | "RESERVED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 
 export type AppointmentResponse = {
   id: string;
   blockId: string;
   patientId: string;
+  patientFirstName?: string; // Ważne dla widoku lekarza
+  patientLastName?: string;  // Ważne dla widoku lekarza
   serviceId: string;
   serviceName: string;
   serviceDurationMinutes: number;
@@ -55,166 +48,64 @@ export type PageResponse<T> = {
   content: T[];
   totalElements: number;
   totalPages: number;
-  number: number; // current page (0-indexed)
+  number: number;
   size: number;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ACTIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * PUBLIC: Fetches all services offered by a specific doctor.
- */
 export async function getDoctorServicesAction(identifier: string): Promise<ActionResult<DoctorServiceResponse[]>> {
-  return callApi(
-    () => springFetch(`/api/schedule/doctors/${identifier}/services`, { 
-      method: "GET",
-      cache: "no-store"
-    }),
-    "Failed to fetch doctor services."
-  );
+  return callApi(() => springFetch(`/api/schedule/doctors/${identifier}/services`, { method: "GET", cache: "no-store" }), "Failed to fetch doctor services.");
 }
 
-/**
- * PUBLIC: Fetches dynamically calculated virtual slots for a doctor, 
- * bounded by the selected service duration and dates.
- */
-export async function getAvailableSlotsAction(
-  doctorId: string,
-  serviceId: string,
-  startIso: string,
-  endIso: string
-): Promise<ActionResult<AvailableSlotResponse[]>> {
-  // Construct the URL with query parameters
-  const query = new URLSearchParams({
-    serviceId,
-    start: startIso,
-    end: endIso,
-  }).toString();
-
-  return callApi<AvailableSlotResponse[]>(
-    () =>
-      springFetch(`/api/schedule/doctors/${doctorId}/slots?${query}`, {
-        method: "GET",
-        cache: "no-store", // Always fetch fresh data for slots in case of recent changes
-      }),
-    "Failed to fetch available time slots."
-  );
+export async function getAvailableSlotsAction(doctorId: string, serviceId: string, startIso: string, endIso: string): Promise<ActionResult<AvailableSlotResponse[]>> {
+  const query = new URLSearchParams({ serviceId, start: startIso, end: endIso }).toString();
+  return callApi<AvailableSlotResponse[]>(() => springFetch(`/api/schedule/doctors/${doctorId}/slots?${query}`, { method: "GET", cache: "no-store" }), "Failed to fetch available time slots.");
 }
 
-export async function bookAppointmentAction(data: {
-  blockId: string;
-  serviceId: string;
-  startTime: string; // ISO String, np. "2026-05-10T10:00:00"
-  endTime: string;   // ISO String, np. "2026-05-10T10:30:00"
-  patientNotes?: string;
-}): Promise<ActionResult<AppointmentResponse>> {
-  return callApi(
-    () => springFetch(`/api/schedule/appointments`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-    "Failed to book appointment. The slot might have just been taken!"
-  );
+export async function bookAppointmentAction(data: { blockId: string; serviceId: string; startTime: string; endTime: string; patientNotes?: string; }): Promise<ActionResult<AppointmentResponse>> {
+  return callApi(() => springFetch(`/api/schedule/appointments`, { method: "POST", body: JSON.stringify(data) }), "Failed to book appointment.");
 }
 
-/**
- * PATIENT: Fetches the current patient's appointments with optional status filter and pagination.
- */
-export async function getMyAppointmentsAction(params?: {
-  status?: AppointmentStatus;
-  page?: number;
-  size?: number;
-}): Promise<ActionResult<PageResponse<AppointmentResponse>>> {
+export async function confirmAppointmentAction(appointmentId: string, patientNotes?: string): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(() => springFetch(`/api/schedule/confirm`, { method: "POST", body: JSON.stringify({ appointmentId, patientNotes }) }), "Nie udało się potwierdzić wizyty.");
+}
+
+export async function getAppointmentAction(appointmentId: string, userRole: string = "USER"): Promise<ActionResult<AppointmentResponse>> {
+  const endpoint = userRole === "DOCTOR" ? `/api/schedule/doctor-appointments/${appointmentId}` : `/api/schedule/my-appointments/${appointmentId}`;
+  return callApi<AppointmentResponse>(() => springFetch(endpoint, { method: "GET", cache: "no-store" }), "Nie udało się pobrać szczegółów wizyty.");
+}
+
+// --- AKCJE LISTY (PACJENT I LEKARZ) ---
+
+export async function getMyAppointmentsAction(params?: { status?: AppointmentStatus; page?: number; size?: number; sort?: string }): Promise<ActionResult<PageResponse<AppointmentResponse>>> {
   const query = new URLSearchParams();
   if (params?.status) query.set("status", params.status);
   if (params?.page !== undefined) query.set("page", String(params.page));
   if (params?.size !== undefined) query.set("size", String(params.size));
+  if (params?.sort) query.set("sort", params.sort);
 
-  const qs = query.toString();
-  return callApi<PageResponse<AppointmentResponse>>(
-    () =>
-      springFetch(`/api/schedule/my-appointments${qs ? `?${qs}` : ""}`, {
-        method: "GET",
-        cache: "no-store",
-      }),
-    "Failed to fetch your appointments."
-  );
+  return callApi<PageResponse<AppointmentResponse>>(() => springFetch(`/api/schedule/my-appointments?${query.toString()}`, { method: "GET", cache: "no-store" }), "Failed to fetch your appointments.");
 }
 
-/**
- * PATIENT: Cancels an appointment by ID.
- */
-export async function cancelAppointmentAction(
-  appointmentId: string
-): Promise<ActionResult<{ message: string }>> {
-  return callApi(
-    () =>
-      springFetch(
-        `/api/schedule/my-appointments/${appointmentId}/cancel`,
-        { method: "POST" }
-      ),
-    "Failed to cancel appointment."
-  );
+export async function getDoctorAppointmentsListAction(params?: { status?: AppointmentStatus; page?: number; size?: number; sort?: string }): Promise<ActionResult<PageResponse<AppointmentResponse>>> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.page !== undefined) query.set("page", String(params.page));
+  if (params?.size !== undefined) query.set("size", String(params.size));
+  if (params?.sort) query.set("sort", params.sort);
+
+  return callApi<PageResponse<AppointmentResponse>>(() => springFetch(`/api/schedule/doctor-appointments?${query.toString()}`, { method: "GET", cache: "no-store" }), "Failed to fetch doctor appointments.");
 }
 
-/**
- * Potwierdza wizytę (zmienia status z RESERVED na SCHEDULED) i zapisuje notatkę pacjenta.
- * (Dopasowane do @PostMapping("/confirm") z Twojego kontrolera)
- */
-export async function confirmAppointmentAction(
-  appointmentId: string,
-  patientNotes?: string
-): Promise<ActionResult<AppointmentResponse>> {
-  return callApi<AppointmentResponse>(
-    () => springFetch(`/api/schedule/confirm`, {
-      method: "POST",
-      // Zakładam, że Twoja klasa ConfirmAppointmentRequest w Javie przyjmuje te dwa pola
-      body: JSON.stringify({ appointmentId, patientNotes }),
-    }),
-    "Nie udało się potwierdzić wizyty. Upewnij się, że czas rezerwacji nie minął."
-  );
+// --- AKCJE ZARZĄDZANIA WIZYTĄ ---
+
+export async function cancelAppointmentAction(appointmentId: string): Promise<ActionResult<{ message: string }>> {
+  return callApi(() => springFetch(`/api/schedule/my-appointments/${appointmentId}/cancel`, { method: "POST" }), "Failed to cancel appointment.");
 }
 
-// lib/actions/booking.ts
-
-// Zaktualizuj tę funkcję lub upewnij się, że przyjmuje rolę, by wiedzieć, w który endpoint uderzyć
-export async function getAppointmentAction(
-  appointmentId: string,
-  userRole: string = "USER"
-): Promise<ActionResult<AppointmentResponse>> {
-  const endpoint = userRole === "DOCTOR" 
-    ? `/api/schedule/doctor-appointments/${appointmentId}` 
-    : `/api/schedule/my-appointments/${appointmentId}`;
-
-  return callApi<AppointmentResponse>(
-    () => springFetch(endpoint, { method: "GET", cache: "no-store" }),
-    "Nie udało się pobrać szczegółów wizyty."
-  );
+export async function cancelByDoctorAction(appointmentId: string, reason: string): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(() => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }), "Nie udało się odwołać wizyty.");
 }
 
-// Nowe akcje dla lekarza:
-export async function cancelByDoctorAction(
-  appointmentId: string,
-  reason: string
-): Promise<ActionResult<AppointmentResponse>> {
-  return callApi<AppointmentResponse>(
-    () => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/cancel`, {
-      method: "POST",
-      body: JSON.stringify({ reason }),
-    }),
-    "Nie udało się odwołać wizyty."
-  );
-}
-
-export async function markAsNoShowAction(
-  appointmentId: string
-): Promise<ActionResult<AppointmentResponse>> {
-  return callApi<AppointmentResponse>(
-    () => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/no-show`, {
-      method: "POST",
-    }),
-    "Nie udało się zmienić statusu na nieodbytą."
-  );
+export async function markAsNoShowAction(appointmentId: string): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(() => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/no-show`, { method: "POST" }), "Nie udało się zmienić statusu.");
 }

@@ -302,8 +302,7 @@ public class ScheduleService {
         // Check if the hold has expired
         if (appointment.getReservedUntil() != null &&
                 appointment.getReservedUntil().isBefore(LocalDateTime.now())) {
-            appointment.setStatus(AppointmentStatus.CANCELLED);
-            appointmentRepository.save(appointment);
+            appointmentRepository.delete(appointment);
             throw new IllegalStateException("Your reservation time has expired. Please select the time slot again.");
         }
 
