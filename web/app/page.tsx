@@ -11,23 +11,14 @@ import {
   HeroSearch,
   type SpecializationOption,
 } from "@/components/landing/hero-search";
-import { SPRING_API } from "@/lib/server/spring";
 
-async function fetchSpecializations(): Promise<SpecializationOption[]> {
-  try {
-    const res = await fetch(`${SPRING_API}/api/specializations`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    return ((await res.json()) as { code: string; name: string }[]).map(
-      (s) => ({ code: s.code, name: s.name }),
-    );
-  } catch {
-    return [];
-  }
-}
 import { Navbar } from "@/components/navbar";
 import { getServerSession } from "@/lib/server/session";
+import { getSpecializationsAction } from "@/lib/actions/doctor";
+
+// TODO: This is the main landing page of the application. It should be a marketing page that explains the value proposition of the app and encourages users to sign up. It should also have a search bar to search for doctors by specialization and city. The search bar should be prominently displayed on the page to encourage users to use it. We should also have some sections that explain how the app works, what features it has, etc. The design should be clean and modern, with a focus on usability and conversion.
+
+// TODO: We should split this page into multiple sections (hero, how it works, for doctors/clinics, etc.) but for now we will keep everything in one place to speed up development.
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -265,11 +256,18 @@ function Footer() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function LandingPage() {
-  const [session, specializations] = await Promise.all([
+  const [session, specResult] = await Promise.all([
     getServerSession(),
-    fetchSpecializations(),
+    getSpecializationsAction(),
   ]);
+
+  // Mapujemy wynik z akcji na format obsługiwany przez wyszukiwarkę na stronie głównej
+  const specializations: SpecializationOption[] = specResult.data
+    ? specResult.data.map((s) => ({ code: s.code, name: s.name }))
+    : [];
 
   return (
     <div className="min-h-screen">

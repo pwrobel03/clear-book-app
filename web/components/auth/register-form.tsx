@@ -79,11 +79,9 @@ export function RegisterForm() {
       return;
     }
 
-    if (result.status === "PENDING") {
+    if (result.data?.status === "PENDING") {
       toast.success("Application submitted successfully!");
-      setPendingMessage(
-        result.message ?? "Your account is pending admin verification.",
-      );
+      setPendingMessage("Your account is pending admin verification.");
       return;
     }
 

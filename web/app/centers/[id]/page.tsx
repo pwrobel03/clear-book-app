@@ -4,13 +4,24 @@ import { MapPin, Phone, Mail, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 
-// Nowe, ujednolicone importy
 import {
   getCenterByIdAction,
   getCenterMembersAction,
 } from "@/lib/actions/centers";
 import { getSpecializationsAction } from "@/lib/actions/doctor";
 import { TYPE_LABELS } from "@/lib/constants/labels";
+
+// TODO: This page is the public profile of a medical center. It shows basic information about the center (name, address, contact info) and a list of doctors working there. It's accessible to everyone, even non-authenticated users. We will add more information to it in the future (like opening hours, services offered, etc.) but for now it's just a simple profile page with basic info and doctors list.
+
+// TODO: We should also add a "Book an appointment" CTA to this page, but we will implement the booking flow in the future, so for now it's just a placeholder link that leads to the auth page (since only authenticated users will be able to book appointments).
+
+// TODO: We should also add some kind of notification system to notify doctor when they receive a new invitation, but for now they will have to check the "My Centers" page manually to see if they received any new invitations.
+
+// TODO: We should also add some kind of "Share this center" functionality to this page (like sharing the center profile link on social media, etc.) but we will implement that in the future, so for now it's just a simple page without any sharing features.
+
+// TODO: We should also add some kind of "Write a review" functionality to this page, so users can share their experience with the center and help other users make informed decisions, but we will implement that in the future, so for now it's just a simple page without any review features.
+
+// TODO: We should also add some kind of "View on map" functionality to this page, so users can see the location of the center on a map and get directions to it, but we will implement that in the future, so for now it's just a simple page without any map features.
 
 export default async function CenterPublicPage({
   params,

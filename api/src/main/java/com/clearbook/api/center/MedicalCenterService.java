@@ -91,6 +91,17 @@ public class MedicalCenterService {
                 .toList();
     }
 
+    /** Returns membership details for a specific center for the authenticated user. */
+    public MembershipResponse getMyMembershipInCenter(User user, UUID centerId) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        CenterMembership membership = membershipRepository.findByUserAndCenter(user, center)
+                .orElseThrow(() -> new ForbiddenException("You are not a member of this center."));
+
+        return toMembershipResponse(membership);
+    }
+
     /**
      * Invites a user to a center using their invite code.
      * Caller must be an ADMIN member of the center.
@@ -105,10 +116,27 @@ public class MedicalCenterService {
         User target = inviteCodeService.resolveUser(rawCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Invite code is invalid or expired."));
 
-        if (membershipRepository.existsByUserAndCenter(target, center)) {
-            throw new ConflictException("User is already a member or has a pending invitation.");
+        var existingMembershipOpt = membershipRepository.findByUserAndCenter(target, center);
+
+        if (existingMembershipOpt.isPresent()) {
+            CenterMembership existing = existingMembershipOpt.get();
+
+            // Block only if user is member or have a pending request
+            if (existing.getStatus() == MembershipStatus.ACTIVE || existing.getStatus() == MembershipStatus.INVITED) {
+                throw new ConflictException("User is already a member or has a pending invitation.");
+            }
+
+            // Renew Invite
+            existing.setRole(role);
+            existing.setStatus(MembershipStatus.INVITED);
+            existing.setInvitedBy(admin);
+            existing.setInvitedAt(LocalDateTime.now());
+            existing.setJoinedAt(null);
+
+            return toMembershipResponse(membershipRepository.save(existing));
         }
 
+        // First touch
         CenterMembership membership = CenterMembership.builder()
                 .user(target)
                 .center(center)
@@ -150,6 +178,26 @@ public class MedicalCenterService {
         membershipRepository.save(membership);
     }
 
+    /** Updates an existing medical center. Caller must be an ADMIN of the center. */
+    @Transactional
+    public MedicalCenterResponse update(User admin, UUID centerId, CreateCenterRequest request) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        assertCenterAdmin(admin, center);
+
+        center.setName(request.getName());
+        center.setDescription(request.getDescription());
+        center.setAddress(request.getAddress());
+        center.setCity(request.getCity());
+        center.setPhone(request.getPhone());
+        center.setEmail(request.getEmail());
+        center.setWebsite(request.getWebsite());
+        center.setType(request.getType());
+
+        return centerMapper.toResponse(centerRepository.save(center));
+    }
+
     /** Returns active members of a center (publicly accessible). */
     public List<CenterMemberSummary> getCenterMembers(UUID centerId) {
         MedicalCenter center = centerRepository.findById(centerId)
@@ -161,6 +209,7 @@ public class MedicalCenterService {
                     User user = m.getUser();
                     return profileRepository.findByUser(user)
                             .map(p -> CenterMemberSummary.builder()
+                                    .membershipId(m.getId())
                                     .firstName(user.getFirstName())
                                     .lastName(user.getLastName())
                                     .publicId(p.getPublicId())
@@ -170,12 +219,39 @@ public class MedicalCenterService {
                                     .role(m.getRole())
                                     .build())
                             .orElseGet(() -> CenterMemberSummary.builder()
+                                    .membershipId(m.getId())
                                     .firstName(user.getFirstName())
                                     .lastName(user.getLastName())
                                     .role(m.getRole())
                                     .build());
                 })
                 .toList();
+    }
+
+    /**
+     * Removes a member from the center (soft delete by setting status to SUSPENDED or hard delete).
+     * Caller must be an ADMIN member of the center.
+     */
+    @Transactional
+    public void removeMember(User admin, UUID centerId, UUID membershipId) {
+        MedicalCenter center = centerRepository.findById(centerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
+
+        assertCenterAdmin(admin, center);
+
+        CenterMembership membership = membershipRepository.findById(membershipId)
+                .orElseThrow(() -> new ResourceNotFoundException("Membership not found."));
+
+        if (!membership.getCenter().getId().equals(centerId)) {
+            throw new ConflictException("Membership does not belong to this center.");
+        }
+
+        if (membership.getUser().getId().equals(admin.getId())) {
+            throw new ConflictException("You cannot remove yourself from the center.");
+        }
+
+        membership.setStatus(MembershipStatus.SUSPENDED);
+        membershipRepository.save(membership);
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

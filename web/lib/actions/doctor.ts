@@ -100,12 +100,9 @@ export async function getDoctorsAction(specialization?: string, city?: string): 
   }
 }
 
-export async function getDoctorByPublicIdAction(publicId: string): Promise<DoctorProfileResponse | null> {
-  try {
-    const res = await springFetch(`/api/doctors/${publicId}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+export async function getDoctorByPublicIdAction(publicId: string): Promise<ActionResult<DoctorProfileResponse>> {
+  return callApi<DoctorProfileResponse>(
+    () => springFetch(`/api/doctors/${publicId}`, { cache: "no-store" }),
+    "Failed to load doctor profile."
+  );
 }

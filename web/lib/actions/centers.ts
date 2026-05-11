@@ -70,6 +70,43 @@ export async function getMyCentersAction(): Promise<ActionResult<MembershipRespo
   );
 }
 
+export async function getMyMembershipInCenterAction(centerId: string): Promise<ActionResult<MembershipResponse>> {
+  return callApi<MembershipResponse>(
+    () => springFetch(`/api/centers/${centerId}/my-membership`, { cache: "no-store" }),
+    "Failed to fetch your membership for this center."
+  );
+}
+
+export async function updateCenterAction(
+  centerId: string, 
+  data: {
+    name: string;
+    description?: string;
+    address: string;
+    city: string;
+    phone?: string;
+    email?: string;
+    website?: string;
+    type: string;
+  }
+): Promise<ActionResult<MedicalCenterResponse>> {
+  const result = await callApi<MedicalCenterResponse>(
+    () =>
+      springFetch(`/api/centers/${centerId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    "Failed to update center settings."
+  );
+
+  if (!result.error) {
+    revalidatePath(`/dashboard/centers/${centerId}`);
+    revalidatePath("/dashboard/centers"); // In case the name or city changed, we want to update the listing page as well
+  }
+
+  return result;
+}
+
 export async function acceptInvitationAction(membershipId: string): Promise<VoidResult> {
   const result = await callApiVoid(
     () =>
@@ -111,4 +148,18 @@ export async function inviteByCodeAction(
       }),
     "Failed to send invitation."
   )
+}
+
+export async function removeCenterMemberAction(centerId: string, membershipId: string): Promise<VoidResult> {
+  const result = await callApiVoid(
+    () => springFetch(`/api/centers/${centerId}/members/${membershipId}`, { method: "DELETE" }),
+    "Failed to remove member."
+  );
+
+  if (!result.error) {
+    revalidatePath(`/dashboard/centers/${centerId}`); // To update the members list on the center details page
+    revalidatePath("/dashboard/centers"); // In case the removed member was the last one, we might want to update the listing page as well
+  }
+
+  return result;
 }

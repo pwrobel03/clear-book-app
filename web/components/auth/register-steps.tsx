@@ -13,6 +13,7 @@ import {
   Lock,
   Loader2,
   Upload,
+  Building2,
   FileText,
   X,
 } from "lucide-react";
@@ -29,7 +30,7 @@ import {
 
 import { type RegisterFormData } from "@/lib/schemas/auth";
 
-// ─── KROK 1: Wybór Roli ────────────────────────────────────────────────────────
+// ─── Role Selection Step ──────────────────────────────────────────────────────
 
 export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
   const { control } = useFormContext<RegisterFormData>();
@@ -52,6 +53,7 @@ export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
           <FormItem>
             <FormControl>
               <div className="grid gap-3">
+                {/* 1. Pacjent */}
                 <div
                   onClick={() => field.onChange("USER")}
                   className={cn(
@@ -79,6 +81,7 @@ export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
                   </div>
                 </div>
 
+                {/* 2. Lekarz */}
                 <div
                   onClick={() => field.onChange("DOCTOR")}
                   className={cn(
@@ -105,6 +108,34 @@ export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
                     </span>
                   </div>
                 </div>
+
+                {/* 3. Menadżer / Placówka */}
+                <div
+                  onClick={() => field.onChange("MANAGER")}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all",
+                    field.value === "MANAGER"
+                      ? "border-accent bg-accent/5 text-accent"
+                      : "border-border text-muted-foreground hover:border-accent/40 hover:bg-accent/5",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "p-2 rounded-lg",
+                      field.value === "MANAGER" ? "bg-accent/20" : "bg-muted",
+                    )}
+                  >
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <span className="block font-semibold text-foreground">
+                      I manage a Clinic
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Register a center and invite your staff.
+                    </span>
+                  </div>
+                </div>
               </div>
             </FormControl>
             <FormMessage />
@@ -119,13 +150,13 @@ export function RoleSelectionStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── KROK 2: Dane Osobowe ──────────────────────────────────────────────────────
+// ─── Personal Details ──────────────────────────────────────────────────────
 
 interface PersonalDetailsStepProps {
   onNext: () => void;
   onBack: () => void;
   isSubmitting: boolean;
-  role: "USER" | "DOCTOR";
+  role: "USER" | "DOCTOR" | "MANAGER";
 }
 
 export function PersonalDetailsStep({
@@ -306,7 +337,7 @@ export function PersonalDetailsStep({
   );
 }
 
-// ─── KROK 3: Weryfikacja Lekarza ──────────────────────────────────────────────
+// --- ─── Doctor Verification Step ──────────────────────────────────────────────
 
 interface DoctorVerificationStepProps {
   onBack: () => void;

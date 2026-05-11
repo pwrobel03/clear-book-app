@@ -20,6 +20,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // IMPORT TOAST
 
+// TODO: This page is currently just a simple interface to show the doctor's invite code and let them refresh it. In the future, we might want to add more features to it (like showing recent invitations, letting doctor manage them, etc.) but for now it's just a simple page to get the invite code and refresh it.
+
+// TODO: We should also add some kind of notification system to notify doctor when they receive a new invitation, but for now they will have to check the "My Centers" page manually to see if they received any new invitations.
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type InviteCode = {
