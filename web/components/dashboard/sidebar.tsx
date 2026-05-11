@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { logoutAction } from "@/lib/actions/auth";
 import {
   LayoutDashboard,
   Calendar,
@@ -113,10 +114,8 @@ export function Sidebar() {
   const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
     clearUser();
-    router.push("/auth");
-    router.refresh();
+    await logoutAction(); // server action — redirects to /auth
   }
 
   return (

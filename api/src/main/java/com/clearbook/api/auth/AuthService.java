@@ -1,13 +1,18 @@
 package com.clearbook.api.auth;
 
-import com.clearbook.api.dto.*;
+import com.clearbook.api.auth.dto.*;
+import com.clearbook.api.exception.ConflictException;
+import com.clearbook.api.exception.ForbiddenException;
+import com.clearbook.api.exception.ResourceNotFoundException;
+import com.clearbook.api.exception.TokenExpiredException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.PasswordResetTokenRepository;
 import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.VerificationTokenRepository;
 import com.clearbook.api.security.JwtService;
-import com.clearbook.api.service.EmailService;
+import com.clearbook.api.shared.email.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -29,17 +35,16 @@ public class AuthService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Użytkownik z tym adresem e-mail już istnieje.");
+            throw new ConflictException("There is already an account with that email address.");
         }
 
-        // Nie pozwalamy rejestrować kont ADMIN przez publiczny endpoint
         if (request.getRole() == Role.ADMIN) {
-            throw new IllegalArgumentException("Rejestracja konta administratora jest niedozwolona.");
+            throw new ForbiddenException("Registration with admin privilege is not allowed.");
         }
 
-        // Każde nowe konto wymaga potwierdzenia e-mail
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -51,7 +56,6 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // Generowanie i zapis tokenu
         String token = UUID.randomUUID().toString();
         VerificationToken verificationToken = VerificationToken.builder()
                 .token(token)
@@ -60,8 +64,6 @@ public class AuthService {
                 .build();
 
         tokenRepository.save(verificationToken);
-
-        // Wysyłka wiadomości
         emailService.sendVerificationEmail(user.getEmail(), token);
 
         return AuthResponse.builder()
@@ -74,25 +76,23 @@ public class AuthService {
     @Transactional
     public void verifyEmail(String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("Nieprawidłowy token weryfikacyjny."));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid verification token."));
 
         if (verificationToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("Link weryfikacyjny wygasł.");
+            throw new TokenExpiredException("Verification link has expired.");
         }
 
         User user = verificationToken.getUser();
+        log.debug("Verifying email for user: {}", user.getEmail());
 
-        System.out.printf("User: %s%n", user);
-
-        // Zmiana statusu w zależności od roli
         if (user.getRole() == Role.DOCTOR) {
-            user.setStatus(AccountStatus.PENDING); // Lekarz idzie do kolejki administratora
+            user.setStatus(AccountStatus.PENDING);
         } else {
-            user.setStatus(AccountStatus.ACTIVE); // Pacjent staje się w pełni aktywny
+            user.setStatus(AccountStatus.ACTIVE);
         }
 
         userRepository.save(user);
-        tokenRepository.delete(verificationToken); // Token jest jednorazowy
+        tokenRepository.delete(verificationToken);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -100,29 +100,25 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        // Szukamy użytkownika po e-mailu
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
 
-        // Precyzyjna weryfikacja statusówpublic
         if (user.getStatus() == AccountStatus.UNVERIFIED) {
-            throw new IllegalArgumentException("You have to confirm you're account before logging in.");
+            throw new ForbiddenException("You must confirm your email address before logging in.");
         }
 
         if (user.getStatus() == AccountStatus.PENDING) {
-            // Zwracamy odpowiedź bez tokenu, frontend obsłuży status PENDING
             return AuthResponse.builder()
                     .role(user.getRole().name())
                     .status(user.getStatus().name())
-                    .message("Your account is waiting for administrator approval..")
+                    .message("Your account is waiting for administrator approval.")
                     .build();
         }
 
         if (user.getStatus() != AccountStatus.ACTIVE) {
-            throw new IllegalArgumentException("Your account has been disabled or has been disabled.");
+            throw new ForbiddenException("Your account has been disabled.");
         }
 
-        // Konto jest ACTIVE, generujemy token
         String token = jwtService.generateToken(user);
         return AuthResponse.builder()
                 .token(token)
@@ -140,7 +136,7 @@ public class AuthService {
             PasswordResetToken resetToken = PasswordResetToken.builder()
                     .token(token)
                     .user(user)
-                    .expiryDate(LocalDateTime.now().plusHours(1)) // Ważny przez godzinę
+                    .expiryDate(LocalDateTime.now().plusHours(1))
                     .build();
 
             passwordResetTokenRepository.save(resetToken);
@@ -151,17 +147,17 @@ public class AuthService {
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new IllegalArgumentException("Wrong or expired token."));
+                .orElseThrow(() -> new ResourceNotFoundException("Password reset token not found."));
 
         if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
             passwordResetTokenRepository.delete(resetToken);
-            throw new IllegalArgumentException("Link for password reset has been expired.");
+            throw new TokenExpiredException("Password reset link has expired.");
         }
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
         userRepository.save(user);
-        passwordResetTokenRepository.delete(resetToken); // Token wykorzystany, usuwamy
+        passwordResetTokenRepository.delete(resetToken);
     }
 }

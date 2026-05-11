@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,16 +18,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const forgotSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-type ForgotFormData = z.infer<typeof forgotSchema>;
+import { forgotPasswordAction } from "@/lib/actions/auth";
+import { forgotSchema, type ForgotFormData } from "@/lib/schemas/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [isSuccess, setIsSuccess] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<ForgotFormData>({
     resolver: zodResolver(forgotSchema),
@@ -37,25 +33,14 @@ export default function ForgotPasswordPage() {
   const { isSubmitting } = form.formState;
 
   async function onSubmit(values: ForgotFormData) {
-    setServerError(null);
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
+    const result = await forgotPasswordAction(values.email);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setServerError(data.message ?? "Something went wrong.");
-        return;
-      }
-
-      setIsSuccess(true);
-    } catch {
-      setServerError("Unable to connect to the server.");
+    if (result.error) {
+      toast.error(result.error);
+      return;
     }
+
+    setIsSuccess(true);
   }
 
   return (
@@ -123,12 +108,6 @@ export default function ForgotPasswordPage() {
                     </FormItem>
                   )}
                 />
-
-                {serverError && (
-                  <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                    {serverError}
-                  </p>
-                )}
 
                 <Button
                   type="submit"

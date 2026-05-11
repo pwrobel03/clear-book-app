@@ -1,62 +1,43 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Search, Calendar, CheckCircle, Building2, Stethoscope, ArrowRight } from "lucide-react";
-import { getServerSession } from "@/lib/server/session";
-import { HeroSearch } from "@/components/landing/hero-search";
+import {
+  Search,
+  Calendar,
+  CheckCircle,
+  Building2,
+  Stethoscope,
+  ArrowRight,
+} from "lucide-react";
+import {
+  HeroSearch,
+  type SpecializationOption,
+} from "@/components/landing/hero-search";
+import { SPRING_API } from "@/lib/server/spring";
 
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-
-function Navbar({ isAuth }: { isAuth: boolean }) {
-  return (
-    <nav className="absolute top-0 left-0 right-0 z-10">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#36A372]">
-            <span className="text-sm font-black text-white">CB</span>
-          </div>
-          <span className="text-lg font-bold text-white">ClearBook</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/centers"
-            className="hidden sm:block text-sm font-medium text-white/70 transition-colors hover:text-white"
-          >
-            Centers
-          </Link>
-          {isAuth ? (
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-[#36A372] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#297A56]"
-            >
-              Go to Dashboard
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/auth"
-                className="text-sm font-medium text-white/80 transition-colors hover:text-white"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/auth"
-                className="rounded-lg bg-[#36A372] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#297A56]"
-              >
-                Get started
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </nav>
-  );
+async function fetchSpecializations(): Promise<SpecializationOption[]> {
+  try {
+    const res = await fetch(`${SPRING_API}/api/specializations`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return ((await res.json()) as { code: string; name: string }[]).map(
+      (s) => ({ code: s.code, name: s.name }),
+    );
+  } catch {
+    return [];
+  }
 }
+import { Navbar } from "@/components/navbar";
+import { getServerSession } from "@/lib/server/session";
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
-function Hero() {
+function Hero({
+  specializations,
+}: {
+  specializations: SpecializationOption[];
+}) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#080F20] to-[#102240] pb-24 pt-32">
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#080F20] to-[#102240] pb-24 pt-20 min-h-[92vh]">
       {/* Decorative blobs */}
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[#36A372]/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-16 top-1/4 h-64 w-64 rounded-full bg-[#F0EBE9]/5 blur-3xl" />
@@ -75,14 +56,14 @@ function Hero() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/65">
-          ClearBook connects patients with verified medical professionals. Browse
-          by specialization, choose your clinic, and secure your appointment — all
-          in one place.
+          ClearBook connects patients with verified medical professionals.
+          Browse by specialization, choose your clinic, and secure your
+          appointment — all in one place.
         </p>
 
         {/* Search card */}
         <div className="mx-auto mt-10 max-w-2xl rounded-2xl bg-white/5 p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
-          <HeroSearch />
+          <HeroSearch specializations={specializations} />
         </div>
 
         {/* Stats */}
@@ -153,7 +134,9 @@ function HowItWorks() {
                 {i + 1}
               </div>
               <h3 className="mb-2 font-semibold text-foreground">{title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
             </div>
           ))}
         </div>
@@ -218,10 +201,12 @@ function B2BSection() {
             <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
               <Building2 size={20} className="text-primary" />
             </div>
-            <h3 className="mb-2 font-bold text-foreground">For Medical Centers</h3>
+            <h3 className="mb-2 font-bold text-foreground">
+              For Medical Centers
+            </h3>
             <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
-              Register your clinic or hospital, manage your team of doctors,
-              and let patients find and book appointments at your facility.
+              Register your clinic or hospital, manage your team of doctors, and
+              let patients find and book appointments at your facility.
             </p>
             <ul className="mb-6 space-y-2 text-sm text-muted-foreground">
               {[
@@ -258,14 +243,20 @@ function Footer() {
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#102240]">
             <span className="text-[10px] font-black text-[#36A372]">CB</span>
           </div>
-          <span className="text-sm font-semibold text-foreground">ClearBook</span>
+          <span className="text-sm font-semibold text-foreground">
+            ClearBook
+          </span>
         </div>
         <p className="text-xs text-muted-foreground">
           © {new Date().getFullYear()} ClearBook. All rights reserved.
         </p>
         <div className="flex gap-4 text-xs text-muted-foreground">
-          <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-          <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+          <a href="#" className="hover:text-foreground transition-colors">
+            Privacy
+          </a>
+          <a href="#" className="hover:text-foreground transition-colors">
+            Terms
+          </a>
         </div>
       </div>
     </footer>
@@ -275,16 +266,15 @@ function Footer() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function LandingPage() {
-  const session = await getServerSession();
-
-  // Authenticated users who explicitly visit / → dashboard
-  // (but stay on landing if they come for other reasons)
-  // We allow staying on landing for now, navbar shows "Go to Dashboard"
+  const [session, specializations] = await Promise.all([
+    getServerSession(),
+    fetchSpecializations(),
+  ]);
 
   return (
     <div className="min-h-screen">
-      <Navbar isAuth={!!session} />
-      <Hero />
+      <Navbar />
+      <Hero specializations={specializations} />
       <HowItWorks />
       <B2BSection />
       <Footer />

@@ -3,15 +3,22 @@ package com.clearbook.api.model;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(of = "id")
+// user i specializations wykluczone: user to lazy proxy, specializations to kolekcja encji
+@ToString(exclude = {"user", "specializations"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,13 +43,12 @@ public class DoctorProfile {
     @Column(unique = true, nullable = false)
     private String publicId;
 
-    @Enumerated(EnumType.STRING)
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(
-            name = "doctor_specializations",
-            joinColumns = @JoinColumn(name = "doctor_profile_id")
+    @ManyToMany
+    @JoinTable(
+            name = "doctor_profile_specializations",
+            joinColumns = @JoinColumn(name = "doctor_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "specialization_id")
     )
-    @Column(name = "specialization")
     @Builder.Default
     private Set<Specialization> specializations = new HashSet<>();
 

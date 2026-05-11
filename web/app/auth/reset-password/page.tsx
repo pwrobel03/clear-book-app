@@ -4,9 +4,9 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,19 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const resetSchema = z
-  .object({
-    newPassword: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string({
-      required_error: "Please confirm your password",
-    }),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type ResetFormData = z.infer<typeof resetSchema>;
+import { resetPasswordAction } from "@/lib/actions/auth";
+import { resetSchema, type ResetFormData } from "@/lib/schemas/auth";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -40,7 +29,6 @@ function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<ResetFormData>({
     resolver: zodResolver(resetSchema),
@@ -64,25 +52,18 @@ function ResetPasswordForm() {
   }
 
   async function onSubmit(values: ResetFormData) {
-    setServerError(null);
-    try {
-      const res = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: values.newPassword }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setServerError(data.message ?? "Failed to reset password.");
-        return;
-      }
-
-      setIsSuccess(true);
-    } catch {
-      setServerError("Unable to connect to the server.");
+    if (!token) {
+      toast.error("Missing reset token. Please use the link from your email.");
+      return;
     }
+    const result = await resetPasswordAction(token, values.newPassword);
+
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    setIsSuccess(true);
   }
 
   if (isSuccess) {
@@ -192,12 +173,6 @@ function ResetPasswordForm() {
               </FormItem>
             )}
           />
-
-          {serverError && (
-            <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-              {serverError}
-            </p>
-          )}
 
           <Button
             type="submit"

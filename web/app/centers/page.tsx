@@ -1,72 +1,16 @@
 import Link from "next/link";
 import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Navbar } from "@/components/navbar";
 
-const SPRING = "http://localhost:8080";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type MedicalCenter = {
-  id: string;
-  name: string;
-  description: string | null;
-  address: string;
-  city: string;
-  phone: string | null;
-  email: string | null;
-  type: string;
-  status: string;
-};
-
-type PageResult = {
-  content: MedicalCenter[];
-  totalElements: number;
-};
-
-// ─── Labels ───────────────────────────────────────────────────────────────────
-
-const TYPE_LABELS: Record<string, string> = {
-  CLINIC: "Clinic",
-  HOSPITAL: "Hospital",
-  PRIVATE_PRACTICE: "Private Practice",
-  DIAGNOSTIC_CENTER: "Diagnostic Center",
-  REHABILITATION_CENTER: "Rehabilitation Center",
-};
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-
-function Navbar() {
-  return (
-    <header className="border-b border-border bg-card sticky top-0 z-10">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#102240]">
-            <span className="text-xs font-black text-[#36A372]">CB</span>
-          </div>
-          <span className="font-bold text-foreground">ClearBook</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/doctors"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Find a Doctor
-          </Link>
-          <Link
-            href="/auth"
-            className="text-sm font-medium text-accent hover:underline"
-          >
-            Sign in
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
+// Używamy naszej akcji i globalnego słownika zamiast powielać kod
+import { getCentersAction } from "@/lib/actions/centers";
+import { TYPE_LABELS } from "@/lib/constants/labels";
+import type { MedicalCenterResponse } from "@/types/api";
 
 // ─── Center card ──────────────────────────────────────────────────────────────
 
-function CenterCard({ center }: { center: MedicalCenter }) {
+function CenterCard({ center }: { center: MedicalCenterResponse }) {
   return (
     <Link
       href={`/centers/${center.id}`}
@@ -129,18 +73,8 @@ export default async function CentersListPage({
 }) {
   const { city = "" } = await searchParams;
 
-  const params = new URLSearchParams({ size: "24" });
-  if (city) params.set("city", city);
-
-  let result: PageResult = { content: [], totalElements: 0 };
-  try {
-    const res = await fetch(`${SPRING}/api/centers?${params}`, {
-      cache: "no-store",
-    });
-    if (res.ok) result = await res.json();
-  } catch {
-    // Spring unavailable
-  }
+  // Pobieranie danych przeniesione do bezpiecznej pod kątem typów Server Action
+  const result = await getCentersAction(city);
 
   return (
     <div className="min-h-screen bg-background">
@@ -180,11 +114,10 @@ export default async function CentersListPage({
       <main className="mx-auto max-w-5xl px-6 py-10">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-foreground">
-            Medical Centers
-          </h1>
+          <h1 className="text-xl font-bold text-foreground">Medical Centers</h1>
           <p className="text-sm text-muted-foreground">
-            {result.totalElements} center{result.totalElements !== 1 ? "s" : ""} available
+            {result.totalElements} center{result.totalElements !== 1 ? "s" : ""}{" "}
+            available
             {city && ` in ${city}`}
           </p>
         </div>
@@ -204,7 +137,10 @@ export default async function CentersListPage({
               </p>
             </div>
             {city && (
-              <Link href="/centers" className="text-sm font-medium text-accent hover:underline">
+              <Link
+                href="/centers"
+                className="text-sm font-medium text-accent hover:underline"
+              >
                 Show all centers
               </Link>
             )}

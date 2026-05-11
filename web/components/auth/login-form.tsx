@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
-import api from "@/lib/api";
-
+import { loginAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,18 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { toast } from "sonner";
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { loginSchema, type LoginFormData } from "@/lib/schemas/auth";
 
 export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -40,29 +33,25 @@ export function LoginForm() {
   const { isSubmitting } = form.formState;
 
   async function onSubmit(values: LoginFormData) {
-    setServerError(null);
-    try {
-      const { data } = await api.post("/auth/login", values);
+    const result = await loginAction(values.email, values.password);
 
-      if (data.status === "PENDING") {
-        setServerError("Your account is awaiting admin verification.");
-        return;
-      }
-      if (data.status === "BANNED") {
-        setServerError(
-          "Your account has been suspended. Please contact support.",
-        );
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Invalid email or password.";
-      setServerError(message);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
     }
+
+    if (result.status === "PENDING") {
+      toast.warning("Your account is awaiting admin verification.");
+      return;
+    }
+    if (result.status === "BANNED") {
+      toast.error("Your account has been suspended. Please contact support.");
+      return;
+    }
+
+    toast.success("Signed in successfully!");
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -105,7 +94,6 @@ export function LoginForm() {
                 <FormLabel className="text-muted-foreground">
                   Password
                 </FormLabel>
-                {/* Placeholder for future forgot password feature */}
                 <Link
                   href="/auth/forgot-password"
                   className="text-xs font-medium text-accent hover:underline"
@@ -140,12 +128,6 @@ export function LoginForm() {
           )}
         />
 
-        {serverError && (
-          <p className="rounded-lg bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-            {serverError}
-          </p>
-        )}
-
         <Button
           type="submit"
           className="w-full h-11 text-base shadow-sm mt-2"
@@ -153,8 +135,7 @@ export function LoginForm() {
         >
           {isSubmitting ? (
             <>
-              <Loader2 size={18} className="mr-2 animate-spin" />
-              Signing in…
+              <Loader2 size={18} className="mr-2 animate-spin" /> Signing in…
             </>
           ) : (
             "Sign in"
