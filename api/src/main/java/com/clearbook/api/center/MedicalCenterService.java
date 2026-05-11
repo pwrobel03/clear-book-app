@@ -11,7 +11,7 @@ import com.clearbook.api.model.*;
 import com.clearbook.api.repository.CenterMembershipRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.MedicalCenterRepository;
-import com.clearbook.api.schedule.ScheduleService;
+import com.clearbook.api.schedule.AvailabilityService;
 import com.clearbook.api.user.InviteCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,7 @@ public class MedicalCenterService {
     private final DoctorProfileRepository profileRepository;
     private final InviteCodeService inviteCodeService;
     private final CenterMapper centerMapper;
-    private final ScheduleService scheduleService;
+    private final AvailabilityService availabilityService;
 
     /**
      * Creates a new medical center and automatically makes the creator its ADMIN.
@@ -261,7 +261,7 @@ public class MedicalCenterService {
         // If the member is a doctor, clean up their future schedule at this center
         User removedUser = membership.getUser();
         if (removedUser.getRole() == Role.DOCTOR) {
-            int cancelledAppointments = scheduleService.cancelFutureScheduleForDoctorAtCenter(removedUser, center);
+            int cancelledAppointments = availabilityService.cancelFutureScheduleForDoctorAtCenter(removedUser, center);
             if (cancelledAppointments > 0) {
                 log.info("Removed doctor {} from center {}: {} future appointments cancelled.",
                         removedUser.getId(), centerId, cancelledAppointments);
