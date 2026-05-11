@@ -4,12 +4,15 @@ import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.AppointmentRepository;
 import com.clearbook.api.repository.AppointmentReviewRepository;
+import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.review.dto.DoctorReplyRequest;
 import com.clearbook.api.review.dto.ReviewRequest;
 import com.clearbook.api.review.dto.ReviewResponse;
 import com.clearbook.api.review.event.ReviewChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ public class ReviewService {
 
     private final AppointmentReviewRepository reviewRepository;
     private final AppointmentRepository appointmentRepository;
+    private final DoctorProfileRepository doctorProfileRepository;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -138,6 +142,16 @@ public class ReviewService {
 
         // If doctor, force show patient info even if review is anonymous, if patient, show based on isAnonymous
         return toResponse(review, true);
+    }
+
+    // This method retrieves reviews for a doctor based on the doctor's public ID, which is more user-friendly than using UUIDs in the API.
+    @Transactional(readOnly = true)
+    public Page<ReviewResponse> getReviewsByDoctorPublicId(String publicId, Pageable pageable) {
+        DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+
+        return reviewRepository.findByAppointment_Block_Doctor_IdOrderByCreatedAtDesc(profile.getUser().getId(), pageable)
+                .map(review -> toResponse(review, false));
     }
 
     // --- Helper mapping ---

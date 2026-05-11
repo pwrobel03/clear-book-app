@@ -105,6 +105,8 @@ export interface DoctorProfileResponse {
   licenseNumber: string | null
   photoUrl: string | null
   public: boolean
+  averageRating: number;
+  totalReviews: number;
   createdAt: string
   updatedAt: string
 }

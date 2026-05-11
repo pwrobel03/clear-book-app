@@ -7,6 +7,7 @@ import {
   Award,
   Lock,
   LogIn,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/actions/doctor";
 import { getServerSession } from "@/lib/server/session";
 import { DoctorBookingClient } from "./booking-client";
+import { DoctorReviewsSection } from "./review-section";
 
 export default async function DoctorProfilePage({
   params,
@@ -35,20 +37,17 @@ export default async function DoctorProfilePage({
     getServerSession(),
   ]);
 
-  // 404 - doctor not found
   if (doctorResult.error && doctorResult.error.includes("not found")) {
     notFound();
   }
 
-  // Private profile
+  // --- Private View ---
   if (doctorResult.error === "PRIVATE_PROFILE") {
     return (
       <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
         <div className="pointer-events-none absolute top-[10%] left-[10%] h-[500px] w-[500px] rounded-full bg-primary/20 blur-[140px] dark:bg-primary/10" />
         <div className="pointer-events-none absolute bottom-[10%] right-[10%] h-[600px] w-[600px] rounded-full bg-accent/20 blur-[140px] dark:bg-accent/15" />
-
         <Navbar />
-
         <main className="relative z-20 mx-auto w-full max-w-2xl px-2 sm:px-6 py-24 text-center flex-1">
           <GlassPanel className="p-10 md:p-14">
             <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-black/5 dark:bg-white/5 shadow-inner border border-black/5 dark:border-white/10">
@@ -79,21 +78,18 @@ export default async function DoctorProfilePage({
   }
 
   const doctor = doctorResult.data!;
-
   const specLabels: Record<string, string> = {};
   if (specResult.data) {
     specResult.data.forEach((s) => (specLabels[s.code] = s.name));
   }
 
   const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`.toUpperCase();
-
   const isAuthenticated = !!session;
   const isPatient = session?.role === "USER";
   const isDoctor = session?.role === "DOCTOR";
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
-      {/* ── Atmospheric blobs ── */}
       <div className="pointer-events-none absolute top-[10%] left-[10%] h-[500px] w-[500px] rounded-full bg-primary/20 blur-[140px] dark:bg-primary/10" />
       <div className="pointer-events-none absolute bottom-[10%] right-[10%] h-[600px] w-[600px] rounded-full bg-accent/20 blur-[140px] dark:bg-accent/15" />
 
@@ -111,7 +107,6 @@ export default async function DoctorProfilePage({
           Back to Search
         </Link>
 
-        {/* Private profile notice (still accessible via direct link) */}
         {!doctor.public && (
           <GlassPanel className="mb-8 border-warning/60 bg-warning/60 p-5">
             <div className="flex items-center gap-3 text-warning-foreground font-medium text-sm">
@@ -124,126 +119,142 @@ export default async function DoctorProfilePage({
           </GlassPanel>
         )}
 
-        <div className="grid gap-8">
-          {/* ── Left Column: Profile & Info ──────────────────────────── */}
-          <div className="space-y-8">
-            <GlassPanel className="p-8 md:p-10">
-              <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="h-32 w-32 shrink-0 rounded-3xl bg-primary flex items-center justify-center text-4xl font-black text-primary-foreground shadow-2xl">
-                  {initials}
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
-                      Dr. {doctor.firstName} {doctor.lastName}
-                    </h1>
-                    {doctor.specializations.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {doctor.specializations.map((s) => (
-                          <Badge
-                            key={s}
-                            variant="accent"
-                            className="px-3 py-1 shadow-sm"
-                          >
-                            {specLabels[s] ?? s}
-                          </Badge>
-                        ))}
-                      </div>
+        <div className="flex flex-col gap-10">
+          {/* Info about the doctor */}
+          <GlassPanel className="p-8 md:p-10">
+            <div className="flex flex-col md:flex-row gap-8 items-start">
+              <div className="h-32 w-32 shrink-0 rounded-3xl bg-primary flex items-center justify-center text-4xl font-black text-primary-foreground shadow-2xl">
+                {initials}
+              </div>
+              <div className="space-y-4 w-full">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
+                    Dr. {doctor.firstName} {doctor.lastName}
+                  </h1>
+
+                  {/* Rating Indicator */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Star
+                      size={18}
+                      className="fill-yellow-400 text-yellow-400"
+                    />
+                    <span className="font-bold text-foreground text-lg">
+                      {doctor.averageRating && doctor.averageRating > 0
+                        ? doctor.averageRating.toFixed(1)
+                        : "No ratings yet"}
+                    </span>
+                    {doctor.totalReviews > 0 && (
+                      <span className="text-muted-foreground text-sm font-medium">
+                        ({doctor.totalReviews}{" "}
+                        {doctor.totalReviews === 1 ? "review" : "reviews"})
+                      </span>
                     )}
                   </div>
 
-                  {doctor.licenseNumber && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-                      <Award size={16} className="text-accent" />
-                      License: {doctor.licenseNumber}
+                  {doctor.specializations.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {doctor.specializations.map((s) => (
+                        <Badge
+                          key={s}
+                          variant="accent"
+                          className="px-3 py-1 shadow-sm"
+                        >
+                          {specLabels[s] ?? s}
+                        </Badge>
+                      ))}
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="mt-10 pt-8 border-t border-black/5 dark:border-white/5">
-                <h2 className="text-xl font-bold text-foreground mb-4">
-                  About the Doctor
-                </h2>
-                <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-line">
-                  {doctor.bio ?? "This doctor hasn't provided a biography yet."}
-                </p>
-              </div>
-            </GlassPanel>
-
-            {/* Affiliated Centers */}
-            <section className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                  <Building2 size={20} />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                  Affiliated Centers
-                </h2>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2">
-                {centers.length === 0 ? (
-                  <GlassPanel className="sm:col-span-2 py-10 text-center border-dashed">
-                    <p className="text-muted-foreground">
-                      No affiliated centers listed.
-                    </p>
-                  </GlassPanel>
-                ) : (
-                  centers.map((center) => (
-                    <Link key={center.id} href={`/centers/${center.id}`}>
-                      <GlassCard className="p-5 flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm">
-                          <Building2
-                            size={22}
-                            className="text-primary dark:text-primary-light"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-bold text-foreground">
-                            {center.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <MapPin size={12} /> {center.city}
-                          </p>
-                        </div>
-                      </GlassCard>
-                    </Link>
-                  ))
+                {doctor.licenseNumber && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                    <Award size={16} className="text-accent" />
+                    License: {doctor.licenseNumber}
+                  </div>
                 )}
               </div>
-            </section>
-          </div>
+            </div>
 
-          {/* ── Right Column: Booking ─────────────────────────────────── */}
-          <div className="space-y-6">
-            <GlassPanel className="p-2 sm:p-6 sticky top-24 border-accent/20">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-lg">
-                  <CalendarDays size={20} />
-                </div>
-                <h3 className="text-xl font-bold text-foreground">
-                  Book Appointment
-                </h3>
+            <div className="mt-10 pt-8 border-t border-black/5 dark:border-white/5">
+              <h2 className="text-xl font-bold text-foreground mb-4">
+                About the Doctor
+              </h2>
+              <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-line">
+                {doctor.bio ?? "This doctor hasn't provided a biography yet."}
+              </p>
+            </div>
+          </GlassPanel>
+
+          {/* Section: Affiliated Centers */}
+          <section className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <Building2 size={20} />
               </div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                Affiliated Centers
+              </h2>
+            </div>
 
-              {/* Not logged in → CTA */}
+            <div className="grid gap-6 sm:grid-cols-2">
+              {centers.length === 0 ? (
+                <GlassPanel className="sm:col-span-2 py-10 text-center border-dashed">
+                  <p className="text-muted-foreground">
+                    No affiliated centers listed.
+                  </p>
+                </GlassPanel>
+              ) : (
+                centers.map((center) => (
+                  <Link key={center.id} href={`/centers/${center.id}`}>
+                    <GlassCard className="p-5 flex items-center gap-4 hover:border-accent/40 transition-colors">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm">
+                        <Building2
+                          size={22}
+                          className="text-primary dark:text-primary-light"
+                        />
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground">
+                          {center.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin size={12} /> {center.city}
+                        </p>
+                      </div>
+                    </GlassCard>
+                  </Link>
+                ))
+              )}
+            </div>
+          </section>
+
+          {/* Section: Book Appointment */}
+          <section className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CalendarDays size={20} />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                Book Appointment
+              </h2>
+            </div>
+
+            <GlassPanel className="p-4 sm:p-8 border-accent/20 shadow-lg">
               {!isAuthenticated && (
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-md mx-auto text-center py-6">
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     Create an account or sign in to book with Dr.{" "}
                     {doctor.lastName}.
                   </p>
                   <Link href={`/auth?redirect=/doctors/${publicId}`}>
-                    <Button className="w-full rounded-2xl gap-2">
-                      <LogIn size={16} />
-                      Sign in to book
+                    <Button className="w-full rounded-2xl gap-2 h-12">
+                      <LogIn size={18} /> Sign in to book
                     </Button>
                   </Link>
                   <Link href={`/auth?redirect=/doctors/${publicId}`}>
                     <Button
                       variant="outline"
-                      className="w-full rounded-2xl mt-2"
+                      className="w-full rounded-2xl mt-3 h-12"
                     >
                       Create account
                     </Button>
@@ -251,15 +262,15 @@ export default async function DoctorProfilePage({
                 </div>
               )}
 
-              {/* Logged in as DOCTOR → informational */}
               {isDoctor && (
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  You are signed in as a doctor. Only patients can book
-                  appointments.
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground leading-relaxed">
+                    You are signed in as a doctor. Only patients can book
+                    appointments.
+                  </p>
+                </div>
               )}
 
-              {/* Logged in as PATIENT → booking form */}
               {isPatient && (
                 <DoctorBookingClient
                   doctorId={publicId}
@@ -269,7 +280,21 @@ export default async function DoctorProfilePage({
                 />
               )}
             </GlassPanel>
-          </div>
+          </section>
+
+          {/* Section: Patient Reviews */}
+          <section className="space-y-6 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                <Star size={20} className="fill-current" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                Patient Reviews
+              </h2>
+            </div>
+
+            <DoctorReviewsSection publicId={publicId} />
+          </section>
         </div>
       </main>
     </div>

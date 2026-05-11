@@ -51,5 +51,5 @@ public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, UU
             Pageable pageable
     );
 
-    ScopedValue<Object> findByUserId(UUID doctorId);
+    Optional<DoctorProfile> findByUser_Id(UUID userId);
 }

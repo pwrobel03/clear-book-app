@@ -5,6 +5,7 @@ import { springFetch } from "@/lib/server/spring"
 import { callApi } from "@/lib/server/api-action"
 import type { ActionResult } from "@/types/api"
 import type { ReviewResponse } from "@/types/api"
+import type { SpringPage } from "@/types/api"
 
 /**
  * Fetches a review for a specific appointment.
@@ -130,4 +131,23 @@ export async function deleteReplyAction(
     "Failed to delete reply."
   )
   return result
+}
+
+export async function getDoctorReviewsAction(
+  publicId: string,
+  page: number = 0,
+  size: number = 5
+): Promise<SpringPage<ReviewResponse>> {
+  try {
+    const res = await springFetch(`/api/doctors/${publicId}/reviews?page=${page}&size=${size}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return { content: [], totalElements: 0, totalPages: 0, size, number: page };
+    }
+    return await res.json();
+  } catch (error) {
+    return { content: [], totalElements: 0, totalPages: 0, size, number: page };
+  }
 }

@@ -25,4 +25,6 @@ public interface AppointmentReviewRepository extends JpaRepository<AppointmentRe
 
     @Query("SELECT COUNT(r) FROM AppointmentReview r WHERE r.appointment.block.doctor.id = :doctorId")
     Long countReviewsForDoctor(@Param("doctorId") UUID doctorId);
+
+    Page<AppointmentReview> findByAppointment_Block_Doctor_IdOrderByCreatedAtDesc(UUID doctorId, Pageable pageable);
 }
