@@ -3,6 +3,8 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { getAppointmentAction } from "@/lib/actions/booking";
 import { AppointmentDetailClient } from "./appointment-detail-client";
 import { getServerSession } from "@/lib/server/session";
+import { AppointmentReviewSection } from "./appointment-review-section";
+import { getReviewAction } from "@/lib/actions/review";
 
 export default async function AppointmentPage({
   params,
@@ -22,12 +24,21 @@ export default async function AppointmentPage({
     notFound();
   }
 
+  const reviewResult = await getReviewAction(id);
+  const initialReview = reviewResult.data || null;
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <DashboardHeader title="Appointment Details" />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <div className="max-w-4xl mx-auto">
           <AppointmentDetailClient appointment={result.data} userRole={role} />
+          <AppointmentReviewSection
+            appointmentId={id}
+            status={result.data.status}
+            isDoctor={role === "DOCTOR"}
+            initialReview={initialReview}
+          />
         </div>
       </main>
     </div>

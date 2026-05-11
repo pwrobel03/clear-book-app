@@ -64,6 +64,14 @@ public class DoctorProfile {
     @Builder.Default
     private boolean isPublic = true;
 
+    @Column(nullable = false, columnDefinition = "double precision default 0.0")
+    @Builder.Default
+    private Double averageRating = 0.0;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private Integer totalReviews = 0;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

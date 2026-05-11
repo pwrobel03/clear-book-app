@@ -7,6 +7,7 @@ import com.clearbook.api.repository.AppointmentReviewRepository;
 import com.clearbook.api.review.dto.DoctorReplyRequest;
 import com.clearbook.api.review.dto.ReviewRequest;
 import com.clearbook.api.review.dto.ReviewResponse;
+import com.clearbook.api.review.event.ReviewChangedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ReviewService {
 
     private final AppointmentReviewRepository reviewRepository;
     private final AppointmentRepository appointmentRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ReviewResponse createReview(User patient, UUID appointmentId, ReviewRequest request) {
@@ -50,9 +52,10 @@ public class ReviewService {
                 .isAnonymous(request.isAnonymous())
                 .build();
 
-        // If future: average rating calculation (e.g., EventPublisher)
+        review = reviewRepository.save(review);
+        eventPublisher.publishEvent(new ReviewChangedEvent(this, appointment.getBlock().getDoctor().getId()));
 
-        return toResponse(reviewRepository.save(review), false);
+        return toResponse(review, false);
     }
 
     @Transactional

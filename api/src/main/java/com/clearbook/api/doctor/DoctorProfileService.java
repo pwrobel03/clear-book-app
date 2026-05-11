@@ -167,6 +167,8 @@ public class DoctorProfileService {
                 .licenseNumber(p.getLicenseNumber())
                 .photoUrl(p.getPhotoUrl())
                 .isPublic(p.isPublic())
+                .averageRating(p.getAverageRating())
+                .totalReviews(p.getTotalReviews())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();

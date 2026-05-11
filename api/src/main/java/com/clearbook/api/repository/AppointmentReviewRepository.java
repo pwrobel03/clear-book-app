@@ -19,4 +19,10 @@ public interface AppointmentReviewRepository extends JpaRepository<AppointmentRe
     // Getting all reviews for a doctor by their ID, ordered by creation date in descending order.
     @Query("SELECT r FROM AppointmentReview r WHERE r.appointment.block.doctor.id = :doctorId ORDER BY r.createdAt DESC")
     Page<AppointmentReview> findAllByDoctorId(@Param("doctorId") UUID doctorId, Pageable pageable);
+
+    @Query("SELECT AVG(r.rating) FROM AppointmentReview r WHERE r.appointment.block.doctor.id = :doctorId")
+    Double calculateAverageRatingForDoctor(@Param("doctorId") UUID doctorId);
+
+    @Query("SELECT COUNT(r) FROM AppointmentReview r WHERE r.appointment.block.doctor.id = :doctorId")
+    Long countReviewsForDoctor(@Param("doctorId") UUID doctorId);
 }

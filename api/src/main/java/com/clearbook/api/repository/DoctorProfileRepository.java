@@ -50,4 +50,6 @@ public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, UU
             @Param("active") MembershipStatus active,
             Pageable pageable
     );
+
+    ScopedValue<Object> findByUserId(UUID doctorId);
 }
