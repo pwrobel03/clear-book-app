@@ -6,6 +6,7 @@ import {
 } from "@/components/landing/hero-search";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
+import { GlassCard, GlassPanel } from "@/components/ui/glass";
 
 import {
   getDoctorsAction,
@@ -21,7 +22,6 @@ import type { DoctorProfileResponse } from "@/types/api";
 
 // TODO: We should also add pagination to the search results, but for now we will just show all doctors in one page to speed up development.
 
-// ─── Doctor card ──────────────────────────────────────────────────────────────
 function DoctorCard({
   doctor,
   specLabels,
@@ -32,55 +32,49 @@ function DoctorCard({
   const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`.toUpperCase();
 
   return (
-    <Link
-      href={`/doctors/${doctor.publicId}`}
-      className="group flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 transition-all hover:border-accent/40 hover:shadow-sm"
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
-          {initials}
-        </div>
-        <div>
-          <p className="font-semibold text-foreground group-hover:text-accent transition-colors">
-            Dr. {doctor.firstName} {doctor.lastName}
-          </p>
-          {doctor.specializations.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {doctor.specializations
-                .slice(0, 2)
-                .map((s) => specLabels[s] ?? s)
-                .join(", ")}
-              {doctor.specializations.length > 2 &&
-                ` +${doctor.specializations.length - 2}`}
+    <Link href={`/doctors/${doctor.publicId}`} className="block h-full">
+      <GlassCard className="flex h-full flex-col gap-5 p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner text-lg font-bold text-primary-foreground">
+            {initials}
+          </div>
+          <div>
+            <p className="text-lg font-bold text-foreground group-hover:text-accent transition-colors">
+              Dr. {doctor.firstName} {doctor.lastName}
             </p>
-          )}
+            {doctor.specializations.length > 0 && (
+              <p className="text-sm font-medium text-muted-foreground mt-0.5">
+                {doctor.specializations
+                  .slice(0, 2)
+                  .map((s) => specLabels[s] ?? s)
+                  .join(", ")}
+                {doctor.specializations.length > 2 &&
+                  ` +${doctor.specializations.length - 2}`}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
 
-      {doctor.specializations.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {doctor.specializations.slice(0, 3).map((s) => (
-            <Badge key={s} variant="accent" className="text-xs">
-              {specLabels[s] ?? s}
-            </Badge>
-          ))}
-        </div>
-      )}
+        {doctor.specializations.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {doctor.specializations.slice(0, 3).map((s) => (
+              <Badge key={s} variant="accent" className="text-xs shadow-sm">
+                {specLabels[s] ?? s}
+              </Badge>
+            ))}
+          </div>
+        )}
 
-      {doctor.bio && (
-        <p className="text-sm leading-relaxed text-muted-foreground line-clamp-2">
-          {doctor.bio}
-        </p>
-      )}
-
-      <span className="mt-auto text-xs font-medium text-accent">
-        View profile →
-      </span>
+        {doctor.bio && (
+          <p className="text-sm leading-relaxed text-muted-foreground line-clamp-2 mt-1">
+            {doctor.bio}
+          </p>
+        )}
+      </GlassCard>
     </Link>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function DoctorsSearchPage({
   searchParams,
 }: {
@@ -93,7 +87,6 @@ export default async function DoctorsSearchPage({
     getSpecializationsAction(),
   ]);
 
-  // Budujemy dynamiczny słownik i listę dla wyszukiwarki na podstawie bazy
   const specLabels: Record<string, string> = {};
   const specializations: SpecializationOption[] = [];
 
@@ -110,26 +103,28 @@ export default async function DoctorsSearchPage({
     : null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
+      {/* ── ATMOSPHERIC BLOBS ── */}
+      <div className="pointer-events-none absolute top-[15%] left-[5%] h-[500px] w-[500px] rounded-full bg-accent/20 blur-[120px] dark:bg-[#357d60]/15" />
+      <div className="pointer-events-none absolute bottom-[10%] right-[10%] h-[600px] w-[600px] rounded-full bg-white/50 blur-[120px] dark:bg-[#4a9b7a]/15" />
+
       <Navbar />
 
-      <div className="border-b border-border bg-card py-6">
-        <div className="mx-auto max-w-5xl px-6">
+      <main className="relative z-10 mx-auto w-full max-w-5xl px-6 py-10 flex-1 flex flex-col">
+        <GlassPanel className="mb-10 p-4">
           <HeroSearch
             specializations={specializations}
             defaultSpecialization={specialization}
             defaultCity={city}
           />
-        </div>
-      </div>
+        </GlassPanel>
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-foreground">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">
               {hasFilters ? "Search Results" : "All Doctors"}
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="mt-2 text-base text-muted-foreground">
               {doctorsResult.totalElements} doctor
               {doctorsResult.totalElements !== 1 ? "s" : ""} found
               {activeSpecLabel && ` · ${activeSpecLabel}`}
@@ -139,35 +134,39 @@ export default async function DoctorsSearchPage({
           {hasFilters && (
             <Link
               href="/doctors"
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft size={14} />
-              Clear filters
+              <ArrowLeft size={16} /> Clear filters
             </Link>
           )}
         </div>
 
         {doctorsResult.content.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border py-16 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              <Search size={24} className="text-muted-foreground" />
+          <GlassPanel className="flex flex-col items-center gap-4 py-20 text-center border-dashed">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 shadow-inner">
+              <Search
+                size={32}
+                className="text-primary dark:text-primary-light"
+              />
             </div>
             <div>
-              <p className="font-semibold text-foreground">No doctors found</p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-xl font-bold text-foreground">
+                No doctors found
+              </p>
+              <p className="mt-2 text-base text-muted-foreground max-w-md mx-auto">
                 Try adjusting your search filters or browse all available
                 doctors.
               </p>
             </div>
             <Link
               href="/doctors"
-              className="text-sm font-medium text-accent hover:underline"
+              className="mt-2 text-sm font-bold text-accent hover:underline"
             >
               Browse all doctors
             </Link>
-          </div>
+          </GlassPanel>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {doctorsResult.content.map((doctor) => (
               <DoctorCard
                 key={doctor.id}

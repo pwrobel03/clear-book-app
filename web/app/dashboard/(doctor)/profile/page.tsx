@@ -154,7 +154,8 @@ export default function DoctorProfilePage() {
                   <FormItem>
                     <FormLabel>Specializations</FormLabel>
                     <FormControl>
-                      <div className="flex flex-wrap gap-2 rounded-md border border-input bg-background p-3">
+                      {/* Usunięto: border, bg-background, p-3. Dodano: pt-2 */}
+                      <div className="flex flex-wrap gap-2 pt-2">
                         {specsList.map((s) => {
                           const active = selected.includes(s.code);
                           return (
@@ -163,10 +164,10 @@ export default function DoctorProfilePage() {
                               type="button"
                               onClick={() => toggleSpecialization(s.code)}
                               className={cn(
-                                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                "rounded-full border px-4 py-1.5 text-xs font-semibold transition-all shadow-sm",
                                 active
-                                  ? "border-accent bg-accent text-accent-foreground"
-                                  : "border-border text-muted-foreground hover:border-accent/50 hover:text-foreground",
+                                  ? "border-accent bg-accent text-accent-foreground shadow-accent/20"
+                                  : "border-black/5 dark:border-white/10 bg-white/60 dark:bg-black/20 text-muted-foreground hover:border-accent/40 hover:text-foreground",
                               )}
                             >
                               {s.name}
@@ -175,7 +176,7 @@ export default function DoctorProfilePage() {
                         })}
                       </div>
                     </FormControl>
-                    <FormDescription>
+                    <FormDescription className="mt-3">
                       Selected:{" "}
                       {selected.length > 0
                         ? selected

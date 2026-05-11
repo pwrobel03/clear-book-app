@@ -124,7 +124,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col bg-primary-dark">
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden rounded-3xl bg-primary-dark shadow-glass">
       {/* Logo */}
       <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-5">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
@@ -134,7 +134,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
         {nav.map((item) => (
           <NavItem
             key={item.href}

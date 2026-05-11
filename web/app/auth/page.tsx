@@ -14,16 +14,16 @@ import { Star } from "lucide-react";
 
 function BrandPanel() {
   return (
-    <div className="relative hidden lg:flex lg:flex-col lg:justify-between bg-gradient-to-br from-[#080F20] to-[#102240] p-12 text-white overflow-hidden">
+    <div className="relative hidden lg:flex lg:flex-col lg:justify-between bg-gradient-to-br from-primary-dark to-primary dark:from-background dark:to-background dark:border-r border-border p-12 text-white overflow-hidden">
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-[500px] w-[500px] rounded-full bg-accent/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/4 -left-16 h-64 w-64 rounded-full bg-[#102240]/10 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/4 -left-16 h-64 w-64 rounded-full bg-primary-light/10 blur-3xl" />
 
       {/* Header */}
       <div className="relative z-10 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shadow-lg">
-          <span className="text-sm font-black text-white">CB</span>
+          <span className="text-sm font-black text-accent-foreground">CB</span>
         </div>
         <span className="text-xl font-bold tracking-tight">ClearBook</span>
       </div>

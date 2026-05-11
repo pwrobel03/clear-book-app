@@ -15,35 +15,35 @@ import {
 import { Navbar } from "@/components/navbar";
 import { getServerSession } from "@/lib/server/session";
 import { getSpecializationsAction } from "@/lib/actions/doctor";
+import { Footer } from "@/components/footer";
 
 // TODO: This is the main landing page of the application. It should be a marketing page that explains the value proposition of the app and encourages users to sign up. It should also have a search bar to search for doctors by specialization and city. The search bar should be prominently displayed on the page to encourage users to use it. We should also have some sections that explain how the app works, what features it has, etc. The design should be clean and modern, with a focus on usability and conversion.
 
 // TODO: We should split this page into multiple sections (hero, how it works, for doctors/clinics, etc.) but for now we will keep everything in one place to speed up development.
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
-
 function Hero({
   specializations,
 }: {
   specializations: SpecializationOption[];
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-[#080F20] to-[#102240] pb-24 pt-20 min-h-[92vh]">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary-dark to-primary dark:from-background dark:to-background pb-24 pt-20 min-h-[92vh]">
       {/* Decorative blobs */}
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[#36A372]/15 blur-3xl" />
-      <div className="pointer-events-none absolute -left-16 top-1/4 h-64 w-64 rounded-full bg-[#F0EBE9]/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-[600px] w-[600px] rounded-full bg-accent/40 blur-[120px] dark:bg-[#36A372]/20" />
+      <div className="pointer-events-none absolute top-[10%] -left-[10%] h-[500px] w-[500px] rounded-full bg-white/20 blur-[120px] dark:bg-[#6A9AD4]/15" />
       {/* Grid pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)]" />
 
       <div className="relative mx-auto max-w-4xl px-6 text-center">
-        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#36A372]/30 bg-[#36A372]/10 px-4 py-1.5 text-xs font-medium text-[#36A372]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#36A372]" />
+        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           Trusted by doctors and patients
         </span>
 
         <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
           Find a Doctor and Book an
-          <span className="text-[#36A372]"> Appointment</span> in 3 Minutes
+          <span className="text-accent"> Appointment</span> in 3 Minutes
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/65">
@@ -223,38 +223,6 @@ function B2BSection() {
     </section>
   );
 }
-
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="border-t border-border bg-card py-8">
-      <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#102240]">
-            <span className="text-[10px] font-black text-[#36A372]">CB</span>
-          </div>
-          <span className="text-sm font-semibold text-foreground">
-            ClearBook
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} ClearBook. All rights reserved.
-        </p>
-        <div className="flex gap-4 text-xs text-muted-foreground">
-          <a href="#" className="hover:text-foreground transition-colors">
-            Privacy
-          </a>
-          <a href="#" className="hover:text-foreground transition-colors">
-            Terms
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 

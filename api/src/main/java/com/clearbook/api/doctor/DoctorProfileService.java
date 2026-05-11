@@ -1,5 +1,6 @@
 package com.clearbook.api.doctor;
 
+import com.clearbook.api.center.dto.MedicalCenterResponse;
 import com.clearbook.api.doctor.dto.DoctorProfileRequest;
 import com.clearbook.api.doctor.dto.DoctorProfileResponse;
 import com.clearbook.api.exception.ForbiddenException;
@@ -16,6 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,6 +29,7 @@ public class DoctorProfileService {
     private final DoctorProfileRepository profileRepository;
     private final SpecializationRepository specializationRepository;
     private final CenterMembershipRepository centerMembershipRepository;
+    private final com.clearbook.api.center.CenterMapper centerMapper;
 
     /** Returns the authenticated doctor's profile. */
     @PreAuthorize("hasRole('DOCTOR')")
@@ -113,6 +116,26 @@ public class DoctorProfileService {
         return profileRepository
                 .search(specCode, cityParam, MembershipStatus.ACTIVE, pageable)
                 .map(this::toResponse);
+    }
+
+    /** Returns public list of active centers where the doctor works. */
+    public List<MedicalCenterResponse> getAffiliatedCenters(String publicId) {
+        // Find doctor profile
+        DoctorProfile profile = profileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
+
+        // Get association with build in JPA method
+        List<CenterMembership> memberships = centerMembershipRepository
+                .findByUserAndStatusAndCenter_Status(
+                        profile.getUser(),
+                        MembershipStatus.ACTIVE,
+                        CenterStatus.ACTIVE
+                );
+
+        // Mapping
+        return memberships.stream()
+                .map(membership -> centerMapper.toResponse(membership.getCenter()))
+                .toList();
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

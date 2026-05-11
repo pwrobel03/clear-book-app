@@ -28,10 +28,7 @@ import {
 } from "@/lib/actions/centers";
 import type { CreateCenterData } from "@/lib/schemas/center";
 import { CenterForm } from "@/components/centers/center-form";
-
-// TODO: We should split this page into multiple subpages (invitations management, center management, etc.) but for now we will keep everything in one place to speed up development.
-
-// ─── Create Center Form (Wrapper) ─────────────────────────────────────────────
+import { GlassCard, GlassPanel } from "@/components/ui/glass";
 
 function CreateCenterFormWrapper({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -42,7 +39,6 @@ function CreateCenterFormWrapper({ onCreated }: { onCreated: () => void }) {
       toast.error(result.error);
       return;
     }
-
     setOpen(false);
     toast.success("Center registered successfully. Pending approval.");
     onCreated();
@@ -50,32 +46,34 @@ function CreateCenterFormWrapper({ onCreated }: { onCreated: () => void }) {
 
   if (!open) {
     return (
-      <Button onClick={() => setOpen(true)} className="gap-2">
-        <Plus size={16} />
+      <Button
+        onClick={() => setOpen(true)}
+        className="gap-2 rounded-2xl h-12 shadow-md"
+      >
+        <Plus size={18} />
         Register a Center
       </Button>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
+    <GlassPanel className="p-6 mx-auto">
       <div className="mb-5 flex items-center justify-between">
-        <h3 className="font-bold text-foreground">Register a Medical Center</h3>
+        <h3 className="text-lg font-bold text-foreground">
+          Register a Medical Center
+        </h3>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           Cancel
         </button>
       </div>
-
       <CenterForm onSubmit={handleCreate} onCancel={() => setOpen(false)} />
-    </div>
+    </GlassPanel>
   );
 }
-
-// ─── Membership Card ──────────────────────────────────────────────────────────
 
 function MembershipCard({
   membership,
@@ -90,40 +88,44 @@ function MembershipCard({
   const roleLabel = membership.role === "ADMIN" ? "Administrator" : "Member";
 
   return (
-    <div
+    <GlassCard
       className={cn(
-        "rounded-xl border bg-card p-5 transition-all",
-        isPending ? "border-warning/30 bg-warning/5" : "border-border",
+        "p-6",
+        isPending &&
+          "border-warning/50 dark:border-warning/30 bg-warning/5 dark:bg-warning/5",
       )}
     >
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-              isPending ? "bg-warning/15" : "bg-primary/10",
+              "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-inner transition-transform group-hover:scale-110",
+              isPending ? "bg-warning/20" : "bg-primary/10 dark:bg-primary/20",
             )}
           >
             <Building2
-              size={18}
-              className={isPending ? "text-warning" : "text-primary"}
+              size={22}
+              className={
+                isPending
+                  ? "text-warning"
+                  : "text-primary dark:text-primary-light"
+              }
             />
           </div>
           <div>
-            <p className="font-semibold text-foreground">
+            <p className="text-lg font-bold text-foreground">
               {membership.centerName}
             </p>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin size={11} />
-              {membership.centerCity}
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+              <MapPin size={14} /> {membership.centerCity}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-col items-end gap-2">
           <Badge variant={membership.role === "ADMIN" ? "default" : "muted"}>
             {membership.role === "ADMIN" && (
-              <ShieldCheck size={10} className="mr-1" />
+              <ShieldCheck size={12} className="mr-1" />
             )}
             {roleLabel}
           </Badge>
@@ -150,42 +152,38 @@ function MembershipCard({
       </div>
 
       {isPending && (
-        <div className="mt-4 flex gap-2">
+        <div className="mt-6 flex gap-3">
           <Button
-            size="sm"
             onClick={() => onAccept(membership.id)}
-            className="gap-1.5"
+            className="gap-2 rounded-xl flex-1"
           >
-            <CheckCircle size={14} />
-            Accept
+            <CheckCircle size={16} /> Accept
           </Button>
           <Button
-            size="sm"
             variant="outline"
             onClick={() => onReject(membership.id)}
-            className="gap-1.5 text-destructive hover:text-destructive"
+            className="gap-2 rounded-xl flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
           >
-            <XCircle size={14} />
-            Reject
+            <XCircle size={16} /> Reject
           </Button>
         </div>
       )}
 
-      {/* Przycisk przejścia do panelu zarządzania placówką */}
       {!isPending && membership.centerStatus === "ACTIVE" && (
-        <div className="mt-4">
+        <div className="mt-6">
           <Link href={`/dashboard/centers/${membership.centerId}`}>
-            <Button variant="outline" size="sm" className="w-full">
+            <Button
+              variant="outline"
+              className="w-full rounded-xl bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 backdrop-blur-md transition-colors"
+            >
               Manage Center
             </Button>
           </Link>
         </div>
       )}
-    </div>
+    </GlassCard>
   );
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CentersPage() {
   const [memberships, setMemberships] = useState<MembershipResponse[]>([]);
@@ -195,11 +193,8 @@ export default function CentersPage() {
     setLoading(true);
     try {
       const result = await getMyCentersAction();
-      if (result.data) {
-        setMemberships(result.data);
-      } else if (result.error) {
-        toast.error(result.error);
-      }
+      if (result.data) setMemberships(result.data);
+      else if (result.error) toast.error(result.error);
     } finally {
       setLoading(false);
     }
@@ -211,9 +206,8 @@ export default function CentersPage() {
 
   async function handleAccept(id: string) {
     const result = await acceptInvitationAction(id);
-    if (result && "error" in result) {
-      toast.error(result.error);
-    } else {
+    if (result && "error" in result) toast.error(result.error);
+    else {
       toast.success("Invitation accepted.");
       load();
     }
@@ -221,9 +215,8 @@ export default function CentersPage() {
 
   async function handleReject(id: string) {
     const result = await rejectInvitationAction(id);
-    if (result && "error" in result) {
-      toast.error(result.error);
-    } else {
+    if (result && "error" in result) toast.error(result.error);
+    else {
       toast.success("Invitation rejected.");
       load();
     }
@@ -235,15 +228,14 @@ export default function CentersPage() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <DashboardHeader title="My Centers" />
-      <main className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-3xl space-y-8">
+      <main className="flex-1 overflow-y-auto p-6 relative z-10">
+        <div className="mx-auto max-w-4xl space-y-10">
           <CreateCenterFormWrapper onCreated={load} />
 
-          {/* Pending invitations */}
           {pending.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-                Pending Invitations ({pending.length})
+            <div className="space-y-4">
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/70">
+                Pending Invitations
               </h2>
               {pending.map((m) => (
                 <MembershipCard
@@ -256,41 +248,40 @@ export default function CentersPage() {
             </div>
           )}
 
-          {/* Active centers */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-              Active Centers ({active.length})
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-muted-foreground/70">
+              Active Centers
             </h2>
-
             {loading ? (
               <div className="flex items-center justify-center py-10">
                 <Loader2
-                  size={22}
+                  size={24}
                   className="animate-spin text-muted-foreground"
                 />
               </div>
             ) : active.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
-                <Building2 size={32} className="text-muted-foreground/50" />
+              <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/20 dark:border-white/10 py-16 text-center bg-card/20 backdrop-blur-sm">
+                <Building2 size={40} className="text-muted-foreground/50" />
                 <div>
-                  <p className="font-medium text-foreground">
+                  <p className="text-lg font-bold text-foreground">
                     No active centers yet
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Register a center or wait for an invitation from an existing
-                    center.
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Register a center or wait for an invitation.
                   </p>
                 </div>
               </div>
             ) : (
-              active.map((m) => (
-                <MembershipCard
-                  key={m.id}
-                  membership={m}
-                  onAccept={handleAccept}
-                  onReject={handleReject}
-                />
-              ))
+              <div className="grid gap-6 md:grid-cols-2">
+                {active.map((m) => (
+                  <MembershipCard
+                    key={m.id}
+                    membership={m}
+                    onAccept={handleAccept}
+                    onReject={handleReject}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
