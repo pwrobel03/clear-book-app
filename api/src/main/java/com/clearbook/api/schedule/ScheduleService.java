@@ -4,8 +4,10 @@ import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.*;
 import com.clearbook.api.schedule.dto.*;
+import com.clearbook.api.schedule.event.AppointmentCancelledEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ScheduleService {
     private final CenterMembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final DoctorProfileRepository doctorProfileRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * DOCTOR LOGIC: Creates a new working block for the doctor.
@@ -157,12 +160,11 @@ public class ScheduleService {
         // Find every visit
         List<Appointment> appointments = appointmentRepository.findByBlock(block);
 
-        // If there are visits change their status
+        // If there are visits change their status and notify patients
         if (!appointments.isEmpty()) {
             for (Appointment app : appointments) {
                 app.setStatus(AppointmentStatus.CANCELLED);
-                // Here, in the future, we can add the throwing of an asynchronous Event (ApplicationEventPublisher),
-                // which will send emails to patients informing them of their appointment cancellations.
+                publishCancellationEvent(app, null);
             }
             appointmentRepository.saveAll(appointments);
             log.info("Cancelled {} appointments due to block {} deletion by doctor {}",
@@ -213,6 +215,7 @@ public class ScheduleService {
             // Cancel the appointment if it falls outside the new time boundaries
             if (app.getStartTime().isBefore(newStart) || app.getEndTime().isAfter(newEnd)) {
                 app.setStatus(AppointmentStatus.CANCELLED);
+                publishCancellationEvent(app, "Doctor changed the working hours, and your appointment no longer fits within the new schedule. Please book a new appointment.");
                 cancelledCount++;
             }
         }
@@ -409,7 +412,10 @@ public class ScheduleService {
 
     /**
      * Cancels all non-completed, non-cancelled appointments on a given block.
-     * Returns the count of cancelled appointments.
+     * Publishes an {@link AppointmentCancelledEvent} for each cancelled appointment
+     * so that the patient receives a notification e-mail.
+     *
+     * @return the number of appointments that were cancelled
      */
     private int cancelFutureAppointmentsOnBlock(AvailabilityBlock block) {
         List<Appointment> appointments = appointmentRepository.findByBlock(block);
@@ -419,6 +425,7 @@ public class ScheduleService {
             if (app.getStatus() != AppointmentStatus.CANCELLED &&
                     app.getStatus() != AppointmentStatus.COMPLETED) {
                 app.setStatus(AppointmentStatus.CANCELLED);
+                publishCancellationEvent(app, null);
                 cancelled++;
             }
         }
@@ -428,6 +435,23 @@ public class ScheduleService {
         }
 
         return cancelled;
+    }
+
+    /**
+     * Helper: builds and publishes an {@link AppointmentCancelledEvent}.
+     * Extracted to keep cancellation loops readable.
+     */
+    private void publishCancellationEvent(Appointment app, String reason) {
+        eventPublisher.publishEvent(new AppointmentCancelledEvent(
+                this,
+                app.getPatient().getEmail(),
+                app.getPatient().getFirstName(),
+                app.getBlock().getDoctor().getFirstName(),
+                app.getBlock().getDoctor().getLastName(),
+                app.getBlock().getCenter().getName(),
+                app.getStartTime(),
+                reason
+        ));
     }
 
     // ── PUBLIC ENDPOINTS (no auth required) ──
@@ -816,8 +840,11 @@ public class ScheduleService {
         appointment.setDoctorNotes(reason); // Save the cancellation reason in doctor notes for future reference
         appointment.setReservedUntil(null);
 
+        Appointment saved = appointmentRepository.save(appointment);
+        publishCancellationEvent(saved, reason);
+
         log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
-        return toResponse(appointmentRepository.save(appointment));
+        return toResponse(saved);
     }
 
     /**
@@ -859,14 +886,6 @@ public class ScheduleService {
         }
 
         return toResponse(appointment);
-    }
-
-    // ── Private helpers ──
-
-    private User findDoctorById(UUID doctorId) {
-        return userRepository.findById(doctorId)
-                .filter(u -> u.getRole() == Role.DOCTOR)
-                .orElseThrow(() -> new IllegalArgumentException("Doctor not found."));
     }
 
     // ── Mapping helpers ──

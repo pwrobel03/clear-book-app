@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Star, Loader2, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-import { enUS } from "date-fns/locale"; // Import English locale for date formatting
+import { enUS } from "date-fns/locale";
 import { GlassCard } from "@/components/ui/glass";
 import { Button } from "@/components/ui/button";
 import { getDoctorReviewsAction } from "@/lib/actions/review";
@@ -50,7 +50,7 @@ export function DoctorReviewsSection({ publicId }: { publicId: string }) {
           This doctor has no reviews yet.
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          Be the first person to review this doctor after your visit!
+          Be the first person to rate this doctor after your visit!
         </p>
       </GlassCard>
     );
@@ -58,54 +58,74 @@ export function DoctorReviewsSection({ publicId }: { publicId: string }) {
 
   return (
     <div className="space-y-4">
-      {reviews.map((review) => (
-        <GlassCard key={review.id} className="p-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-2">
-            <div>
-              <span className="font-bold text-foreground block">
-                {review.patientDisplayName}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {format(new Date(review.createdAt), "d MMMM yyyy", {
+      {reviews.map((review) => {
+        const isEdited =
+          review.updatedAt &&
+          review.createdAt &&
+          new Date(review.updatedAt).getTime() -
+            new Date(review.createdAt).getTime() >
+            1000;
+
+        return (
+          <GlassCard key={review.id} className="p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-2">
+              <div>
+                <span className="font-bold text-foreground block">
+                  {review.patientDisplayName}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(review.createdAt), "d MMMM yyyy", {
+                    locale: enUS,
+                  })}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    size={16}
+                    className={
+                      s <= review.rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-muted-foreground/30"
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <p className="text-sm text-foreground/90 italic leading-relaxed">
+              "{review.patientComment}"
+            </p>
+
+            {/* Information about edit */}
+            {isEdited && (
+              <p className="text-[11px] text-muted-foreground mt-1 mb-2">
+                (Edited on{" "}
+                {format(new Date(review.updatedAt), "d MMMM yyyy", {
                   locale: enUS,
                 })}
-              </span>
-            </div>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Star
-                  key={s}
-                  size={16}
-                  className={
-                    s <= review.rating
-                      ? "fill-yellow-400 text-yellow-400"
-                      : "text-muted-foreground/30"
-                  }
-                />
-              ))}
-            </div>
-          </div>
+                )
+              </p>
+            )}
 
-          <p className="text-sm text-foreground/90 italic leading-relaxed">
-            "{review.patientComment}"
-          </p>
-
-          {review.doctorReply && (
-            <div className="mt-4 p-4 bg-background/50 rounded-xl border border-border">
-              <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground block mb-1">
-                Doctor's Reply (
-                {format(new Date(review.repliedAt), "d MMM yyyy", {
-                  locale: enUS,
-                })}
-                ):
-              </span>
-              <span className="text-sm text-foreground/90">
-                {review.doctorReply}
-              </span>
-            </div>
-          )}
-        </GlassCard>
-      ))}
+            {review.doctorReply && (
+              <div className="mt-4 p-4 bg-background/50 rounded-xl border border-border">
+                <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground block mb-1">
+                  Doctor's Response (
+                  {format(new Date(review.repliedAt), "d MMM yyyy", {
+                    locale: enUS,
+                  })}
+                  ):
+                </span>
+                <span className="text-sm text-foreground/90">
+                  {review.doctorReply}
+                </span>
+              </div>
+            )}
+          </GlassCard>
+        );
+      })}
 
       {page + 1 < totalPages && (
         <Button
@@ -117,7 +137,7 @@ export function DoctorReviewsSection({ publicId }: { publicId: string }) {
           {isLoadingMore ? (
             <Loader2 className="animate-spin mr-2" size={16} />
           ) : (
-            "Load more reviews"
+            "Load More Reviews"
           )}
         </Button>
       )}

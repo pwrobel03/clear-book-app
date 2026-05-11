@@ -6,6 +6,9 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -18,14 +21,14 @@ public class EmailService {
     public void sendVerificationEmail(String toEmail, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
-        message.setSubject("Potwierdzenie adresu e-mail — ClearBook");
+        message.setSubject("Verify your email address — ClearBook");
 
         String confirmationUrl = frontendUrl + "/auth/email-verification?token=" + token;
 
-        message.setText("Witaj w ClearBook!\n\n" +
-                "Aby potwierdzić swój adres e-mail i aktywować konto, kliknij w poniższy link:\n" +
+        message.setText("Hello and welcome to ClearBook!\n\n" +
+                "To verify your email address and activate your account, please click the link below:\n" +
                 confirmationUrl + "\n\n" +
-                "Link wygaśnie za 24 godziny.");
+                "This link will expire in 24 hours.");
 
         mailSender.send(message);
     }
@@ -37,11 +40,46 @@ public class EmailService {
 
         String resetUrl = frontendUrl + "/auth/reset-password?token=" + token;
 
-        message.setText("Otrzymaliśmy prośbę o zresetowanie hasła.\n\n" +
-                "Aby ustawić nowe hasło, kliknij w poniższy link:\n" +
+        message.setText("We have received a request to reset your password.\n\n" +
+                "To set a new password, please click the link below:\n" +
                 resetUrl + "\n\n" +
-                "Link wygaśnie za 1 godzinę. Jeśli to nie Ty prosiłeś o zmianę, zignoruj tę wiadomość.");
+                "This link will expire in 1 hour. If this was not you who requested a password change, please ignore this message.");
 
+        mailSender.send(message);
+    }
+
+    public void sendAppointmentCancelledEmail(String toEmail,
+                                              String patientFirstName,
+                                              String doctorFirstName,
+                                              String doctorLastName,
+                                              String centerName,
+                                              LocalDateTime startTime,
+                                              String reason) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Your appointment has been cancelled — ClearBook");
+
+        String formattedTime = startTime.format(
+                DateTimeFormatter.ofPattern("dd.MM.yyyy 'o godz.' HH:mm"));
+
+        StringBuilder text = new StringBuilder();
+        text.append("Hello ").append(patientFirstName).append(",\n\n");
+        text.append("We would like to inform you that your appointment with Dr. ")
+                .append(doctorFirstName).append(" ").append(doctorLastName)
+                .append(" at ").append(centerName)
+                .append(", scheduled for ").append(formattedTime)
+                .append(", has been cancelled by the doctor.\n\n");
+
+        if (reason != null && !reason.isBlank()) {
+            text.append("Reason for cancellation: ").append(reason).append("\n\n");
+        }
+
+        text.append("We apologize for any inconvenience. ")
+                .append("You can book a new appointment on the ClearBook website:\n")
+                .append(frontendUrl).append("/doctors\n\n")
+                .append("The ClearBook Team");
+
+        message.setText(text.toString());
         mailSender.send(message);
     }
 }
