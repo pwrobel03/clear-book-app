@@ -71,7 +71,7 @@ public class ReviewService {
         review.setPatientComment(request.getComment());
         review.setAnonymous(request.isAnonymous());
 
-        // If future: average rating calculation (e.g., EventPublisher)
+        eventPublisher.publishEvent(new ReviewChangedEvent(this, review.getAppointment().getBlock().getDoctor().getId()));
 
         return toResponse(reviewRepository.save(review), false);
     }
@@ -86,7 +86,7 @@ public class ReviewService {
         }
 
         reviewRepository.delete(review);
-        // In future: average rating calculation (e.g., EventPublisher)
+        eventPublisher.publishEvent(new ReviewChangedEvent(this, review.getAppointment().getBlock().getDoctor().getId()));
     }
 
     @Transactional
@@ -102,7 +102,24 @@ public class ReviewService {
         review.setDoctorReply(request.getReply());
         review.setRepliedAt(LocalDateTime.now());
 
-        // true = wymuszamy widoczność danych pacjenta dla lekarza, niezależnie od isAnonymous
+        // The data is returned with forceShowPatient=true to ensure doctor can see patient's name even if review is anonymous
+        return toResponse(reviewRepository.save(review), true);
+    }
+
+    @Transactional
+    public ReviewResponse deleteReply(User doctor, UUID reviewId) {
+        AppointmentReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review doesn't exist."));
+
+        // Check if doctor is the owner of the review
+        if (!review.getAppointment().getBlock().getDoctor().getId().equals(doctor.getId())) {
+            throw new IllegalStateException("You can only delete your own replies.");
+        }
+
+        // Clear reply and repliedAt
+        review.setDoctorReply(null);
+        review.setRepliedAt(null);
+
         return toResponse(reviewRepository.save(review), true);
     }
 
@@ -111,7 +128,7 @@ public class ReviewService {
         AppointmentReview review = reviewRepository.findByAppointmentId(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Review doesn't exist."));
 
-        // Sprawdzamy, czy pytający to pacjent czy lekarz z tej wizyty
+        // Check if user is either the patient or doctor of the appointment
         boolean isPatient = review.getAppointment().getPatient().getId().equals(user.getId());
         boolean isDoctor = review.getAppointment().getBlock().getDoctor().getId().equals(user.getId());
 
@@ -119,16 +136,16 @@ public class ReviewService {
             throw new IllegalStateException("You do not have permission to view this review.");
         }
 
-        // Jeśli czyta to lekarz lub autor-pacjent, ignorujemy flagę anonimowości
+        // If doctor, force show patient info even if review is anonymous, if patient, show based on isAnonymous
         return toResponse(review, true);
     }
 
-    // --- Helper mapujący ---
+    // --- Helper mapping ---
     private ReviewResponse toResponse(AppointmentReview review, boolean forceShowPatient) {
         User patient = review.getAppointment().getPatient();
         User doctor = review.getAppointment().getBlock().getDoctor();
 
-        // LOGIKA ANONIMOWOŚCI
+        // Anonymous review - if forceShowPatient is false, we show "Anonymous" instead of patient's name
         String displayName;
         if (!review.isAnonymous() || forceShowPatient) {
             displayName = patient.getFirstName() + " " + patient.getLastName();

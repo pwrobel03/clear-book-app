@@ -4,21 +4,7 @@ import { revalidatePath } from "next/cache"
 import { springFetch } from "@/lib/server/spring"
 import { callApi } from "@/lib/server/api-action"
 import type { ActionResult } from "@/types/api"
-
-// Jeśli nie masz jeszcze tego typu w @/types/api, możesz go tam przenieść
-export interface ReviewResponse {
-  id: string
-  appointmentId: string
-  rating: number
-  patientComment: string
-  doctorReply?: string
-  repliedAt?: string
-  createdAt: string
-  patientDisplayName: string
-  doctorId: string
-  doctorFirstName: string
-  doctorLastName: string
-}
+import type { ReviewResponse } from "@/types/api"
 
 /**
  * Fetches a review for a specific appointment.
@@ -67,5 +53,81 @@ export async function submitReviewAction(
     revalidatePath(`/dashboard/appointments/${appointmentId}`)
   }
 
+  return result
+}
+
+// Edit existing review (only for patients) or doctor's reply (only for doctors)
+export async function updateReviewAction(
+  reviewId: string,
+  payload: { rating: number; comment: string; isAnonymous: boolean }
+): Promise<ActionResult<ReviewResponse>> {
+  const result = await callApi<ReviewResponse>(
+    () =>
+      springFetch(`/api/reviews/${reviewId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    "Failed to update review."
+  )
+  return result
+}
+
+// Delete review (for patients) or doctor's reply (for doctors)
+export async function deleteReviewAction(
+  reviewId: string
+): Promise<ActionResult<void>> {
+  const result = await callApi<void>(
+    () =>
+      springFetch(`/api/reviews/${reviewId}`, {
+        method: "DELETE",
+      }),
+    "Failed to delete review."
+  )
+  return result
+}
+
+// Doctor's reply to a review
+export async function replyToReviewAction(
+  reviewId: string,
+  reply: string
+): Promise<ActionResult<ReviewResponse>> {
+  const result = await callApi<ReviewResponse>(
+    () =>
+      springFetch(`/api/reviews/${reviewId}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ reply }), // Matching the expected payload structure in the API
+      }),
+    "Failed to submit reply."
+  )
+  return result
+}
+
+// Edit doctor's reply to a review
+export async function updateReplyAction(
+  reviewId: string,
+  reply: string
+): Promise<ActionResult<ReviewResponse>> {
+  const result = await callApi<ReviewResponse>(
+    () =>
+      springFetch(`/api/reviews/${reviewId}/reply`, {
+        method: "PUT",
+        body: JSON.stringify({ reply }),
+      }),
+    "Failed to update reply."
+  )
+  return result
+}
+
+// Delete doctor's reply to a review
+export async function deleteReplyAction(
+  reviewId: string
+): Promise<ActionResult<ReviewResponse>> {
+  const result = await callApi<ReviewResponse>(
+    () =>
+      springFetch(`/api/reviews/${reviewId}/reply`, {
+        method: "DELETE",
+      }),
+    "Failed to delete reply."
+  )
   return result
 }

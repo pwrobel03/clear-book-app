@@ -128,3 +128,17 @@ export interface SpringPage<T> {
   size: number
   number: number
 }
+
+export interface ReviewResponse {
+  id: string
+  appointmentId: string
+  rating: number
+  patientComment: string
+  doctorReply?: string
+  repliedAt?: string
+  createdAt: string
+  patientDisplayName: string
+  doctorId: string
+  doctorFirstName: string
+  doctorLastName: string
+}

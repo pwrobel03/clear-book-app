@@ -60,7 +60,7 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReviewByAppointmentId(user, appointmentId));
     }
 
-    // DOCTOR: Responsd for review
+    // DOCTOR: Respond for review
     @PostMapping("/{reviewId}/reply")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ReviewResponse> replyToReview(
@@ -68,5 +68,22 @@ public class ReviewController {
             @PathVariable UUID reviewId,
             @Valid @RequestBody DoctorReplyRequest request) {
         return ResponseEntity.ok(reviewService.replyToReview(doctor, reviewId, request));
+    }
+
+    // DOCTOR: Editing response for review
+    @PutMapping("/{reviewId}/reply")
+    public ResponseEntity<ReviewResponse> updateReply(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID reviewId,
+            @Valid @RequestBody DoctorReplyRequest request) {
+        return ResponseEntity.ok(reviewService.replyToReview(doctor, reviewId, request));
+    }
+
+    // DOCTOR: Removing response for review
+    @DeleteMapping("/{reviewId}/reply")
+    public ResponseEntity<ReviewResponse> deleteReply(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID reviewId) {
+        return ResponseEntity.ok(reviewService.deleteReply(doctor, reviewId));
     }
 }
