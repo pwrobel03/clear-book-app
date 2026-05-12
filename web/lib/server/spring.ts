@@ -5,25 +5,22 @@ import { redirect } from "next/navigation";
 // Używamy zmiennej środowiskowej (zabezpieczone fallbackiem)
 export const SPRING_API = process.env.SPRING_API_URL || "http://localhost:8080";
 
-const ACCESS_TOKEN_MAX_AGE = 7 * 24 * 60 * 60; // 7 days — cookie outlives the JWT; Spring 401 triggers silent refresh
-const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60; // 7 days — matches Spring configuration
+const COOKIE_MAX_AGE = parseInt(process.env.COOKIE_MAX_AGE || "604800", 10);
+const ACCESS_TOKEN_MAX_AGE = COOKIE_MAX_AGE; 
+const REFRESH_TOKEN_MAX_AGE = COOKIE_MAX_AGE;
 
 /**
  * Parses the `Set-Cookie` header returned by Spring and extracts the `refreshToken` value.
- * Spring may return multiple Set-Cookie headers; node-fetch / undici exposes them joined by ", ".
  */
 export function extractRefreshTokenFromSetCookie(res: Response): string | null {
-  // Headers API returns a single joined string for repeated header names
   const raw = res.headers.get("set-cookie");
   if (!raw) return null;
-  // Match refreshToken=<value> (stops at ; or end)
   const match = raw.match(/(?:^|,\s*)refreshToken=([^;,\s]+)/i);
   return match?.[1] ?? null;
 }
 
 /**
  * Stores the Spring access token as a Next.js HttpOnly cookie.
- * Exported so auth.ts can reuse the same settings.
  */
 export async function setAccessTokenCookie(token: string) {
   const store = await cookies();
@@ -37,8 +34,7 @@ export async function setAccessTokenCookie(token: string) {
 }
 
 /**
- * Stores the Spring refresh token value (extracted from Set-Cookie) as a Next.js HttpOnly cookie.
- * Exported so auth.ts can reuse the same settings on login.
+ * Stores the Spring refresh token value as a Next.js HttpOnly cookie.
  */
 export async function setRefreshTokenCookie(token: string) {
   const store = await cookies();
@@ -52,54 +48,28 @@ export async function setRefreshTokenCookie(token: string) {
 }
 
 /**
- * Calls Spring /api/auth/refresh using the stored refresh token cookie.
- * On success: rotates both cookies and returns the new access token.
- * On failure: clears both cookies and returns null.
+ * Resolves the best available access token for the current request:
+ * 1. `x-access-token` header — injected by middleware after a proactive refresh
+ * 2. `clearbook_token` cookie — normal case (token still valid)
  */
-async function tryRefreshTokens(): Promise<string | null> {
+async function resolveAccessToken(): Promise<string | undefined> {
+  const headerStore = await headers();
+  const forwarded = headerStore.get("x-access-token");
+  if (forwarded) return forwarded;
+
   const store = await cookies();
-  const refreshToken = store.get("clearbook_refresh_token")?.value;
-  if (!refreshToken) return null;
-
-  try {
-    const res = await fetch(`${SPRING_API}/api/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Pass the stored refresh token as a cookie header so Spring can read it
-        Cookie: `refreshToken=${refreshToken}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      store.delete("clearbook_token");
-      store.delete("clearbook_refresh_token");
-      return null;
-    }
-
-    const data = await res.json();
-    const newAccessToken: string | undefined = data.token;
-    if (!newAccessToken) return null;
-
-    await setAccessTokenCookie(newAccessToken);
-
-    // Spring rotates the refresh token on every use — extract and persist the new one
-    const newRefreshToken = extractRefreshTokenFromSetCookie(res);
-    if (newRefreshToken) {
-      await setRefreshTokenCookie(newRefreshToken);
-    }
-
-    return newAccessToken;
-  } catch {
-    return null;
-  }
+  return store.get("clearbook_token")?.value;
 }
 
-/** Forwards a request to the Spring backend, injecting the httpOnly JWT cookie. */
+/**
+ * Forwards a request to the Spring backend, injecting the current access token.
+ *
+ * Token refresh is handled proactively by middleware before the request reaches
+ * Server Components. This function only needs to handle the edge case where the
+ * token expired mid-request (e.g. a slow Server Action).
+ */
 export async function springFetch(path: string, init?: RequestInit) {
-  const store = await cookies();
-  const token = store.get("clearbook_token")?.value;
+  const token = await resolveAccessToken();
 
   const res = await fetch(`${SPRING_API}${path}`, {
     ...init,
@@ -111,34 +81,19 @@ export async function springFetch(path: string, init?: RequestInit) {
     cache: "no-store",
   });
 
-  // Access token expired — attempt a silent refresh before giving up
+  // 401 here means the token expired mid-request after middleware already ran.
+  // Clear session cookies and send the user to login.
   if (res.status === 401) {
-    const newAccessToken = await tryRefreshTokens();
-
-    if (newAccessToken) {
-      // Retry the original request with the freshly issued access token
-      return fetch(`${SPRING_API}${path}`, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${newAccessToken}`,
-          ...(init?.headers ?? {}),
-        },
-        cache: "no-store",
-      });
-    }
-
-    // Refresh failed (token revoked / expired) — clear session and redirect to login
-    store.delete("clearbook_token");
-    store.delete("clearbook_refresh_token");
+    const store = await cookies();
+    try { store.delete("clearbook_token"); } catch { /* Server Component context — ignore */ }
+    try { store.delete("clearbook_refresh_token"); } catch { /* same */ }
 
     const headerStore = await headers();
     const referer = headerStore.get("referer");
     let callbackPath = "";
     if (referer) {
       try {
-        const url = new URL(referer);
-        callbackPath = url.pathname;
+        callbackPath = new URL(referer).pathname;
       } catch { /* ignore invalid referer */ }
     }
 
@@ -160,8 +115,7 @@ export async function proxyResponse(res: Response) {
 
 /** Returns 401 if not authenticated. */
 export async function requireAuth() {
-  const store = await cookies();
-  const token = store.get("clearbook_token")?.value;
+  const token = await resolveAccessToken();
   if (!token) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
