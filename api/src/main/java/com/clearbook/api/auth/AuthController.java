@@ -2,6 +2,7 @@ package com.clearbook.api.auth;
 
 import com.clearbook.api.auth.dto.*;
 import com.clearbook.api.shared.dto.MessageResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,8 +35,42 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletResponse response) {
+        AuthResponse authResponse = authService.login(request, response);
+        HttpStatus status = authResponse.getToken() == null ? HttpStatus.ACCEPTED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(authResponse);
+    }
+
+    /**
+     * POST /api/auth/refresh
+     * Reads the HttpOnly refresh-token cookie, rotates it, and returns a fresh access token.
+     * No Authorization header required — the cookie carries the credentials.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(AuthResponse.builder()
+                            .message("Refresh token cookie is missing. Please log in again.")
+                            .build());
+        }
+        return ResponseEntity.ok(authService.refresh(refreshToken, response));
+    }
+
+    /**
+     * POST /api/auth/logout
+     * Revokes the refresh token and clears the HttpOnly cookie.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<MessageResponse> logout(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response) {
+        authService.logout(refreshToken, response);
+        return ResponseEntity.ok(new MessageResponse("Logged out successfully."));
     }
 
     @PostMapping("/forgot-password")

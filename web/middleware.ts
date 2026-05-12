@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = [
-  "/auth", 
-  "/api/auth/login", 
-  "/api/auth/register", 
-  "/api/auth/verify-email", // Proxy API jest publiczne
+  "/auth",
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/verify-email",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/refresh",  // silent token rotation — no access token needed
+  "/api/auth/logout",   // can be called even with expired access token
   "/colors",
   "/doctors",  // public doctor profiles + search results
   "/centers",  // public center listing + individual center pages

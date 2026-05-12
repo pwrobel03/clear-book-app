@@ -58,7 +58,10 @@ public class SecurityConfig {
 
                 // Reguły dostępu do endpointów
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login",
+                                         "/api/auth/verify-email", "/api/auth/forgot-password",
+                                         "/api/auth/reset-password",
+                                         "/api/auth/refresh", "/api/auth/logout").permitAll()
                         // Swagger UI / OpenAPI spec — public available for testing and documentation
                         .requestMatchers(
                                 "/swagger-ui/**",

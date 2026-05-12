@@ -3,44 +3,50 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
-import { SPRING_API } from "@/lib/server/spring"
-import { callApi, callApiVoid } from "@/lib/server/api-action"
+import {
+  SPRING_API,
+  extractRefreshTokenFromSetCookie,
+  setAccessTokenCookie,
+  setRefreshTokenCookie,
+} from "@/lib/server/spring"
+import { callApiVoid } from "@/lib/server/api-action"
 import type { AccountStatus, ActionResult, AuthResponse, UserRole, VoidResult } from "@/types/api"
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-async function setAuthCookie(token: string) {
-  const store = await cookies()
-  store.set("clearbook_token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24h
-    path: "/",
-  })
-}
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 export async function loginAction(
-  email: string, 
+  email: string,
   password: string
 ): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
-  const result = await callApi<AuthResponse>(
-    () =>
-      fetch(`${SPRING_API}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      }),
-    "Invalid credentials."
-  )
+  let res: Response
+  try {
+    res = await fetch(`${SPRING_API}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    })
+  } catch {
+    return { error: "Service unavailable. Please try again later." }
+  }
 
-  if (result.error || !result.data) return result
+  const body: AuthResponse = await res.json().catch(() => ({}))
 
-  if (result.data.token) await setAuthCookie(result.data.token)
+  if (!res.ok) {
+    return { error: body?.message ?? "Invalid credentials." }
+  }
 
-  return { data: { role: result.data.role, status: result.data.status } }
+  // Store the short-lived access token
+  if (body.token) {
+    await setAccessTokenCookie(body.token)
+  }
+
+  // Extract and store the HttpOnly refresh token that Spring attached to Set-Cookie
+  const refreshToken = extractRefreshTokenFromSetCookie(res)
+  if (refreshToken) {
+    await setRefreshTokenCookie(refreshToken)
+  }
+
+  return { data: { role: body.role, status: body.status } }
 }
 
 export async function registerAction(payload: {
@@ -50,21 +56,34 @@ export async function registerAction(payload: {
   lastName: string
   role: string
 }): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
-  const result = await callApi<AuthResponse>(
-    () =>
-      fetch(`${SPRING_API}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    "Registration failed."
-  )
+  let res: Response
+  try {
+    res = await fetch(`${SPRING_API}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    return { error: "Service unavailable. Please try again later." }
+  }
 
-  if (result.error || !result.data) return result
+  const body: AuthResponse = await res.json().catch(() => ({}))
 
-  if (result.data.token) await setAuthCookie(result.data.token)
+  if (!res.ok) {
+    return { error: body?.message ?? "Registration failed." }
+  }
 
-  return { data: { role: result.data.role, status: result.data.status } }
+  // Registration for patients completes immediately; doctors go to PENDING — no tokens yet
+  if (body.token) {
+    await setAccessTokenCookie(body.token)
+  }
+
+  const refreshToken = extractRefreshTokenFromSetCookie(res)
+  if (refreshToken) {
+    await setRefreshTokenCookie(refreshToken)
+  }
+
+  return { data: { role: body.role, status: body.status } }
 }
 
 export async function forgotPasswordAction(email: string): Promise<VoidResult> {
@@ -106,6 +125,23 @@ export async function verifyEmailAction(token: string): Promise<VoidResult> {
 
 export async function logoutAction() {
   const store = await cookies()
+  const refreshToken = store.get("clearbook_refresh_token")?.value
+
+  // Tell Spring to revoke the refresh token — fire and forget; errors don't block logout
+  if (refreshToken) {
+    try {
+      await fetch(`${SPRING_API}/api/auth/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `refreshToken=${refreshToken}`,
+        },
+        cache: "no-store",
+      })
+    } catch { /* ignore network errors on logout */ }
+  }
+
   store.delete("clearbook_token")
+  store.delete("clearbook_refresh_token")
   redirect("/auth")
 }
