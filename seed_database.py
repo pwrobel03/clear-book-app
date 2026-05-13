@@ -24,6 +24,8 @@ except ImportError:
 
 from seed.config import parse_args, DB_CONFIG, SEED_PASSWORD
 from seed.reset import reset_seeded_data
+from seed.data.centers import MEDICAL_CENTERS
+from seed.data.doctors import generate_doctors
 from seed.data.patients import make_patients
 
 from seed.seeders.centers      import seed_medical_centers
@@ -41,6 +43,7 @@ def main() -> None:
     print("=" * 60)
     print("  ClearBook – Database Seed")
     print("=" * 60)
+    print(f"  doctors    : {args.doctors}")
     print(f"  patients   : {args.patients}")
     print(f"  past appts : {args.past}")
     print(f"  future appts : {args.future}")
@@ -83,7 +86,8 @@ def main() -> None:
 
         # ── 4. Doctors · profiles · services ─────────────────────────────────
         print("\n─── 4. Doctors · profiles · services ────────────────────────")
-        doctor_data = seed_doctors(cur, spec_map)
+        doctor_defs = generate_doctors(args.doctors, MEDICAL_CENTERS)
+        doctor_data = seed_doctors(cur, spec_map, doctor_defs)
 
         # ── 5. Clinic memberships ─────────────────────────────────────────────
         print("\n─── 5. Clinic memberships ────────────────────────────────────")

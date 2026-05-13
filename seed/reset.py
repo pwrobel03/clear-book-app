@@ -4,73 +4,42 @@ seed/reset.py
 Removes all previously seeded demo data in strict dependency order so that
 foreign-key constraints are never violated.
 
-Only rows created by this seeder are removed – the application's own bootstrap
-data (admin@clearbook.com, specializations, etc.) is left untouched.
+Ownership rules
+---------------
+Tables that Spring Boot NEVER writes to (seeder owns 100 %):
+    appointment_reviews, appointments, availability_blocks,
+    center_memberships, medical_centers
+→ These are deleted in full (all rows).
+
+Tables that Spring Boot also writes to:
+    doctor_profile_specializations, doctor_services, doctor_profiles,
+    invite_codes, refresh_tokens, verification_tokens,
+    password_reset_tokens, notifications, users
+→ Filtered to demo email patterns (@clearbook.demo / @example.com).
+    Spring Boot rows (admin@clearbook.com, etc.) are left untouched.
 """
 
-from seed.data.centers import MEDICAL_CENTERS
-
-# Email patterns that identify seeded accounts
-_DEMO_PATTERNS = ["%@clearbook.demo", "%@example.com"]
+# Email patterns that identify seeded demo accounts
+_DEMO = ["%@clearbook.demo", "%@example.com"]
 
 
 def reset_seeded_data(cur) -> None:
-    """Delete all demo data seeded by this script."""
+    """Delete all data seeded by this script."""
     print("  ⚠  Resetting seeded data…")
 
-    p = _DEMO_PATTERNS   # shorthand for repeated use
+    # ── 1. Reviews (owns all rows) ────────────────────────────────────────────
+    cur.execute("DELETE FROM appointment_reviews")
 
-    # 1. Reviews that belong to seeded doctors' appointments
-    cur.execute(
-        """
-        DELETE FROM appointment_reviews
-        WHERE appointment_id IN (
-            SELECT a.id
-            FROM   appointments a
-            JOIN   availability_blocks ab ON ab.id       = a.block_id
-            JOIN   users              u  ON u.id         = ab.doctor_id
-            WHERE  u.email LIKE %s OR u.email LIKE %s
-        )
-        """,
-        p,
-    )
+    # ── 2. Appointments (owns all rows) ───────────────────────────────────────
+    cur.execute("DELETE FROM appointments")
 
-    # 2. Appointments booked by seeded patients
-    cur.execute(
-        "DELETE FROM appointments WHERE patient_id IN "
-        "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
-        p,
-    )
+    # ── 3. Availability blocks (owns all rows) ────────────────────────────────
+    cur.execute("DELETE FROM availability_blocks")
 
-    # 3. Appointments in seeded doctors' blocks (catch any remainder)
-    cur.execute(
-        """
-        DELETE FROM appointments
-        WHERE block_id IN (
-            SELECT ab.id
-            FROM   availability_blocks ab
-            JOIN   users u ON u.id = ab.doctor_id
-            WHERE  u.email LIKE %s OR u.email LIKE %s
-        )
-        """,
-        p,
-    )
+    # ── 4. Clinic memberships (owns all rows) ─────────────────────────────────
+    cur.execute("DELETE FROM center_memberships")
 
-    # 4. Availability blocks owned by seeded doctors
-    cur.execute(
-        "DELETE FROM availability_blocks WHERE doctor_id IN "
-        "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
-        p,
-    )
-
-    # 5. Clinic memberships
-    cur.execute(
-        "DELETE FROM center_memberships WHERE user_id IN "
-        "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
-        p,
-    )
-
-    # 6. Doctor–specialization join rows
+    # ── 5. Doctor–specialization links (filter to demo doctors only) ──────────
     cur.execute(
         """
         DELETE FROM doctor_profile_specializations
@@ -81,34 +50,50 @@ def reset_seeded_data(cur) -> None:
             WHERE  u.email LIKE %s OR u.email LIKE %s
         )
         """,
-        p,
+        _DEMO,
     )
 
-    # 7. Doctor services
+    # ── 6. Doctor services (filter to demo doctors only) ──────────────────────
     cur.execute(
         "DELETE FROM doctor_services WHERE doctor_id IN "
         "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
-        p,
+        _DEMO,
     )
 
-    # 8. Doctor profiles
+    # ── 7. Doctor profiles (filter to demo doctors only) ──────────────────────
     cur.execute(
         "DELETE FROM doctor_profiles WHERE user_id IN "
         "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
-        p,
+        _DEMO,
     )
 
-    # 9. All seeded user accounts (doctors + patients)
+    # ── 8. Token & code tables (no CASCADE in schema – must delete before users)
+    for table in ("invite_codes", "refresh_tokens",
+                  "verification_tokens", "password_reset_tokens"):
+        cur.execute(
+            f"DELETE FROM {table} WHERE user_id IN "
+            "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
+            _DEMO,
+        )
+
+    # ── 9. Notifications (optional table – skip if absent) ────────────────────
+    cur.execute(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications'"
+    )
+    if cur.fetchone():
+        cur.execute(
+            "DELETE FROM notifications WHERE user_id IN "
+            "(SELECT id FROM users WHERE email LIKE %s OR email LIKE %s)",
+            _DEMO,
+        )
+
+    # ── 10. Demo user accounts ────────────────────────────────────────────────
     cur.execute(
         "DELETE FROM users WHERE email LIKE %s OR email LIKE %s",
-        p,
+        _DEMO,
     )
 
-    # 10. Medical centres (identified by name)
-    center_names = [mc["name"] for mc in MEDICAL_CENTERS]
-    cur.execute(
-        "DELETE FROM medical_centers WHERE name = ANY(%s)",
-        (center_names,),
-    )
+    # ── 11. Medical centres (owns all rows – Spring Boot creates none) ─────────
+    cur.execute("DELETE FROM medical_centers")
 
     print("  ✓ Reset complete")

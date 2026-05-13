@@ -10,7 +10,6 @@ from pathlib import Path
 
 from seed.config import SEED_PASSWORD, DUMMY_LICENSE_PATH
 from seed.helpers import uid, now_ts, hash_pw, upsert_returning, col_exists
-from seed.data.doctors import DOCTORS
 
 
 # ─── Dummy licence file ───────────────────────────────────────────────────────
@@ -49,15 +48,18 @@ def seed_dummy_license(project_root: Path) -> None:
 
 # ─── Doctor seeder ────────────────────────────────────────────────────────────
 
-def seed_doctors(cur, spec_map: dict) -> list[dict]:
+def seed_doctors(cur, spec_map: dict, doctors: list[dict]) -> list[dict]:
     """
-    Ensure all DOCTORS exist with their profiles and services.
+    Ensure all doctors exist with their profiles and services.
 
     Parameters
     ----------
     spec_map : dict
         code → id mapping for all active specializations
-        (produced by seed_specializations / load_specializations).
+        (produced by load_specializations).
+    doctors : list[dict]
+        Doctor definitions – typically the return value of
+        seed.data.doctors.generate_doctors().
 
     Returns
     -------
@@ -70,7 +72,7 @@ def seed_doctors(cur, spec_map: dict) -> list[dict]:
 
     result: list[dict] = []
 
-    for d in DOCTORS:
+    for d in doctors:
         # ── 1. User account ───────────────────────────────────────────────
         user_id = upsert_returning(
             cur,

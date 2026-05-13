@@ -58,6 +58,10 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--doctors", type=int, default=80,
+        help="Number of doctor accounts to generate (default: 80)",
+    )
+    p.add_argument(
         "--patients", type=int, default=10,
         help="Number of patient accounts to generate (default: 10)",
     )
