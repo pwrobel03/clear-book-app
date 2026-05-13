@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import type { UserRole } from "@/types/session";
+import { SidebarNotifications } from "./sidebard-notifications";
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
@@ -154,6 +155,7 @@ export function Sidebar() {
             }
           />
         ))}
+        <SidebarNotifications />
       </nav>
 
       {/* User + Logout */}
