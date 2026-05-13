@@ -1,5 +1,6 @@
 "use client";
 
+import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/auth";
 
@@ -31,6 +32,8 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
           <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
         )}
       </div>
+
+      <TestNotificationButton />
 
       <div className="flex items-center gap-3 shrink-0">
         {user && (
