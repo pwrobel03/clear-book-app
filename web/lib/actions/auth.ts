@@ -49,41 +49,36 @@ export async function loginAction(
   return { data: { role: body.role, status: body.status } }
 }
 
-export async function registerAction(payload: {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-  role: string
-}): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
-  let res: Response
+export async function registerAction(
+  formData: FormData
+): Promise<ActionResult<{ role: UserRole; status: AccountStatus }>> {
+  let res: Response;
   try {
     res = await fetch(`${SPRING_API}/api/auth/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+      body: formData,
+    });
   } catch {
-    return { error: "Service unavailable. Please try again later." }
+    return { error: "Service unavailable. Please try again later." };
   }
 
-  const body: AuthResponse = await res.json().catch(() => ({}))
+  const body: AuthResponse = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    return { error: body?.message ?? "Registration failed." }
+    return { error: body?.message ?? "Registration failed." };
   }
 
   // Registration for patients completes immediately; doctors go to PENDING — no tokens yet
   if (body.token) {
-    await setAccessTokenCookie(body.token)
+    await setAccessTokenCookie(body.token);
   }
 
-  const refreshToken = extractRefreshTokenFromSetCookie(res)
+  const refreshToken = extractRefreshTokenFromSetCookie(res);
   if (refreshToken) {
-    await setRefreshTokenCookie(refreshToken)
+    await setRefreshTokenCookie(refreshToken);
   }
 
-  return { data: { role: body.role, status: body.status } }
+  return { data: { role: body.role, status: body.status } };
 }
 
 export async function forgotPasswordAction(email: string): Promise<VoidResult> {

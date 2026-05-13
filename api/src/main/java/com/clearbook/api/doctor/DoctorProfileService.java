@@ -31,6 +31,19 @@ public class DoctorProfileService {
     private final CenterMembershipRepository centerMembershipRepository;
     private final com.clearbook.api.center.CenterMapper centerMapper;
 
+    @Transactional
+    public void createInitialProfile(User user, String licenseFilePath) {
+        DoctorProfile profile = DoctorProfile.builder()
+                .user(user)
+                .publicId(generatePublicId(user))
+                .licenseFilePath(licenseFilePath)
+                .verificationStatus(VerificationStatus.PENDING)
+                .isPublic(false)
+                .build();
+
+        profileRepository.save(profile);
+    }
+
     /** Returns the authenticated doctor's profile. */
     @PreAuthorize("hasRole('DOCTOR')")
     public DoctorProfileResponse getMyProfile(User user) {
@@ -44,12 +57,8 @@ public class DoctorProfileService {
     @PreAuthorize("hasRole('DOCTOR')")
     public DoctorProfileResponse createOrUpdate(User user, DoctorProfileRequest request) {
         DoctorProfile profile = profileRepository.findByUser(user)
-                .orElseGet(() -> DoctorProfile.builder()
-                        .user(user)
-                        .publicId(generatePublicId(user))
-                        .build());
+                .orElseThrow(() -> new IllegalStateException("Critical error: Doctor profile not found despite active account."));
 
-        // Resolve codes → entities, silently skip unknown codes
         Set<Specialization> specs = request.getSpecializations().stream()
                 .map(code -> specializationRepository.findByCode(code.toUpperCase()).orElse(null))
                 .filter(java.util.Objects::nonNull)
@@ -58,8 +67,6 @@ public class DoctorProfileService {
         profile.setSpecializations(specs);
         profile.setBio(request.getBio());
         profile.setLicenseNumber(request.getLicenseNumber());
-        profile.setPublic(request.isPublic());
-
         return toResponse(profileRepository.save(profile));
     }
 
@@ -140,7 +147,7 @@ public class DoctorProfileService {
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 
-    private String generatePublicId(User user) {
+    public String generatePublicId(User user) {
         String base = (user.getFirstName() + "-" + user.getLastName())
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")

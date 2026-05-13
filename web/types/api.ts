@@ -119,6 +119,16 @@ export interface PendingDoctorResponse {
   firstName: string
   lastName: string
   createdAt: string // ISO-8601
+  licenseFilePath?: string | null
+}
+
+export interface PendingDoctor {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  createdAt: string // ISO-8601
+  licenseFilePath?: string | null
 }
 
 // ─── Pagination (Spring Data) ─────────────────────────────────────────────────

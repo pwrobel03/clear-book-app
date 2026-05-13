@@ -9,7 +9,6 @@ import {
   getPendingCentersAction,
 } from "@/lib/actions/admin";
 import {
-  Stethoscope,
   Building2,
   CheckCircle,
   XCircle,
@@ -45,13 +44,10 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PendingDoctor = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  createdAt: string;
-};
+import { PendingDoctor } from "@/types/api";
+import { ViewDocumentButton } from "./view-document-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
 type PendingCenter = {
   id: string;
   name: string;
@@ -113,27 +109,43 @@ function DoctorCard({
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
               <Clock size={12} /> Applied {timeAgo(doctor.createdAt)}
             </p>
+
+            {/* Link to license document */}
+            {doctor.licenseFilePath && (
+              <ViewDocumentButton fileName={doctor.licenseFilePath} />
+            )}
           </div>
         </div>
         <Badge variant="warning">Pending</Badge>
       </div>
 
       <div className="mt-6 flex gap-3">
-        <Button
-          onClick={() => onApprove(doctor.id)}
-          disabled={loading}
-          className="gap-2 rounded-xl flex-1"
+        <ConfirmDialog
+          title="Approve Doctor"
+          description={`Are you sure you want to approve Dr. ${doctor.firstName} ${doctor.lastName}? They will gain full access to the platform.`}
+          onConfirm={async () => await onApprove(doctor.id)}
+          confirmText="Yes, approve"
         >
-          <CheckCircle size={16} /> Approve
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => onReject(doctor.id)}
-          disabled={loading}
-          className="gap-2 rounded-xl flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+          <Button disabled={loading} className="gap-2 rounded-xl flex-1">
+            <CheckCircle size={16} /> Approve
+          </Button>
+        </ConfirmDialog>
+
+        <ConfirmDialog
+          title="Reject Application"
+          description={`Are you sure you want to reject Dr. ${doctor.firstName} ${doctor.lastName}? This action will ban the account and cannot be easily undone.`}
+          onConfirm={async () => await onReject(doctor.id)}
+          confirmText="Yes, reject"
+          destructive={true}
         >
-          <XCircle size={16} /> Reject
-        </Button>
+          <Button
+            variant="outline"
+            disabled={loading}
+            className="gap-2 rounded-xl flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+          >
+            <XCircle size={16} /> Reject
+          </Button>
+        </ConfirmDialog>
       </div>
     </GlassCard>
   );
@@ -183,21 +195,32 @@ function CenterCard({
         </p>
       )}
       <div className="mt-6 flex gap-3">
-        <Button
-          onClick={() => onApprove(center.id)}
-          disabled={loading}
-          className="gap-2 rounded-xl flex-1"
+        <ConfirmDialog
+          title="Approve Medical Center"
+          description={`Are you sure you want to approve ${center.name}? It will become visible on the platform and patients will be able to book appointments there.`}
+          onConfirm={async () => await onApprove(center.id)}
+          confirmText="Yes, approve"
         >
-          <CheckCircle size={16} /> Approve
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => onReject(center.id)}
-          disabled={loading}
-          className="gap-2 rounded-xl flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+          <Button disabled={loading} className="gap-2 rounded-xl flex-1">
+            <CheckCircle size={16} /> Approve
+          </Button>
+        </ConfirmDialog>
+
+        <ConfirmDialog
+          title="Reject Medical Center"
+          description={`Are you sure you want to reject ${center.name}? This action will ban the center from being listed on the platform and cannot be easily undone.`}
+          onConfirm={async () => await onReject(center.id)}
+          confirmText="Yes, reject"
+          destructive={true}
         >
-          <XCircle size={16} /> Reject
-        </Button>
+          <Button
+            variant="outline"
+            disabled={loading}
+            className="gap-2 rounded-xl flex-1 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+          >
+            <XCircle size={16} /> Reject
+          </Button>
+        </ConfirmDialog>
       </div>
     </GlassCard>
   );
