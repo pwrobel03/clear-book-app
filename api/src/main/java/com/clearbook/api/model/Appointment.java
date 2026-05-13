@@ -62,6 +62,9 @@ public class Appointment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

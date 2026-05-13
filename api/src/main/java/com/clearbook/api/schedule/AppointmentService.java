@@ -365,6 +365,14 @@ public class AppointmentService {
             throw new IllegalStateException("You do not have permission to modify this appointment.");
         }
 
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("This appointment is already cancelled.");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("Cannot cancel a completed appointment.");
+        }
+
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setDoctorNotes(reason);
         appointment.setReservedUntil(null);
