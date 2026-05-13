@@ -1,9 +1,8 @@
 "use client";
 
-import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/auth";
-import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 
 const roleLabel: Record<string, string> = {
   USER: "Patient",
@@ -34,8 +33,8 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
         )}
       </div>
 
-      <TestNotificationButton />
-      <NotificationBell />
+      {/* Test Notification Button - Only visible in development environment */}
+      {process.env.NODE_ENV === "development" && <TestNotificationButton />}
 
       <div className="flex items-center gap-3 shrink-0">
         {user && (

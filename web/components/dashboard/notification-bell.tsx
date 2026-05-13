@@ -1,87 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, CheckCheck } from "lucide-react";
 import { useNotificationStore } from "@/store/notification";
+import { markNotificationsAsReadAction } from "@/lib/actions/ws";
+
 import {
-  getNotificationsAction,
-  markNotificationsAsReadAction,
-} from "@/lib/actions/ws";
-import { GlassPanel } from "@/components/ui/glass";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 export function NotificationBell() {
-  const { notifications, unreadCount, setNotifications, markAllAsRead } =
+  const { notifications, unreadCount, markAllAsRead, fetchHistory } =
     useNotificationStore();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fetch notification history on mount to populate the dropdown when user clicks the bell
+  // Ensure we fetch notifications history when the component mounts, but only if it hasn't been loaded yet (singleton pattern in store)
   useEffect(() => {
-    const fetchHistory = async () => {
-      const data = await getNotificationsAction(15);
-      if (data && data.length > 0) {
-        setNotifications(data);
-      }
-    };
     fetchHistory();
-  }, [setNotifications]);
+  }, [fetchHistory]);
 
-  // Handle opening/closing the notification dropdown
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && unreadCount > 0) {
-      // Optimistically mark all as read in the UI immediately for better UX
       markAllAsRead();
       await markNotificationsAsReadAction();
     }
   };
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => handleOpenChange(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-100"
-      >
-        <Bell className="w-6 h-6" />
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full animate-in zoom-in">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {isOpen && (
-        <GlassPanel className="absolute right-0 mt-2 w-80 border border-gray-200 shadow-lg rounded-md z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 font-semibold text-gray-700">
-            Notifications
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent"
+        >
+          <div className="relative inline-flex items-center justify-center">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground shadow-sm ring-2 ring-background animate-in zoom-in">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </div>
+          <span className="sr-only">Notifications</span>
+        </Button>
+      </PopoverTrigger>
 
-          <div className="max-h-96 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500">
-                No notifications yet.
-              </div>
-            ) : (
-              notifications.map((notif) => (
+      <PopoverContent align="end" className="w-80 p-0 shadow-lg" sideOffset={8}>
+        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3">
+          <h4 className="text-sm font-semibold">Notifications</h4>
+          {unreadCount === 0 && notifications.length > 0 && (
+            <div className="flex items-center text-xs text-muted-foreground">
+              <CheckCheck className="mr-1 h-3 w-3" />
+              Read
+            </div>
+          )}
+        </div>
+
+        <ScrollArea className="h-[400px]">
+          {notifications.length === 0 ? (
+            <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
+              <Bell className="mb-2 h-8 w-8 opacity-20" />
+              <p className="text-sm">No new notifications</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  className={`p-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${!notif.isRead ? "bg-blue-50/50" : ""}`}
+                  className={cn(
+                    "flex flex-col border-b px-4 py-3 transition-colors last:border-0 hover:bg-muted/50",
+                    !notif.isRead && "bg-blue-50/40 dark:bg-blue-950/20",
+                  )}
                 >
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="text-sm font-semibold text-gray-800">
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <span className="text-sm font-medium leading-none">
                       {notif.title}
-                    </h4>
-                    <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                    </span>
+                    <span className="whitespace-nowrap text-[10px] text-muted-foreground">
                       {new Date(notif.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 line-clamp-2">
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                     {notif.message}
                   </p>
                 </div>
-              ))
-            )}
-          </div>
-        </GlassPanel>
-      )}
-    </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
   );
 }

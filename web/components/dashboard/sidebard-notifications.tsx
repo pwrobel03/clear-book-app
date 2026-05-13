@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 import { useNotificationStore } from "@/store/notification";
-import {
-  getNotificationsAction,
-  markNotificationsAsReadAction,
-} from "@/lib/actions/ws";
+import { markNotificationsAsReadAction } from "@/lib/actions/ws";
 
 import {
   Popover,
@@ -17,19 +14,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 export function SidebarNotifications() {
-  const { notifications, unreadCount, setNotifications, markAllAsRead } =
+  const { notifications, unreadCount, markAllAsRead, fetchHistory } =
     useNotificationStore();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Singleton pattern: Ensure we fetch notifications history when the component mounts, but only if it hasn't been loaded yet (store manages this internally)
   useEffect(() => {
-    const fetchHistory = async () => {
-      const data = await getNotificationsAction(15);
-      if (data) {
-        setNotifications(data);
-      }
-    };
     fetchHistory();
-  }, [setNotifications]);
+  }, [fetchHistory]);
 
   const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
@@ -42,12 +34,11 @@ export function SidebarNotifications() {
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        {/* Przycisk idealnie imitujący Twój NavItem */}
         <button
           className={cn(
             "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
             isOpen
-              ? "bg-white/15 text-white" // Kiedy Popover jest otwarty, udaje "aktywną" zakładkę
+              ? "bg-white/15 text-white"
               : "text-white/60 hover:bg-white/10 hover:text-white",
           )}
         >

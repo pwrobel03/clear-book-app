@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/server/session";
 import { AuthInitializer } from "@/components/dashboard/auth-initializer";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { GlobalNotificationListener } from "./notification-listener";
 
 export default async function DashboardLayout({
   children,
@@ -16,7 +15,6 @@ export default async function DashboardLayout({
     <>
       {/* Seeds the Zustand store with server-fetched user data */}
       <AuthInitializer user={user} />
-      <GlobalNotificationListener />
 
       <div className="relative flex h-screen overflow-hidden bg-background">
         {/* ── Glassy, Central Light Blobs ── */}
