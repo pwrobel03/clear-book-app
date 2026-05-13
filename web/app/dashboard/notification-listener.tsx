@@ -5,6 +5,7 @@ import { Client } from "@stomp/stompjs";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth";
 import { getWsTokenAction } from "@/lib/actions/ws";
+import { useNotificationStore } from "@/store/notification";
 
 export function GlobalNotificationListener() {
   const user = useAuthStore((s) => s.user);
@@ -41,6 +42,8 @@ export function GlobalNotificationListener() {
               description: notification.message,
               duration: 8000, // Stays for 8 seconds so the doctor notices
             });
+
+            useNotificationStore.getState().addNotification(notification);
 
             // In the future, we'll add: setUnreadCount(prev => prev + 1);
           });
