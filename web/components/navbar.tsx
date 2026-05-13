@@ -44,9 +44,9 @@ export async function Navbar() {
           {isAuth ? (
             <div className="flex items-center gap-3">
               {/* Test Notification Button - Only visible in development environment */}
-              {process.env.NODE_ENV === "development" && (
+              {/* {process.env.NODE_ENV === "development" && (
                 <TestNotificationButton />
-              )}
+              )} */}
 
               <NotificationBell />
               <ThemeToggle />
