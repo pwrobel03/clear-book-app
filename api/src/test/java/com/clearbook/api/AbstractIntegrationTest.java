@@ -81,10 +81,12 @@ public abstract class AbstractIntegrationTest {
     // ── Factory helpers ───────────────────────────────────────────────────────
 
     protected User saveUser(String email, Role role) {
+        String uniqueFirstName = email.split("@")[0];
+
         return userRepository.save(User.builder()
                 .email(email)
                 .password("$2a$10$irrelevantHashForTests000000000000000000000000000000")
-                .firstName("Test")
+                .firstName(uniqueFirstName)
                 .lastName(role == Role.DOCTOR ? "Doctor" : "Patient")
                 .role(role)
                 .status(AccountStatus.ACTIVE)
