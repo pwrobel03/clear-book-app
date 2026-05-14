@@ -13,6 +13,8 @@ public class AppointmentResponse {
     private UUID id;
     private UUID blockId;
     private UUID patientId;
+    private String patientFirstName;
+    private String patientLastName;
     private UUID serviceId;
     private String serviceName;
     private int serviceDurationMinutes;

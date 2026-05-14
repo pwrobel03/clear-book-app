@@ -462,6 +462,8 @@ public class AppointmentService {
                 .id(a.getId())
                 .blockId(a.getBlock().getId())
                 .patientId(a.getPatient().getId())
+                .patientFirstName(a.getPatient().getFirstName())
+                .patientLastName(a.getPatient().getLastName())
                 .serviceId(a.getService().getId())
                 .serviceName(a.getService().getName())
                 .serviceDurationMinutes(a.getService().getDurationMinutes())
