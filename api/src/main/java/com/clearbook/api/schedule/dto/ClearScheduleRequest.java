@@ -25,4 +25,11 @@ public class ClearScheduleRequest {
      * If null, all blocks in the range are cleared regardless of center.
      */
     private UUID centerId;
+
+    /**
+     * Optional: reason shown to patients in the cancellation e-mail.
+     * e.g. "Doctor is on annual leave", "Medical emergency".
+     * If null, a generic message is used.
+     */
+    private String reason;
 }

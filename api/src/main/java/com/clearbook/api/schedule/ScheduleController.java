@@ -83,6 +83,15 @@ public class ScheduleController {
         return ResponseEntity.ok(new MessageResponse("Working block updated successfully."));
     }
 
+    @PostMapping("/blocks/preview-clear")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<PreviewClearScheduleResponse> previewClearSchedule(
+            @AuthenticationPrincipal User doctor,
+            @Valid @RequestBody ClearScheduleRequest request) {
+
+        return ResponseEntity.ok(availabilityService.previewClearSchedule(doctor, request));
+    }
+
     @PostMapping("/blocks/clear")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ClearScheduleResponse> clearSchedule(

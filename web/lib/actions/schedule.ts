@@ -35,6 +35,18 @@ export type AvailabilityBlock = {
   centerName: string;
   startTime: string;
   endTime: string;
+  /** Number of active (SCHEDULED or non-expired RESERVED) appointments in this block */
+  appointmentCount: number;
+};
+
+export type PreviewClearScheduleResponse = {
+  blocksAffected: number;
+  appointmentsAffected: number;
+};
+
+export type ClearScheduleResponse = {
+  blocksDeleted: number;
+  appointmentsCancelled: number;
 };
 
 export type DoctorServiceResponse = {
@@ -153,4 +165,43 @@ export async function deactivateDoctorServiceAction(serviceId: string): Promise<
     }),
     "Failed to deactivate service."
   );
+}
+
+/* Dry-run — returns how many blocks and appointments would be affected without modifying anything */
+export async function previewClearScheduleAction(data: {
+  rangeStart: string;
+  rangeEnd: string;
+  centerId?: string;
+}): Promise<ActionResult<PreviewClearScheduleResponse>> {
+  return callApi<PreviewClearScheduleResponse>(
+    () =>
+      springFetch("/api/schedule/blocks/preview-clear", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    "Failed to preview schedule clear."
+  );
+}
+
+/* Bulk delete all blocks in a date range and cancel their appointments */
+export async function clearScheduleAction(data: {
+  rangeStart: string;
+  rangeEnd: string;
+  centerId?: string;
+  reason?: string;
+}): Promise<ActionResult<ClearScheduleResponse>> {
+  const result = await callApi<ClearScheduleResponse>(
+    () =>
+      springFetch("/api/schedule/blocks/clear", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    "Failed to clear schedule."
+  );
+
+  if (!result.error) {
+    revalidatePath("/dashboard/schedule");
+  }
+
+  return result;
 }

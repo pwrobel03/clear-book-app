@@ -212,6 +212,37 @@ public class AvailabilityService {
     // ── Bulk operations ───────────────────────────────────────────────────────
 
     /**
+     * Dry-run version of clearSchedule. Returns how many blocks and active appointments
+     * would be affected without modifying any data.
+     * Used by the frontend to show the doctor a preview before confirming.
+     */
+    @Transactional(readOnly = true)
+    public PreviewClearScheduleResponse previewClearSchedule(User doctor, ClearScheduleRequest request) {
+        if (!request.getRangeStart().isBefore(request.getRangeEnd())) {
+            throw new IllegalArgumentException("Range start must be before range end.");
+        }
+
+        MedicalCenter center = null;
+        if (request.getCenterId() != null) {
+            center = centerRepository.findById(request.getCenterId())
+                    .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
+        }
+
+        List<AvailabilityBlock> blocks = blockRepository.findBlocksInRange(
+                doctor, request.getRangeStart(), request.getRangeEnd(), center);
+
+        int totalAppointments = 0;
+        for (AvailabilityBlock block : blocks) {
+            totalAppointments += appointmentRepository.countActiveAppointmentsByBlock(block);
+        }
+
+        return PreviewClearScheduleResponse.builder()
+                .blocksAffected(blocks.size())
+                .appointmentsAffected(totalAppointments)
+                .build();
+    }
+
+    /**
      * Clears all working blocks within a date range, optionally scoped to one center.
      * Non-finished appointments are cancelled and patients notified.
      */
@@ -236,7 +267,7 @@ public class AvailabilityService {
 
         int totalCancelled = 0;
         for (AvailabilityBlock block : blocks) {
-            totalCancelled += cancelFutureAppointmentsOnBlock(block);
+            totalCancelled += cancelFutureAppointmentsOnBlock(block, request.getReason());
         }
 
         blockRepository.deleteAll(blocks);
@@ -268,7 +299,7 @@ public class AvailabilityService {
 
         int totalCancelled = 0;
         for (AvailabilityBlock block : futureBlocks) {
-            totalCancelled += cancelFutureAppointmentsOnBlock(block);
+            totalCancelled += cancelFutureAppointmentsOnBlock(block, null);
         }
 
         blockRepository.deleteAll(futureBlocks);
@@ -284,8 +315,10 @@ public class AvailabilityService {
     /**
      * Cancels all non-finished appointments on a block and notifies patients.
      * Returns the number of appointments cancelled.
+     *
+     * @param reason optional message forwarded to patients in the cancellation e-mail
      */
-    private int cancelFutureAppointmentsOnBlock(AvailabilityBlock block) {
+    private int cancelFutureAppointmentsOnBlock(AvailabilityBlock block, String reason) {
         List<Appointment> appointments = appointmentRepository.findByBlock(block);
         int cancelled = 0;
 
@@ -293,7 +326,7 @@ public class AvailabilityService {
             if (app.getStatus() != AppointmentStatus.CANCELLED
                     && app.getStatus() != AppointmentStatus.COMPLETED) {
                 app.setStatus(AppointmentStatus.CANCELLED);
-                publishCancellationEvent(app, null);
+                publishCancellationEvent(app, reason);
                 cancelled++;
             }
         }
@@ -325,6 +358,7 @@ public class AvailabilityService {
                 .centerName(block.getCenter().getName())
                 .startTime(block.getStartTime())
                 .endTime(block.getEndTime())
+                .appointmentCount(appointmentRepository.countActiveAppointmentsByBlock(block))
                 .build();
     }
 }

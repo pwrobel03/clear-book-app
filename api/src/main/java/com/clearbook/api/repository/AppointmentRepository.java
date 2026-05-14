@@ -103,6 +103,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
             "WHERE a.status = 'RESERVED' AND a.reservedUntil < CURRENT_TIMESTAMP")
     int cancelExpiredReservations();
 
+    /**
+     * Counts active (SCHEDULED or non-expired RESERVED) appointments for a given block.
+     * Used to populate appointmentCount in AvailabilityBlockResponse.
+     */
+    @Query("SELECT COUNT(a) FROM Appointment a " +
+            "WHERE a.block = :block " +
+            "AND (a.status = 'SCHEDULED' OR (a.status = 'RESERVED' AND a.reservedUntil > CURRENT_TIMESTAMP))")
+    int countActiveAppointmentsByBlock(@Param("block") AvailabilityBlock block);
+
     boolean existsByService(DoctorService service);
 
     List<Appointment> findByStatusAndEndTimeBefore(AppointmentStatus status, LocalDateTime endTime);
