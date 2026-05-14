@@ -53,7 +53,8 @@ def parse_args() -> argparse.Namespace:
             "Examples:\n"
             "  python seed_database.py\n"
             "  python seed_database.py --reset\n"
-            "  python seed_database.py --patients 20 --past 80 --future 40\n"
+            "  python seed_database.py --patients 50\n"
+            "  python seed_database.py --min-appts 5 --max-appts 8\n"
             "  python seed_database.py --dry-run\n"
         ),
     )
@@ -62,16 +63,16 @@ def parse_args() -> argparse.Namespace:
         help="Number of doctor accounts to generate (default: 80)",
     )
     p.add_argument(
-        "--patients", type=int, default=10,
-        help="Number of patient accounts to generate (default: 10)",
+        "--patients", type=int, default=200,
+        help="Number of patient accounts to generate (default: 200)",
     )
     p.add_argument(
-        "--past", type=int, default=45,
-        help="Target number of past appointments (default: 45)",
+        "--min-appts", type=int, default=7, dest="min_appts",
+        help="Minimum appointments per patient (default: 7)",
     )
     p.add_argument(
-        "--future", type=int, default=25,
-        help="Target number of future SCHEDULED appointments (default: 25)",
+        "--max-appts", type=int, default=10, dest="max_appts",
+        help="Maximum appointments per patient (default: 10)",
     )
     p.add_argument(
         "--reset", action="store_true",

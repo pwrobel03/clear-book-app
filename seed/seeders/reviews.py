@@ -4,7 +4,8 @@ seed/seeders/reviews.py
 Adds patient reviews to COMPLETED appointments and recalculates
 average_rating / total_reviews on each affected doctor profile.
 
-~70 % of completed appointments receive a review.
+~90 % of completed appointments receive a review  (target: ≥ 50 % of
+ALL appointments across the dataset have a comment/review).
 ~25 % of reviews are anonymous.
 ~60 % of reviews include a doctor reply.
 """
@@ -15,6 +16,8 @@ from datetime import timedelta
 from seed.helpers import uid, now_ts
 from seed.data.content import REVIEW_COMMENTS, DOCTOR_REPLIES
 
+_REVIEW_RATE = 0.90   # fraction of COMPLETED appointments that get a review
+
 
 def seed_reviews(cur, past_appointments: list[tuple]) -> None:
     """
@@ -23,13 +26,14 @@ def seed_reviews(cur, past_appointments: list[tuple]) -> None:
     Parameters
     ----------
     past_appointments : list of (appointment_id: str, status: str)
-        Typically the return value of seed_past_appointments().
+        Typically the return value of seed_appointments_per_patient().
     """
     completed = [aid for aid, s in past_appointments if s == "COMPLETED"]
+    all_count = len(past_appointments)
     added = 0
 
     for appt_id in completed:
-        if random.random() > 0.70:       # 30 % of visits have no review
+        if random.random() > _REVIEW_RATE:
             continue
 
         cur.execute(
@@ -86,4 +90,8 @@ def seed_reviews(cur, past_appointments: list[tuple]) -> None:
         """
     )
 
-    print(f"  + {added} review(s) added  |  doctor rating stats recalculated")
+    review_pct = round(added / all_count * 100, 1) if all_count else 0
+    print(
+        f"  + {added} review(s) added  ({review_pct}% of all appointments)  "
+        f"|  doctor rating stats recalculated"
+    )

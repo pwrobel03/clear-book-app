@@ -8,10 +8,11 @@ All logic lives in the seed/ package; this file is intentionally thin.
 Usage
 -----
     pip install psycopg2-binary bcrypt python-dotenv
-    python seed_database.py                        # default run
-    python seed_database.py --reset                # wipe & re-seed
-    python seed_database.py --patients 20 --past 80 --future 40
-    python seed_database.py --dry-run              # validate connection only
+    python seed_database.py                              # default run (200 patients)
+    python seed_database.py --reset                      # wipe & re-seed
+    python seed_database.py --patients 50                # fewer patients
+    python seed_database.py --min-appts 5 --max-appts 8  # smaller per-patient window
+    python seed_database.py --dry-run                    # validate connection only
 """
 
 import sys
@@ -33,7 +34,7 @@ from seed.seeders.doctors      import seed_doctors, seed_dummy_license, load_spe
 from seed.seeders.memberships  import seed_memberships
 from seed.seeders.patients     import seed_patients
 from seed.seeders.blocks       import seed_availability_blocks
-from seed.seeders.appointments import seed_past_appointments, seed_future_appointments
+from seed.seeders.appointments import seed_appointments_per_patient
 from seed.seeders.reviews      import seed_reviews
 
 
@@ -43,12 +44,11 @@ def main() -> None:
     print("=" * 60)
     print("  ClearBook – Database Seed")
     print("=" * 60)
-    print(f"  doctors    : {args.doctors}")
-    print(f"  patients   : {args.patients}")
-    print(f"  past appts : {args.past}")
-    print(f"  future appts : {args.future}")
-    print(f"  reset      : {args.reset}")
-    print(f"  dry-run    : {args.dry_run}")
+    print(f"  doctors      : {args.doctors}")
+    print(f"  patients     : {args.patients}")
+    print(f"  appts/patient: {args.min_appts}–{args.max_appts}")
+    print(f"  reset        : {args.reset}")
+    print(f"  dry-run      : {args.dry_run}")
     print("=" * 60 + "\n")
 
     # ── Connect ───────────────────────────────────────────────────────────────
@@ -101,21 +101,17 @@ def main() -> None:
         print("\n─── 7. Availability blocks ───────────────────────────────────")
         block_map = seed_availability_blocks(cur, doctor_data, center_ids)
 
-        # ── 8. Past appointments ──────────────────────────────────────────────
-        print("\n─── 8. Past appointments ─────────────────────────────────────")
-        past_appts = seed_past_appointments(
-            cur, doctor_data, patient_ids, block_map, args.past,
+        # ── 8. Appointments (per-patient, load-balanced across doctors) ───────
+        print("\n─── 8. Appointments (per-patient) ────────────────────────────")
+        all_appts = seed_appointments_per_patient(
+            cur, doctor_data, patient_ids, block_map,
+            min_appts=args.min_appts,
+            max_appts=args.max_appts,
         )
 
-        # ── 9. Future appointments ────────────────────────────────────────────
-        print("\n─── 9. Future appointments (SCHEDULED) ──────────────────────")
-        seed_future_appointments(
-            cur, doctor_data, patient_ids, block_map, args.future,
-        )
-
-        # ── 10. Reviews ───────────────────────────────────────────────────────
-        print("\n─── 10. Reviews ──────────────────────────────────────────────")
-        seed_reviews(cur, past_appts)
+        # ── 9. Reviews ────────────────────────────────────────────────────────
+        print("\n─── 9. Reviews ───────────────────────────────────────────────")
+        seed_reviews(cur, all_appts)
 
         conn.commit()
         print("\n✓ Commit – all data saved.\n")
