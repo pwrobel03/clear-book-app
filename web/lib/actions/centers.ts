@@ -37,8 +37,12 @@ export async function createCenterAction(data: {
   return result
 }
 
-export async function getCentersAction(city?: string): Promise<SpringPage<MedicalCenterResponse>> {
-  const params = new URLSearchParams({ size: "24" });
+export async function getCentersAction(
+  city?: string,
+  page = 0,
+  size = 12,
+): Promise<SpringPage<MedicalCenterResponse>> {
+  const params = new URLSearchParams({ size: String(size), page: String(page) });
   if (city) params.set("city", city);
 
   try {
@@ -46,8 +50,7 @@ export async function getCentersAction(city?: string): Promise<SpringPage<Medica
     if (!res.ok) throw new Error("Failed to fetch centers");
     return res.json();
   } catch (error) {
-    // Zwracamy pusty wynik w przypadku błędu (np. gdy backend leży)
-    return { content: [], totalElements: 0, totalPages: 0, size: 24, number: 0 };
+    return { content: [], totalElements: 0, totalPages: 0, size, number: page };
   }
 }
 

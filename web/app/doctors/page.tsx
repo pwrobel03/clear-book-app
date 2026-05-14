@@ -7,6 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
+import { Pagination } from "@/components/ui/pagination";
 
 import {
   getDoctorsAction,
@@ -78,12 +79,13 @@ function DoctorCard({
 export default async function DoctorsSearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ specialization?: string; city?: string }>;
+  searchParams: Promise<{ specialization?: string; city?: string; page?: string }>;
 }) {
-  const { specialization = "", city = "" } = await searchParams;
+  const { specialization = "", city = "", page: pageParam = "0" } = await searchParams;
+  const page = Math.max(0, parseInt(pageParam, 10) || 0);
 
   const [doctorsResult, specResult] = await Promise.all([
-    getDoctorsAction(specialization, city),
+    getDoctorsAction(specialization, city, page),
     getSpecializationsAction(),
   ]);
 
@@ -166,15 +168,31 @@ export default async function DoctorsSearchPage({
             </Link>
           </GlassPanel>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {doctorsResult.content.map((doctor) => (
-              <DoctorCard
-                key={doctor.id}
-                doctor={doctor}
-                specLabels={specLabels}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {doctorsResult.content.map((doctor) => (
+                <DoctorCard
+                  key={doctor.id}
+                  doctor={doctor}
+                  specLabels={specLabels}
+                />
+              ))}
+            </div>
+
+            <Pagination
+              currentPage={doctorsResult.number}
+              totalPages={doctorsResult.totalPages}
+              buildHref={(p) => {
+                const params = new URLSearchParams();
+                if (specialization) params.set("specialization", specialization);
+                if (city) params.set("city", city);
+                if (p > 0) params.set("page", String(p));
+                const qs = params.toString();
+                return `/doctors${qs ? `?${qs}` : ""}`;
+              }}
+              className="mt-10"
+            />
+          </>
         )}
       </main>
     </div>

@@ -86,8 +86,13 @@ export async function refreshInviteCodeAction(): Promise<ActionResult<InviteCode
   )
 }
 
-export async function getDoctorsAction(specialization?: string, city?: string): Promise<SpringPage<DoctorProfileResponse>> {
-  const params = new URLSearchParams({ size: "12" });
+export async function getDoctorsAction(
+  specialization?: string,
+  city?: string,
+  page = 0,
+  size = 12,
+): Promise<SpringPage<DoctorProfileResponse>> {
+  const params = new URLSearchParams({ size: String(size), page: String(page) });
   if (specialization) params.set("specialization", specialization);
   if (city) params.set("city", city);
 
@@ -96,8 +101,7 @@ export async function getDoctorsAction(specialization?: string, city?: string): 
     if (!res.ok) throw new Error("Failed to fetch doctors");
     return res.json();
   } catch (error) {
-    // Prawidłowy pusty fallback SpringPage
-    return { content: [], totalElements: 0, totalPages: 0, size: 12, number: 0 };
+    return { content: [], totalElements: 0, totalPages: 0, size, number: page };
   }
 }
 
