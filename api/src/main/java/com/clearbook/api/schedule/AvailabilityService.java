@@ -156,8 +156,8 @@ public class AvailabilityService {
             }
         }
 
-        blockRepository.delete(block);
-        log.info("Working block {} deleted successfully.", blockId);
+        blockRepository.softDeleteById(blockId);
+        log.info("Working block {} soft-deleted successfully.", blockId);
     }
 
     /**
@@ -270,7 +270,7 @@ public class AvailabilityService {
             totalCancelled += cancelFutureAppointmentsOnBlock(block, request.getReason());
         }
 
-        blockRepository.deleteAll(blocks);
+        blockRepository.softDeleteAll(blocks);
         log.info("Doctor {} cleared {} blocks ({} appointments cancelled) from {} to {}",
                 doctor.getId(), blocks.size(), totalCancelled,
                 request.getRangeStart(), request.getRangeEnd());
@@ -302,7 +302,7 @@ public class AvailabilityService {
             totalCancelled += cancelFutureAppointmentsOnBlock(block, null);
         }
 
-        blockRepository.deleteAll(futureBlocks);
+        blockRepository.softDeleteAll(futureBlocks);
         log.info("Membership deactivation: cancelled {} appointments and removed {} future blocks "
                         + "for doctor {} at center {}",
                 totalCancelled, futureBlocks.size(), doctor.getId(), center.getId());

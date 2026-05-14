@@ -1,18 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { format } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 import {
   Loader2,
   CalendarOff,
   AlertTriangle,
   CheckCircle2,
   Building2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -20,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GlassPanel } from "@/components/ui/glass";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
@@ -39,22 +47,25 @@ interface VacationPlannerClientProps {
 }
 
 export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
-  const [rangeStart, setRangeStart] = useState("");
-  const [rangeEnd, setRangeEnd] = useState("");
+  const [rangeStart, setRangeStart] = useState<Date | undefined>(undefined);
+  const [rangeEnd, setRangeEnd] = useState<Date | undefined>(undefined);
   const [centerId, setCenterId] = useState("__all__");
   const [reason, setReason] = useState("");
 
-  const [preview, setPreview] = useState<PreviewClearScheduleResponse | null>(
-    null,
-  );
+  const [preview, setPreview] = useState<PreviewClearScheduleResponse | null>(null);
   const [previewing, startPreview] = useTransition();
   const [isClearing, setIsClearing] = useState(false);
 
-  const isFormValid = rangeStart && rangeEnd && rangeStart < rangeEnd;
+  const today = startOfDay(new Date());
+
+  const isFormValid =
+    rangeStart !== undefined &&
+    rangeEnd !== undefined &&
+    !isBefore(rangeEnd, rangeStart);
 
   const buildPayload = () => ({
-    rangeStart: `${rangeStart}T00:00:00`,
-    rangeEnd: `${rangeEnd}T23:59:59`,
+    rangeStart: format(rangeStart!, "yyyy-MM-dd'T'00:00:00"),
+    rangeEnd: format(rangeEnd!, "yyyy-MM-dd'T'23:59:59"),
     centerId: centerId === "__all__" ? undefined : centerId,
     reason: reason.trim() || undefined,
   });
@@ -88,9 +99,8 @@ export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
         `${appointmentsCancelled} ${appointmentsCancelled === 1 ? "appointment" : "appointments"} cancelled.`,
     );
 
-    // Reset form and refresh the calendar
-    setRangeStart("");
-    setRangeEnd("");
+    setRangeStart(undefined);
+    setRangeEnd(undefined);
     setCenterId("__all__");
     setReason("");
     setPreview(null);
@@ -100,7 +110,8 @@ export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
   const confirmDescription =
     preview && preview.appointmentsAffected > 0 ? (
       <span>
-        This will permanently delete <strong>{preview.blocksAffected}</strong>{" "}
+        This will permanently delete{" "}
+        <strong>{preview.blocksAffected}</strong>{" "}
         {preview.blocksAffected === 1 ? "block" : "blocks"} and cancel{" "}
         <strong className="text-destructive">
           {preview.appointmentsAffected}{" "}
@@ -110,13 +121,15 @@ export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
         {reason.trim() && (
           <>
             {" "}
-            Your message to them: <em>&ldquo;{reason.trim()}&rdquo;</em>
+            Your message to them:{" "}
+            <em>&ldquo;{reason.trim()}&rdquo;</em>
           </>
         )}
       </span>
     ) : (
       <span>
-        This will delete <strong>{preview?.blocksAffected ?? 0}</strong>{" "}
+        This will delete{" "}
+        <strong>{preview?.blocksAffected ?? 0}</strong>{" "}
         {preview?.blocksAffected === 1 ? "block" : "blocks"} with no active
         appointments.
       </span>
@@ -124,38 +137,95 @@ export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
 
   return (
     <div className="space-y-5">
-      {/* Date range */}
+      {/* Date range pickers */}
       <div className="grid grid-cols-2 gap-4">
+        {/* From */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
             From
           </label>
-          <Input
-            type="date"
-            value={rangeStart}
-            onChange={(e) => {
-              setRangeStart(e.target.value);
-              setPreview(null);
-            }}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal rounded-xl h-9 px-3 text-sm",
+                  !rangeStart && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon size={14} className="mr-2 opacity-50 shrink-0" />
+                {rangeStart ? format(rangeStart, "dd MMM yyyy") : "Pick date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0 border-none shadow-2xl rounded-3xl"
+              align="start"
+            >
+              <GlassPanel className="p-2 border-none">
+                <Calendar
+                  mode="single"
+                  selected={rangeStart}
+                  onSelect={(date) => {
+                    setRangeStart(date);
+                    // If end is now before start, reset end
+                    if (date && rangeEnd && isBefore(rangeEnd, date)) {
+                      setRangeEnd(undefined);
+                    }
+                    setPreview(null);
+                  }}
+                  disabled={(date) => isBefore(date, today)}
+                  initialFocus
+                  className="bg-transparent"
+                />
+              </GlassPanel>
+            </PopoverContent>
+          </Popover>
         </div>
+
+        {/* To */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
             To
           </label>
-          <Input
-            type="date"
-            value={rangeEnd}
-            min={rangeStart}
-            onChange={(e) => {
-              setRangeEnd(e.target.value);
-              setPreview(null);
-            }}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal rounded-xl h-9 px-3 text-sm",
+                  !rangeEnd && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon size={14} className="mr-2 opacity-50 shrink-0" />
+                {rangeEnd ? format(rangeEnd, "dd MMM yyyy") : "Pick date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0 border-none shadow-2xl rounded-3xl"
+              align="end"
+            >
+              <GlassPanel className="p-2 border-none">
+                <Calendar
+                  mode="single"
+                  selected={rangeEnd}
+                  onSelect={(date) => {
+                    setRangeEnd(date);
+                    setPreview(null);
+                  }}
+                  disabled={(date) =>
+                    isBefore(date, today) ||
+                    (rangeStart !== undefined && isBefore(date, rangeStart))
+                  }
+                  initialFocus
+                  className="bg-transparent"
+                />
+              </GlassPanel>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {/* Center filter */}
+      {/* Center filter — only shown when doctor is in more than one center */}
       {centers.length > 1 && (
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
@@ -237,13 +307,12 @@ export function VacationPlannerClient({ centers }: VacationPlannerClientProps) {
           </div>
           <p>
             <strong>{preview.blocksAffected}</strong>{" "}
-            {preview.blocksAffected === 1 ? "block" : "blocks"} will be deleted.
+            {preview.blocksAffected === 1 ? "block" : "blocks"} will be
+            deleted.
           </p>
           <p>
             <strong>{preview.appointmentsAffected}</strong>{" "}
-            {preview.appointmentsAffected === 1
-              ? "appointment"
-              : "appointments"}{" "}
+            {preview.appointmentsAffected === 1 ? "appointment" : "appointments"}{" "}
             will be cancelled
             {preview.appointmentsAffected > 0
               ? " — patients will be notified by e-mail."
