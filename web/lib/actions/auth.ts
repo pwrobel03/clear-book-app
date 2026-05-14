@@ -14,6 +14,13 @@ import type { AccountStatus, ActionResult, AuthResponse, UserRole, VoidResult } 
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
+/**
+ * Intentionally uses raw fetch instead of springFetch/callApi.
+ *
+ * springFetch would redirect to /auth on a 401 response, which would break the
+ * login flow itself. We also need direct access to the Set-Cookie header in order
+ * to extract and forward the HttpOnly refresh token set by Spring.
+ */
 export async function loginAction(
   email: string,
   password: string

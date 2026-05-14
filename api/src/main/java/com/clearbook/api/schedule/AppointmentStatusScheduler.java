@@ -17,13 +17,16 @@ import java.util.List;
 @Slf4j
 public class AppointmentStatusScheduler {
 
+    /** How often to check for appointments that should be auto-completed (every 5 minutes). */
+    private static final long STATUS_CHECK_INTERVAL_MS = 5 * 60 * 1_000L;
+
     private final AppointmentRepository appointmentRepository;
 
     /**
-     * Starts native Spring scheduler that runs every 5 minutes and checks for any SCHEDULED appointments that have already ended.
-     * If it finds any, it automatically updates their status to COMPLETED.
+     * Runs every {@value #STATUS_CHECK_INTERVAL_MS} ms and auto-completes any SCHEDULED
+     * appointments whose end time has already passed.
      */
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(fixedRate = STATUS_CHECK_INTERVAL_MS)
     @Transactional
     public void markPastAppointmentsAsCompleted() {
         LocalDateTime now = LocalDateTime.now();

@@ -2,11 +2,13 @@ package com.clearbook.api.auth;
 
 import com.clearbook.api.auth.dto.*;
 import com.clearbook.api.doctor.DoctorProfileService;
+import com.clearbook.api.doctor.FileStorageService;
 import com.clearbook.api.exception.ConflictException;
 import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.exception.TokenExpiredException;
 import com.clearbook.api.model.*;
+import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.PasswordResetTokenRepository;
 import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.VerificationTokenRepository;
@@ -20,6 +22,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -37,12 +40,13 @@ public class AuthService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenService refreshTokenService;
-    private final com.clearbook.api.doctor.FileStorageService fileStorageService;
-    private final com.clearbook.api.repository.DoctorProfileRepository doctorProfileRepository;
+    private final FileStorageService fileStorageService;
+    private final DoctorProfileRepository doctorProfileRepository;
     private final DoctorProfileService doctorProfileService;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request, org.springframework.web.multipart.MultipartFile file) {   if (userRepository.existsByEmail(request.getEmail())) {
+    public AuthResponse register(RegisterRequest request, MultipartFile file) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("There is already an account with that email address.");
         }
 
