@@ -11,10 +11,12 @@ import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.MedicalCenterRepository;
 import com.clearbook.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -26,12 +28,20 @@ public class AdminService {
     private final CenterMapper centerMapper;
     private final DoctorProfileRepository doctorProfileRepository;
 
-    /** Returns all doctor accounts awaiting platform verification. */
+    /**
+     * Returns all doctor accounts awaiting platform verification.
+     * Profiles are batch-loaded in a single query to avoid N+1.
+     */
+    @Transactional(readOnly = true)
     public List<PendingDoctorResponse> getPendingDoctors() {
-        return userRepository.findByRoleAndStatus(Role.DOCTOR, AccountStatus.PENDING)
-                .stream()
+        List<User> pendingDoctors = userRepository.findByRoleAndStatus(Role.DOCTOR, AccountStatus.PENDING);
+
+        // One query for all profiles instead of one per doctor
+        Map<UUID, DoctorProfile> profileMap = doctorProfileRepository.findProfileMapByUsers(pendingDoctors);
+
+        return pendingDoctors.stream()
                 .map(u -> {
-                    DoctorProfile profile = doctorProfileRepository.findByUser(u).orElse(null);
+                    DoctorProfile profile = profileMap.get(u.getId());
                     return PendingDoctorResponse.builder()
                             .id(u.getId())
                             .firstName(u.getFirstName())
@@ -77,7 +87,7 @@ public class AdminService {
     /** Returns all medical centers awaiting platform approval. */
     public List<MedicalCenterResponse> getPendingCenters() {
         return centerRepository
-                .findByStatus(CenterStatus.PENDING_APPROVAL, org.springframework.data.domain.Pageable.unpaged())
+                .findByStatus(CenterStatus.PENDING_APPROVAL, Pageable.unpaged())
                 .stream()
                 .map(centerMapper::toResponse)
                 .toList();

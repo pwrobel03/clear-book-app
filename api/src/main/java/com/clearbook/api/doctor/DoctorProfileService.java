@@ -1,5 +1,6 @@
 package com.clearbook.api.doctor;
 
+import com.clearbook.api.center.CenterMapper;
 import com.clearbook.api.center.dto.MedicalCenterResponse;
 import com.clearbook.api.doctor.dto.DoctorProfileRequest;
 import com.clearbook.api.doctor.dto.DoctorProfileResponse;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,7 +31,7 @@ public class DoctorProfileService {
     private final DoctorProfileRepository profileRepository;
     private final SpecializationRepository specializationRepository;
     private final CenterMembershipRepository centerMembershipRepository;
-    private final com.clearbook.api.center.CenterMapper centerMapper;
+    private final CenterMapper centerMapper;
 
     @Transactional
     public void createInitialProfile(User user, String licenseFilePath) {
@@ -61,7 +63,7 @@ public class DoctorProfileService {
 
         Set<Specialization> specs = request.getSpecializations().stream()
                 .map(code -> specializationRepository.findByCode(code.toUpperCase()).orElse(null))
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         profile.setSpecializations(specs);
@@ -96,7 +98,7 @@ public class DoctorProfileService {
                     .anyMatch(reqM -> {
                         // Active membership
                         return centerMembershipRepository.findByUserAndCenter(profile.getUser(), reqM.getCenter())
-                                .filter(docM -> docM.getStatus() == MembershipStatus.ACTIVE) // <-- KRYTYCZNY FILTR
+                                .filter(docM -> docM.getStatus() == MembershipStatus.ACTIVE)
                                 .isPresent();
                     });
 
@@ -147,7 +149,7 @@ public class DoctorProfileService {
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 
-    public String generatePublicId(User user) {
+    private String generatePublicId(User user) {
         String base = (user.getFirstName() + "-" + user.getLastName())
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")
