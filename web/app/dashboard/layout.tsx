@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/server/session";
 import { AuthInitializer } from "@/components/dashboard/auth-initializer";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { MobileSidebarDrawer } from "@/components/dashboard/mobile-sidebar-drawer";
 
 export default async function DashboardLayout({
   children,
@@ -21,7 +22,11 @@ export default async function DashboardLayout({
         <div className="pointer-events-none absolute top-[20%] left-[30%] h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30 blur-[140px] dark:bg-[#357d60]/20" />
         <div className="pointer-events-none absolute bottom-[20%] right-[20%] h-[500px] w-[500px] translate-x-1/4 translate-y-1/4 rounded-full bg-accent/20 blur-[140px] dark:bg-[#4a9b7a]/15" />
 
+        {/* Mobile slide-in drawer (hidden on md+) */}
+        <MobileSidebarDrawer />
+
         <div className="relative z-10 flex h-full w-full p-0 md:p-4 gap-4">
+          {/* Desktop sidebar (hidden on mobile) */}
           <div className="hidden md:flex flex-col">
             <Sidebar />
           </div>
