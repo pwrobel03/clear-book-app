@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   User,
   LogOut,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
@@ -63,6 +64,7 @@ const navByRole: Record<UserRole, NavItem[]> = {
     },
     { href: "/dashboard/centers", icon: Building2, label: "My Centers" },
     { href: "/dashboard/invite", icon: Key, label: "Invite Code" },
+    { href: "/dashboard/reports", icon: BarChart2, label: "Reports" },
     { href: "/dashboard/profile", icon: User, label: "Profile" },
   ],
   ADMIN: [

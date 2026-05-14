@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
 import { toast } from "sonner";
-import { Loader2, Plus, Clock } from "lucide-react";
+import { Loader2, Plus, Clock, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { GlassPanel } from "@/components/ui/glass";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -19,7 +26,7 @@ interface CenterOption {
   centerName: string;
 }
 
-// Funkcja generująca opcje czasu co 15 minut (00:00, 00:15, ..., 23:45)
+// Generates time options every 15 minutes (00:00, 00:15, ..., 23:45)
 const generateTimeOptions = () => {
   const options = [];
   for (let i = 0; i < 24 * 4; i++) {
@@ -39,7 +46,8 @@ const TIME_OPTIONS = generateTimeOptions();
 export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
   const [loading, setLoading] = useState(false);
   const [centerId, setCenterId] = useState<string>("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("16:00");
 
@@ -50,8 +58,9 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
       return;
     }
 
-    const startIso = `${date}T${startTime}:00`;
-    const endIso = `${date}T${endTime}:00`;
+    const dateStr = format(date, "yyyy-MM-dd");
+    const startIso = `${dateStr}T${startTime}:00`;
+    const endIso = `${dateStr}T${endTime}:00`;
 
     setLoading(true);
     const result = await createWorkingBlockAction({
@@ -64,8 +73,7 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
       toast.error(result.error);
     } else {
       toast.success("Working block created successfully!");
-      setDate("");
-
+      setDate(undefined);
       window.dispatchEvent(new Event("refresh-schedule"));
     }
     setLoading(false);
@@ -95,13 +103,41 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
         <label className="text-sm font-semibold text-foreground ml-1">
           Date
         </label>
-        {/* Input type="date" zostawiamy, bo natywne kalendarze (szczególnie na mobile) są bardzo wygodne */}
-        <Input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-left font-normal"
+            >
+              <CalendarIcon size={14} className="mr-2 opacity-50" />
+              {date ? (
+                format(date, "EEE, d MMM yyyy")
+              ) : (
+                <span className="text-muted-foreground">Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto p-0 border-none shadow-2xl rounded-3xl"
+            align="start"
+          >
+            <GlassPanel className="p-2 border-none">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(d) => {
+                  setDate(d);
+                  setCalendarOpen(false);
+                }}
+                disabled={(d) =>
+                  d < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+                initialFocus
+                className="bg-transparent"
+              />
+            </GlassPanel>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

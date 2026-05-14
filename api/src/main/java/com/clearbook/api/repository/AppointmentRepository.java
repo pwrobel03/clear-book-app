@@ -121,4 +121,70 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
             LocalDateTime startTimeStart,
             LocalDateTime startTimeEnd
     );
+
+    // ── Reporting ─────────────────────────────────────────────────────────────
+
+    /**
+     * Counts appointments for a doctor grouped by status within a given period.
+     * Returns rows of [status (String), count (Long)].
+     */
+    @Query("SELECT a.status, COUNT(a) FROM Appointment a " +
+            "WHERE a.block.doctor = :doctor " +
+            "AND a.startTime >= :from AND a.startTime < :to " +
+            "GROUP BY a.status")
+    List<Object[]> countByStatusForDoctor(
+            @Param("doctor") User doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    /**
+     * Sums earnings (service price) for COMPLETED appointments within a period.
+     * Returns null when there are no completed appointments.
+     */
+    @Query("SELECT COALESCE(SUM(a.service.price), 0) FROM Appointment a " +
+            "WHERE a.block.doctor = :doctor " +
+            "AND a.status = 'COMPLETED' " +
+            "AND a.startTime >= :from AND a.startTime < :to")
+    java.math.BigDecimal sumEarningsForDoctor(
+            @Param("doctor") User doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
+
+    /**
+     * Returns top services by appointment count for COMPLETED appointments.
+     * Rows: [serviceName (String), count (Long)].
+     */
+    @Query("SELECT a.service.name, COUNT(a) FROM Appointment a " +
+            "WHERE a.block.doctor = :doctor " +
+            "AND a.status = 'COMPLETED' " +
+            "AND a.startTime >= :from AND a.startTime < :to " +
+            "GROUP BY a.service.name " +
+            "ORDER BY COUNT(a) DESC")
+    List<Object[]> topServicesByDoctor(
+            @Param("doctor") User doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable
+    );
+
+    /**
+     * Per-center breakdown: center name, total appointments, completed count, earnings.
+     * Rows: [centerName (String), total (Long), completed (Long), earnings (BigDecimal)].
+     */
+    @Query("SELECT b.center.name, COUNT(a), " +
+            "SUM(CASE WHEN a.status = 'COMPLETED' THEN 1 ELSE 0 END), " +
+            "COALESCE(SUM(CASE WHEN a.status = 'COMPLETED' THEN a.service.price ELSE 0 END), 0) " +
+            "FROM Appointment a " +
+            "JOIN a.block b " +
+            "WHERE b.doctor = :doctor " +
+            "AND a.startTime >= :from AND a.startTime < :to " +
+            "GROUP BY b.center.name " +
+            "ORDER BY COUNT(a) DESC")
+    List<Object[]> perCenterBreakdownForDoctor(
+            @Param("doctor") User doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
+    );
 }
