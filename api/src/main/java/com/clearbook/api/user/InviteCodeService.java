@@ -58,10 +58,21 @@ public class InviteCodeService {
         return toResponse(newCode);
     }
 
-    /** Invalidates the current code and issues a fresh one. */
+    /**
+     * Invalidates the current code and issues a fresh one.
+     * Updates the existing record in place (same UPSERT pattern as getOrCreate) to
+     * avoid DELETE + INSERT, which could violate constraints under concurrent requests.
+     */
     @Transactional
     public InviteCodeResponse refresh(User user) {
-        inviteCodeRepository.deleteByUser(user);
+        InviteCode existing = inviteCodeRepository.findByUser(user).orElse(null);
+
+        if (existing != null) {
+            existing.setCode(generateUniqueCode());
+            existing.setExpiresAt(LocalDateTime.now().plusHours(TTL_HOURS));
+            return toResponse(inviteCodeRepository.save(existing));
+        }
+
         return create(user);
     }
 
