@@ -1,17 +1,83 @@
 services:
+
+  # ── Database ────────────────────────────────────────────────────────────────
   postgres-db:
     image: postgres:18.3
     container_name: clearbook_postgres
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER:     ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-      PGDATA: /var/lib/postgresql/data/pgdata # <--- KLUCZOWE DLA V18+
-    ports:
-      - "5432:5432"
+      POSTGRES_DB:       ${DB_NAME}
+      PGDATA:            /var/lib/postgresql/data/pgdata
     volumes:
-      - postgres-data:/var/lib/postgresql/data # Dane nie znikną po restarcie kontenera
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - clearbook-net
 
+  # ── Backend (Spring Boot) ───────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    image: clearbook-backend:latest
+    container_name: clearbook_backend
+    restart: unless-stopped
+    environment:
+      # Override the localhost URL from application.properties
+      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres-db:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      # JWT
+      JWT_SECRET:                   ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION_MS:     ${JWT_ACCESS_EXPIRATION_MS:-900000}
+      JWT_REFRESH_EXPIRATION_DAYS:  ${JWT_REFRESH_EXPIRATION_DAYS:-7}
+      # E-mail
+      EMAIL_USERNAME:               ${EMAIL_USERNAME}
+      EMAIL_2FA_PASSWORD:           ${EMAIL_2FA_PASSWORD}
+      # CORS — set to the public domain in production
+      FRONTEND_URL:                 ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "8080:8080"      # expose for debugging; remove in production if not needed
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - clearbook-net
+
+  # ── Frontend (Next.js) ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # Baked into the Next.js build at image-build time.
+        # The Next.js server proxies /api/backend/* → http://backend:8080/api/*
+        # This is an internal Docker network address, invisible to the browser.
+        SPRING_API_URL: http://backend:8080
+    image: clearbook-frontend:latest
+    container_name: clearbook_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - clearbook-net
+
+# ── Shared network ────────────────────────────────────────────────────────────
+# All containers communicate via this internal bridge network.
+# Only ports explicitly mapped above are reachable from the host machine.
+networks:
+  clearbook-net:
+    driver: bridge
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
 volumes:
   postgres-data:
