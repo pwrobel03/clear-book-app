@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Medical Centers | ClearBook",
+  description:
+    "Find medical centers and clinics near you. Browse by city and book appointments with qualified doctors.",
+};
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";

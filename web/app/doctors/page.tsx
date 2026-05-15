@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Search, ArrowLeft } from "lucide-react";
 import {
@@ -14,6 +15,12 @@ import {
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
 import type { DoctorProfileResponse } from "@/types/api";
+
+export const metadata: Metadata = {
+  title: "Find a Doctor | ClearBook",
+  description:
+    "Browse and search doctors by specialization and city. Book an appointment online in minutes.",
+};
 
 // TODO: This page is the main public directory of doctors. It shows a list of all doctors registered in the system with basic information about them (name, specializations, bio). Users can search for doctors by specialization and city. Each doctor card links to the doctor's public profile page.
 

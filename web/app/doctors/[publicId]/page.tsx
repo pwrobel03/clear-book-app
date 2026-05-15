@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   Building2,
@@ -22,6 +23,37 @@ import {
 import { getServerSession } from "@/lib/server/session";
 import { DoctorBookingClient } from "./booking-client";
 import { DoctorReviewsSection } from "./review-section";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ publicId: string }>;
+}): Promise<Metadata> {
+  const { publicId } = await params;
+  const { getDoctorByPublicIdAction, getSpecializationsAction } = await import(
+    "@/lib/actions/doctor"
+  );
+  const [doctorResult, specResult] = await Promise.all([
+    getDoctorByPublicIdAction(publicId),
+    getSpecializationsAction(),
+  ]);
+  if (!doctorResult.data) return { title: "Doctor | ClearBook" };
+
+  const { firstName, lastName, specializations } = doctorResult.data;
+  const specMap: Record<string, string> = {};
+  specResult.data?.forEach((s) => { specMap[s.code] = s.name; });
+  const specText = specializations
+    ?.slice(0, 2)
+    .map((c) => specMap[c] ?? c)
+    .join(", ");
+
+  return {
+    title: `Dr. ${firstName} ${lastName} | ClearBook`,
+    description: specText
+      ? `Book an appointment with Dr. ${firstName} ${lastName}, specializing in ${specText}.`
+      : `Book an appointment with Dr. ${firstName} ${lastName} on ClearBook.`,
+  };
+}
 
 export default async function DoctorProfilePage({
   params,

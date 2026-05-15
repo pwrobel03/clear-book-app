@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   submitReviewAction,
   updateReviewAction,
@@ -60,8 +61,8 @@ export function AppointmentReviewSection({
   // --- Patient logic ---
   const handlePatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (rating === 0) return toast.error("Proszę wybrać ocenę (gwiazdki).");
-    if (!comment.trim()) return toast.error("Proszę wpisać treść opinii.");
+    if (rating === 0) return toast.error("Please select a star rating.");
+    if (!comment.trim()) return toast.error("Please write a comment before submitting.");
 
     setIsSubmitting(true);
 
@@ -86,25 +87,19 @@ export function AppointmentReviewSection({
   };
 
   const handlePatientDelete = async () => {
-    if (
-      !confirm(
-        "Czy na pewno chcesz usunąć swoją opinię? Tej operacji nie można cofnąć.",
-      )
-    )
-      return;
-
     setIsSubmitting(true);
     const result = await deleteReviewAction(review.id);
 
     if (result.error) {
       toast.error(result.error);
+      throw new Error(result.error); // keeps ConfirmDialog open
     } else {
       setReview(null);
       setRating(0);
       setComment("");
       setIsAnonymous(false);
       setIsEditing(false);
-      toast.success("Update: Your opinion has been deleted!");
+      toast.success("Your review has been deleted.");
     }
     setIsSubmitting(false);
   };
@@ -146,18 +141,17 @@ export function AppointmentReviewSection({
   };
 
   const handleDoctorReplyDelete = async () => {
-    if (!confirm("Czy na pewno chcesz usunąć swoją odpowiedź?")) return;
-
     setIsSubmitting(true);
     const result = await deleteReplyAction(review.id);
 
     if (result.error) {
       toast.error(result.error);
+      throw new Error(result.error); // keeps ConfirmDialog open
     } else if (result.data) {
-      setReview(result.data); // Backend powinien zwrócić opinię z null w doctorReply
+      setReview(result.data);
       setIsEditingReply(false);
       setReplyText("");
-      toast.success("Update: Your reply has been deleted.");
+      toast.success("Reply deleted.");
     }
     setIsSubmitting(false);
   };
@@ -306,7 +300,7 @@ export function AppointmentReviewSection({
             {isDoctor ? "Patient Review" : "Your Review"}
           </h3>
 
-          {/* Akcje Pacjenta (Zarządzanie) */}
+          {/* Patient review actions */}
           {!isDoctor && (
             <div className="flex gap-2">
               <Button
@@ -317,14 +311,20 @@ export function AppointmentReviewSection({
               >
                 <Edit2 size={14} className="mr-2" /> Edit
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePatientDelete}
-                className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              <ConfirmDialog
+                title="Delete Review"
+                description="Are you sure you want to delete your review? This action cannot be undone."
+                confirmText="Delete"
+                onConfirm={handlePatientDelete}
               >
-                <Trash2 size={14} className="mr-2" /> Delete
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 size={14} className="mr-2" /> Delete
+                </Button>
+              </ConfirmDialog>
             </div>
           )}
         </div>
@@ -368,7 +368,7 @@ export function AppointmentReviewSection({
                   Doctor's Reply:
                 </span>
 
-                {/* Akcje Lekarza (Zarządzanie) */}
+                {/* Doctor reply actions */}
                 {isDoctor && !isEditingReply && (
                   <div className="flex gap-2">
                     <Button
@@ -382,14 +382,20 @@ export function AppointmentReviewSection({
                     >
                       <Edit2 size={12} className="mr-1" /> Edit
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDoctorReplyDelete}
-                      className="h-6 px-2 py-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    <ConfirmDialog
+                      title="Delete Reply"
+                      description="Are you sure you want to delete your reply to this review?"
+                      confirmText="Delete"
+                      onConfirm={handleDoctorReplyDelete}
                     >
-                      <Trash2 size={12} className="mr-1" /> Delete
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 py-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 size={12} className="mr-1" /> Delete
+                      </Button>
+                    </ConfirmDialog>
                   </div>
                 )}
               </div>

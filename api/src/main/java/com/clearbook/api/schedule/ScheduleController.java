@@ -256,4 +256,15 @@ public class ScheduleController {
 
         return ResponseEntity.ok(appointmentService.markAsNoShow(doctor, appointmentId));
     }
+
+    @PatchMapping("/doctor-appointments/{appointmentId}/notes")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> saveDoctorNotes(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId,
+            @RequestBody SaveDoctorNotesRequest request) {
+
+        return ResponseEntity.ok(
+                appointmentService.saveDoctorNotes(doctor, appointmentId, request.getNotes()));
+    }
 }

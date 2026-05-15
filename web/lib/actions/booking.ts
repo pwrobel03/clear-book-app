@@ -186,3 +186,16 @@ export async function markAsNoShowAction(
     "Failed to update appointment status."
   );
 }
+
+export async function saveDoctorNotesAction(
+  appointmentId: string,
+  notes: string
+): Promise<ActionResult<AppointmentResponse>> {
+  return callApi<AppointmentResponse>(
+    () => springFetch(`/api/schedule/doctor-appointments/${appointmentId}/notes`, {
+      method: "PATCH",
+      body: JSON.stringify({ notes }),
+    }),
+    "Failed to save notes."
+  );
+}
