@@ -40,11 +40,11 @@ const navByRole: Record<UserRole, NavItem[]> = {
       label: "Appointments",
     },
     {
-      href: "/dashboard/doctors",
+      href: "/doctors",
       icon: Stethoscope,
       label: "Find a Doctor",
-      soon: true,
     },
+    { href: "/centers", icon: Building2, label: "Medical Centers" },
     { href: "/dashboard/profile", icon: User, label: "Profile", soon: true },
   ],
   DOCTOR: [
