@@ -25,15 +25,37 @@ public class InviteCodeService {
     private final InviteCodeRepository inviteCodeRepository;
 
     /**
-     * Returns the user's current invite code if still valid,
-     * otherwise generates a new one automatically.
+     * Fetches the valid invite code for the user, or creates/updates one if it's missing or expired.
+     * Uses the UPSERT pattern to prevent Hibernate's INSERT-before-DELETE constraint violations.
      */
     @Transactional
     public InviteCodeResponse getOrCreate(User user) {
-        return inviteCodeRepository.findByUser(user)
-                .filter(ic -> !ic.isExpired())
-                .map(this::toResponse)
-                .orElseGet(() -> create(user));
+        // Check if the user already has any code in the database
+        InviteCode inviteCode = inviteCodeRepository.findByUser(user).orElse(null);
+
+        if (inviteCode != null) {
+            // If it exists and is still valid, just return it
+            if (inviteCode.getExpiresAt().isAfter(LocalDateTime.now())) {
+                return toResponse(inviteCode);
+            }
+
+            // If it exists but is expired, UPDATE the existing record instead of deleting it
+            inviteCode.setCode(generateUniqueCode());
+            inviteCode.setExpiresAt(LocalDateTime.now().plusHours(TTL_HOURS));
+            inviteCodeRepository.save(inviteCode);
+
+            return toResponse(inviteCode);
+        }
+
+        // If no record exists at all, create a brand new one
+        InviteCode newCode = InviteCode.builder()
+                .user(user)
+                .code(generateUniqueCode())
+                .expiresAt(LocalDateTime.now().plusHours(TTL_HOURS))
+                .build();
+
+        inviteCodeRepository.save(newCode);
+        return toResponse(newCode);
     }
 
     /** Invalidates the current code and issues a fresh one. */

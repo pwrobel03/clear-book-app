@@ -22,10 +22,6 @@ const placeholderCards = [
 export function PatientDashboard({ user }: { user: SessionUser }) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <DashboardHeader
-        title={`Good to see you, ${user.firstName}`}
-        description="Manage your appointments and find the right doctor for you."
-      />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <PageHeader
           title={`Good to see you, ${user.firstName}`}

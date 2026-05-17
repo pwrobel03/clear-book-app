@@ -68,7 +68,8 @@ public class SecurityConfig {
                                 "/api/centers/",
                                 "/api/centers/**",
                                 "/api/specializations",
-                                "/api/specializations/**"
+                                "/api/specializations/**",
+                                "/api/schedule/doctors/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
