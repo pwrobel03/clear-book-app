@@ -2,6 +2,7 @@ package com.clearbook.api.schedule;
 
 import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
+import com.clearbook.api.notification.NotificationEvent;
 import com.clearbook.api.repository.*;
 import com.clearbook.api.schedule.dto.*;
 import com.clearbook.api.schedule.event.AppointmentCancelledEvent;
@@ -198,8 +199,22 @@ public class AppointmentService {
         appointment.setReservedUntil(null);
         appointment.setPatientNotes(request.getPatientNotes());
 
-        log.info("Patient {} confirmed appointment {}.", patient.getId(), appointment.getId());
-        return toResponse(appointmentRepository.save(appointment));
+        // log.info("Patient {} confirmed appointment {}.", patient.getId(), appointment.getId());
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+
+        String message = String.format("Patient %s %s has reserved a new appointment on %s at %s.", 
+                        patient.getFirstName(), 
+                        patient.getLastName(), 
+                        savedAppointment.getDate(),
+                        savedAppointment.getStartTime());
+
+        eventPublisher.publishEvent(new NotificationEvent(
+            savedAppointment.getBlock().getDoctor(), // recipient
+            "📅 New appointment reservation",
+            message
+        ));
+
+        return toResponse(savedAppointment);
     }
 
     /**
@@ -294,7 +309,20 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setReservedUntil(null);
 
-        log.info("Patient {} cancelled appointment {}.", patient.getId(), appointmentId);
+        // log.info("Patient {} cancelled appointment {}.", patient.getId(), appointmentId);
+
+        // Notify the doctor about the cancellation
+        String message = String.format("Patient %s %s has cancelled their appointment scheduled for %s. You now have an available slot in your schedule.", 
+                patient.getFirstName(), 
+                patient.getLastName(), 
+                appointment.getDate());
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                appointment.getBlock().getDoctor(), // recipient
+                "ℹ️ Appointment Cancellation",
+                message
+        ));
+
         return toResponse(appointmentRepository.save(appointment));
     }
 
@@ -337,6 +365,14 @@ public class AppointmentService {
             throw new IllegalStateException("You do not have permission to modify this appointment.");
         }
 
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("This appointment is already cancelled.");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("Cannot cancel a completed appointment.");
+        }
+
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setDoctorNotes(reason);
         appointment.setReservedUntil(null);
@@ -344,7 +380,20 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         publishCancellationEvent(saved, reason);
 
-        log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
+        // log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
+
+        // Notify the patient about the cancellation with the provided reason
+        String message = String.format("Doctor %s %s had to cancel your appointment scheduled for %s. We apologize for any inconvenience.", 
+                doctor.getFirstName(), 
+                doctor.getLastName(), 
+                appointment.getDate());
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                appointment.getPatient(), // recipient
+                "❌ Appointment has been cancelled.",
+                message
+        ));
+
         return toResponse(saved);
     }
 
@@ -373,7 +422,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.NO_SHOW);
         appointment.setReservedUntil(null);
 
-        log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
+        // log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
         return toResponse(appointmentRepository.save(appointment));
     }
 

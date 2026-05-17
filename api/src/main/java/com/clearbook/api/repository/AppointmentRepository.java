@@ -103,4 +103,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     boolean existsByService(DoctorService service);
 
     List<Appointment> findByStatusAndEndTimeBefore(AppointmentStatus status, LocalDateTime endTime);
+
+    List<Appointment> findByStatusAndStartTimeBetweenAndReminderSentFalse(
+            AppointmentStatus status,
+            LocalDateTime startTimeStart,
+            LocalDateTime startTimeEnd
+    );
 }

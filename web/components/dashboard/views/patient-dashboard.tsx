@@ -12,9 +12,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { SessionUser } from "@/types/session";
-import { GlassCard } from "@/components/ui/glass";
+import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { PageHeader } from "../page-header";
-import { getMyAppointmentsAction, type AppointmentResponse } from "@/lib/actions/booking";
+import {
+  getMyAppointmentsAction,
+  type AppointmentResponse,
+} from "@/lib/actions/booking";
 
 export function PatientDashboard({ user }: { user: SessionUser }) {
   const [upcomingAppts, setUpcomingAppts] = useState<AppointmentResponse[]>([]);
@@ -61,7 +64,10 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
             <GlassCard className="p-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner">
-                  <Calendar size={22} className="text-accent dark:text-accent-light" />
+                  <Calendar
+                    size={22}
+                    className="text-accent dark:text-accent-light"
+                  />
                 </div>
                 <span className="text-sm font-semibold text-muted-foreground">
                   Upcoming Appointments
@@ -78,8 +84,8 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
                     {upcomingAppts.length === 0
                       ? "No upcoming appointments"
                       : upcomingAppts.length === 1
-                      ? "1 appointment scheduled"
-                      : `${upcomingAppts.length} appointments scheduled`}
+                        ? "1 appointment scheduled"
+                        : `${upcomingAppts.length} appointments scheduled`}
                   </p>
                 </>
               )}
@@ -89,7 +95,10 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
             <GlassCard className="p-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner">
-                  <Clock size={22} className="text-accent dark:text-accent-light" />
+                  <Clock
+                    size={22}
+                    className="text-accent dark:text-accent-light"
+                  />
                 </div>
                 <span className="text-sm font-semibold text-muted-foreground">
                   Past Visits
@@ -116,10 +125,15 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
               <GlassCard className="group flex h-full cursor-pointer items-center justify-between p-6 hover:border-accent/30 transition-colors">
                 <div className="flex items-center gap-5">
                   <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 dark:bg-accent/20 shadow-inner transition-transform group-hover:rotate-6">
-                    <Stethoscope size={26} className="text-accent dark:text-accent-light" />
+                    <Stethoscope
+                      size={26}
+                      className="text-accent dark:text-accent-light"
+                    />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-foreground">Find a Doctor</p>
+                    <p className="text-lg font-bold text-foreground">
+                      Find a Doctor
+                    </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Browse doctors and book instantly.
                     </p>
@@ -175,7 +189,7 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
           {/* Quick link to all appointments */}
           {!isLoading && upcomingAppts.length > 1 && (
             <Link href="/dashboard/appointments">
-              <GlassCard className="group flex cursor-pointer items-center justify-between p-5 hover:border-primary/20 transition-colors">
+              <GlassPanel className="group flex cursor-pointer items-center justify-between p-5 hover:border-primary/20 transition-colors mt-4 bg-accent">
                 <div className="flex items-center gap-3">
                   <Calendar size={18} className="text-primary" />
                   <span className="text-sm font-bold text-foreground">
@@ -186,7 +200,7 @@ export function PatientDashboard({ user }: { user: SessionUser }) {
                   size={16}
                   className="text-muted-foreground group-hover:translate-x-1 transition-transform"
                 />
-              </GlassCard>
+              </GlassPanel>
             </Link>
           )}
         </div>

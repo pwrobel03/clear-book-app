@@ -151,7 +151,7 @@ function CenterCard({
   loading: boolean;
 }) {
   return (
-    <GlassCard>
+    <GlassCard className="px-8 py-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 dark:bg-primary/20 shadow-inner transition-transform group-hover:scale-110">

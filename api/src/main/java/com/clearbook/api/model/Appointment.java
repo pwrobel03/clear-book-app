@@ -3,7 +3,9 @@ package com.clearbook.api.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Getter
@@ -60,8 +62,44 @@ public class Appointment {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    /**
+     * Helper method to extract the date part from the startTime for easier frontend rendering and grouping.
+     */
+    @Transient
+    public LocalDate getDate() {
+        if (this.startTime != null) {
+            return this.startTime.toLocalDate();
+        }
+        return null;
+    }
+
+    /**
+     * Helper method to return a nicely formatted date string (e.g., "25.12.2026") for frontend display.
+     */
+    @Transient
+    public String getFormattedDate() {
+        if (this.startTime != null) {
+            return this.startTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        }
+        return "";
+    }
+
+    /**
+     * Helper method to return a nicely formatted time string (e.g., "14:30") for frontend display.
+     */
+    @Transient
+    public String getFormattedTime() {
+        if (this.startTime != null) {
+            return this.startTime.format(DateTimeFormatter.ofPattern("HH:mm"));
+        }
+        return "";
     }
 }

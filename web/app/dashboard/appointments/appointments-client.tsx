@@ -372,7 +372,9 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <DashboardHeader title={isDoctor ? "Wizyty pacjentów" : "Moje wizyty"} />
+      <DashboardHeader
+        title={isDoctor ? "Patient appointments" : "My appointments"}
+      />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="flex items-center justify-between">

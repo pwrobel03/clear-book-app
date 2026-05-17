@@ -21,6 +21,10 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    /** Access token lifetime in milliseconds (default: 15 minutes). */
+    @Value("${jwt.access-token.expiration-ms:900000}")
+    private long accessTokenExpirationMs;
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -34,6 +38,10 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
+    /**
+     * Generates a short-lived access token (15 min by default).
+     * This is the only token handed to the frontend; refresh tokens live in HttpOnly cookies.
+     */
     public String generateToken(UserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
         String role = userDetails.getAuthorities().iterator().next().getAuthority();
@@ -47,7 +55,7 @@ public class JwtService {
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpirationMs))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

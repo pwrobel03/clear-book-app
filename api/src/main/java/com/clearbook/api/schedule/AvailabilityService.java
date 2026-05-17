@@ -138,13 +138,22 @@ public class AvailabilityService {
 
         List<Appointment> appointments = appointmentRepository.findByBlock(block);
         if (!appointments.isEmpty()) {
+            int cancelledCount = 0;
             for (Appointment app : appointments) {
+                // Only cancel if not already cancelled or completed, to avoid duplicate events and preserve historical records
+                if (app.getStatus() == AppointmentStatus.COMPLETED || app.getStatus() == AppointmentStatus.CANCELLED) {
+                    continue;
+                }
                 app.setStatus(AppointmentStatus.CANCELLED);
                 publishCancellationEvent(app, null);
+                cancelledCount++;
             }
-            appointmentRepository.saveAll(appointments);
-            log.info("Cancelled {} appointments due to block {} deletion by doctor {}",
-                    appointments.size(), blockId, doctor.getId());
+
+            if (cancelledCount > 0) {
+                appointmentRepository.saveAll(appointments);
+                log.info("Cancelled {} appointments due to block {} deletion by doctor {}",
+                        cancelledCount, blockId, doctor.getId());
+            }
         }
 
         blockRepository.delete(block);

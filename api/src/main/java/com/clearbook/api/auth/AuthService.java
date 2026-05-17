@@ -11,6 +11,7 @@ import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.VerificationTokenRepository;
 import com.clearbook.api.security.JwtService;
 import com.clearbook.api.shared.email.EmailService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +35,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -95,7 +97,8 @@ public class AuthService {
         tokenRepository.delete(verificationToken);
     }
 
-    public AuthResponse login(LoginRequest request) {
+    @Transactional
+    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
@@ -119,12 +122,45 @@ public class AuthService {
             throw new ForbiddenException("Your account has been disabled.");
         }
 
-        String token = jwtService.generateToken(user);
+        String accessToken = jwtService.generateToken(user);
+        RefreshToken refreshToken = refreshTokenService.create(user);
+        refreshTokenService.setRefreshTokenCookie(response, refreshToken.getToken());
+
+        log.info("User {} logged in.", user.getId());
         return AuthResponse.builder()
-                .token(token)
+                .token(accessToken)
                 .role(user.getRole().name())
                 .status(user.getStatus().name())
                 .build();
+    }
+
+    /**
+     * Validates the refresh token from the HttpOnly cookie, rotates it,
+     * and issues a new access token.
+     */
+    @Transactional
+    public AuthResponse refresh(String refreshTokenValue, HttpServletResponse response) {
+        RefreshToken newRefreshToken = refreshTokenService.rotate(refreshTokenValue);
+        refreshTokenService.setRefreshTokenCookie(response, newRefreshToken.getToken());
+
+        String accessToken = jwtService.generateToken(newRefreshToken.getUser());
+        User user = newRefreshToken.getUser();
+
+        log.debug("Access token refreshed for user {}.", user.getId());
+        return AuthResponse.builder()
+                .token(accessToken)
+                .role(user.getRole().name())
+                .status(user.getStatus().name())
+                .build();
+    }
+
+    /** Revokes the refresh token and clears the HttpOnly cookie. */
+    @Transactional
+    public void logout(String refreshTokenValue, HttpServletResponse response) {
+        if (refreshTokenValue != null) {
+            refreshTokenService.revokeByValue(refreshTokenValue);
+        }
+        refreshTokenService.clearRefreshTokenCookie(response);
     }
 
     @Transactional

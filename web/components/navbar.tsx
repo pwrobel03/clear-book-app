@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getServerSession } from "@/lib/server/session";
+import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
+import { NotificationBell } from "./dashboard/notification-bell";
+import { ThemeToggle } from "./theme-toggle";
 
 export async function Navbar() {
   const session = await getServerSession();
@@ -39,14 +42,25 @@ export async function Navbar() {
           <div className="hidden h-4 w-px bg-border sm:block" />
 
           {isAuth ? (
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark"
-            >
-              Go to Dashboard
-            </Link>
+            <div className="flex items-center gap-3">
+              {/* Test Notification Button - Only visible in development environment */}
+              {process.env.NODE_ENV === "development" && (
+                <TestNotificationButton />
+              )}
+
+              <NotificationBell />
+              <ThemeToggle />
+
+              <Link
+                href="/dashboard"
+                className="ml-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark"
+              >
+                Go to Dashboard
+              </Link>
+            </div>
           ) : (
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <Link
                 href="/auth"
                 className="text-sm font-medium text-accent hover:underline"
