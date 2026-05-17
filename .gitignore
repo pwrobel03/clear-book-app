@@ -45,3 +45,8 @@ next-env.d.ts
 repomix.config.json
 repomix-output.xml
 repomix-output.md
+
+# .gitignore
+__pycache__/
+*.pyc
+*.pyo

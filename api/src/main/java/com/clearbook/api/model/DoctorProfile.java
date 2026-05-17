@@ -57,6 +57,13 @@ public class DoctorProfile {
 
     private String licenseNumber;
 
+    @Column(name = "license_file_path")
+    private String licenseFilePath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status")
+    private VerificationStatus verificationStatus = VerificationStatus.PENDING;
+
     private String photoUrl;
 
     /** Whether the profile is visible to patients in search results. */

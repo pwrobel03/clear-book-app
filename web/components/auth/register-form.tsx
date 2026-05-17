@@ -66,13 +66,19 @@ export function RegisterForm() {
   async function onSubmit(values: RegisterFormData) {
     setPendingMessage(null);
 
-    const result = await registerAction({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      password: values.password,
-      role: values.role,
-    });
+    // Prepare FormData for submission, including the file if the role is DOCTOR
+    const formData = new FormData();
+    formData.append("firstName", values.firstName);
+    formData.append("lastName", values.lastName);
+    formData.append("email", values.email);
+    formData.append("password", values.password);
+    formData.append("role", values.role);
+
+    if (values.role === "DOCTOR" && selectedFile) {
+      formData.append("file", selectedFile);
+    }
+
+    const result = await registerAction(formData);
 
     if (result.error) {
       toast.error(result.error);

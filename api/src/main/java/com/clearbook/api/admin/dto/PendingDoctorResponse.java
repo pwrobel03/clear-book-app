@@ -19,4 +19,5 @@ public class PendingDoctorResponse {
     private String lastName;
     private String email;
     private LocalDateTime createdAt;
+    private String licenseFilePath;
 }

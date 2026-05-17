@@ -16,10 +16,13 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
-        // Jeśli brak tokenu (konto PENDING/UNVERIFIED) → 202 Accepted zamiast 200 OK
+    @PostMapping(value = "/register", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AuthResponse> register(
+            @Valid @ModelAttribute RegisterRequest request,
+            @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file) {
+        
+        AuthResponse response = authService.register(request, file);
+        
         HttpStatus status = response.getToken() == null ? HttpStatus.ACCEPTED : HttpStatus.OK;
         return ResponseEntity.status(status).body(response);
     }

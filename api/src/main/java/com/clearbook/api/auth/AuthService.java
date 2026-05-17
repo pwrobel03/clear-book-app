@@ -1,6 +1,7 @@
 package com.clearbook.api.auth;
 
 import com.clearbook.api.auth.dto.*;
+import com.clearbook.api.doctor.DoctorProfileService;
 import com.clearbook.api.exception.ConflictException;
 import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
@@ -36,15 +37,21 @@ public class AuthService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenService refreshTokenService;
+    private final com.clearbook.api.doctor.FileStorageService fileStorageService;
+    private final com.clearbook.api.repository.DoctorProfileRepository doctorProfileRepository;
+    private final DoctorProfileService doctorProfileService;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+    public AuthResponse register(RegisterRequest request, org.springframework.web.multipart.MultipartFile file) {   if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("There is already an account with that email address.");
         }
 
         if (request.getRole() == Role.ADMIN) {
             throw new ForbiddenException("Registration with admin privilege is not allowed.");
+        }
+
+        if (request.getRole() == Role.DOCTOR && (file == null || file.isEmpty())) {
+            throw new IllegalArgumentException("License file is required for doctor registration.");
         }
 
         User user = User.builder()
@@ -57,6 +64,11 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+
+        if (request.getRole() == Role.DOCTOR) {
+            String fileName = fileStorageService.storeFile(file);
+            doctorProfileService.createInitialProfile(user, fileName);
+        }
 
         String token = UUID.randomUUID().toString();
         VerificationToken verificationToken = VerificationToken.builder()

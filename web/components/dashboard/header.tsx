@@ -20,7 +20,7 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <header className="mx-6 mt-6 flex min-h-16 items-center justify-between rounded-2xl border border-white/20 border-t-white/40 bg-white/60 px-6 py-3 shadow-sm backdrop-blur-xl dark:border-white/5 dark:border-t-white/10 dark:bg-white/[0.04]">
+    <header className="mx-6 my-6 flex min-h-16 items-center justify-between rounded-2xl border border-white/20 border-t-white/40 bg-white/60 px-6 py-3 shadow-sm backdrop-blur-xl dark:border-white/5 dark:border-t-white/10 dark:bg-white/[0.04]">
       <div className="flex flex-col justify-center">
         <h1 className="text-sm font-semibold text-foreground">
           {title ??
@@ -34,7 +34,7 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
       </div>
 
       {/* Test Notification Button - Only visible in development environment */}
-      {process.env.NODE_ENV === "development" && <TestNotificationButton />}
+      {/* {process.env.NODE_ENV === "development" && <TestNotificationButton />} */}
 
       <div className="flex items-center gap-3 shrink-0">
         {user && (

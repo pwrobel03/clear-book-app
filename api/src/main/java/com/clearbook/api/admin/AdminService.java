@@ -7,6 +7,7 @@ import com.clearbook.api.center.dto.MedicalCenterResponse;
 import com.clearbook.api.exception.ConflictException;
 import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
+import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.MedicalCenterRepository;
 import com.clearbook.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,18 +24,23 @@ public class AdminService {
     private final UserRepository userRepository;
     private final MedicalCenterRepository centerRepository;
     private final CenterMapper centerMapper;
+    private final DoctorProfileRepository doctorProfileRepository;
 
     /** Returns all doctor accounts awaiting platform verification. */
     public List<PendingDoctorResponse> getPendingDoctors() {
         return userRepository.findByRoleAndStatus(Role.DOCTOR, AccountStatus.PENDING)
                 .stream()
-                .map(u -> PendingDoctorResponse.builder()
-                        .id(u.getId())
-                        .firstName(u.getFirstName())
-                        .lastName(u.getLastName())
-                        .email(u.getUsername())
-                        .createdAt(u.getCreatedAt())
-                        .build())
+                .map(u -> {
+                    DoctorProfile profile = doctorProfileRepository.findByUser(u).orElse(null);
+                    return PendingDoctorResponse.builder()
+                            .id(u.getId())
+                            .firstName(u.getFirstName())
+                            .lastName(u.getLastName())
+                            .email(u.getUsername())
+                            .createdAt(u.getCreatedAt())
+                            .licenseFilePath(profile != null ? profile.getLicenseFilePath() : null)
+                            .build();
+                })
                 .toList();
     }
 
@@ -48,10 +54,21 @@ public class AdminService {
             throw new ConflictException("User is not a doctor.");
         }
 
+        DoctorProfile profile = doctorProfileRepository.findByUser(doctor).orElse(null);
+
         if (action == Action.APPROVE) {
             doctor.setStatus(AccountStatus.ACTIVE);
+            if (profile != null) {
+                profile.setVerificationStatus(VerificationStatus.VERIFIED);
+                profile.setPublic(true);
+                doctorProfileRepository.save(profile);
+            }
         } else if (action == Action.REJECT) {
             doctor.setStatus(AccountStatus.BANNED);
+            if (profile != null) {
+                profile.setVerificationStatus(VerificationStatus.REJECTED);
+                doctorProfileRepository.save(profile);
+            }
         }
 
         userRepository.save(doctor);

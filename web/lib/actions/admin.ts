@@ -37,6 +37,34 @@ export async function verifyDoctorAction(
   return result
 }
 
+export async function getVerificationDocumentAction(
+  fileName: string
+): Promise<ActionResult<{ base64: string; mimeType: string }>> {
+  try {
+    const res = await springFetch(`/api/verification/document/${fileName}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { error: body?.message ?? "Nie udało się pobrać dokumentu." };
+    }
+
+    // Getting the MIME type from the response headers, defaulting to application/octet-stream if not provided
+    const mimeType = res.headers.get("content-type") || "application/octet-stream";
+    
+    // Getting the file as an ArrayBuffer and converting it to a Base64 string
+    const arrayBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+    return { data: { base64, mimeType } };
+  } catch (error) {
+    console.error("Error fetching document:", error);
+    return { error: "Server error while fetching document." };
+  }
+}
+
 export async function getPendingCentersAction(): Promise<ActionResult<MedicalCenterResponse[]>> {
   return callApi<MedicalCenterResponse[]>(
     () => springFetch("/api/admin/centers/pending"),
