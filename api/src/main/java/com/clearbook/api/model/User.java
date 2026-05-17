@@ -21,8 +21,9 @@ import java.util.UUID;
 @Setter
 // equals/hashCode tylko po kluczu głównym — bezpieczne dla Hibernate i kolekcji
 @EqualsAndHashCode(of = "id")
-// password wykluczony z logów ze względów bezpieczeństwa
-@ToString(exclude = "password")
+// password i doctorProfile wykluczone z logów: password ze względów bezpieczeństwa,
+// doctorProfile aby uniknąć cyklu (DoctorProfile.toString → User.toString)
+@ToString(exclude = {"password", "doctorProfile"})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -59,6 +60,14 @@ public class User implements UserDetails {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * Back-reference to the doctor's profile.
+     * Only populated for users with role DOCTOR; null for patients and admins.
+     * Lazy-loaded — use JOIN FETCH when needed to avoid N+1 queries.
+     */
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private DoctorProfile doctorProfile;
 
     // --- METODY WYMAGANE PRZEZ INTERFEJS USERDETAILS ---
 

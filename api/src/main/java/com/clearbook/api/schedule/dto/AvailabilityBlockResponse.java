@@ -14,4 +14,6 @@ public class AvailabilityBlockResponse {
     private String centerName;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    /** Number of active (SCHEDULED or RESERVED) appointments inside this block. */
+    private int appointmentCount;
 }

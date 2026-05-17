@@ -1,11 +1,18 @@
 package com.clearbook.api.doctor;
 
+import com.clearbook.api.center.CenterMapper;
 import com.clearbook.api.center.dto.MedicalCenterResponse;
 import com.clearbook.api.doctor.dto.DoctorProfileRequest;
 import com.clearbook.api.doctor.dto.DoctorProfileResponse;
 import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
-import com.clearbook.api.model.*;
+import com.clearbook.api.model.CenterMembership;
+import com.clearbook.api.model.CenterStatus;
+import com.clearbook.api.model.DoctorProfile;
+import com.clearbook.api.model.MembershipStatus;
+import com.clearbook.api.model.Specialization;
+import com.clearbook.api.model.User;
+import com.clearbook.api.model.VerificationStatus;
 import com.clearbook.api.repository.CenterMembershipRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import com.clearbook.api.repository.SpecializationRepository;
@@ -18,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,7 +37,7 @@ public class DoctorProfileService {
     private final DoctorProfileRepository profileRepository;
     private final SpecializationRepository specializationRepository;
     private final CenterMembershipRepository centerMembershipRepository;
-    private final com.clearbook.api.center.CenterMapper centerMapper;
+    private final CenterMapper centerMapper;
 
     @Transactional
     public void createInitialProfile(User user, String licenseFilePath) {
@@ -45,6 +53,7 @@ public class DoctorProfileService {
     }
 
     /** Returns the authenticated doctor's profile. */
+    @Transactional(readOnly = true)
     @PreAuthorize("hasRole('DOCTOR')")
     public DoctorProfileResponse getMyProfile(User user) {
         DoctorProfile profile = profileRepository.findByUser(user)
@@ -61,7 +70,7 @@ public class DoctorProfileService {
 
         Set<Specialization> specs = request.getSpecializations().stream()
                 .map(code -> specializationRepository.findByCode(code.toUpperCase()).orElse(null))
-                .filter(java.util.Objects::nonNull)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         profile.setSpecializations(specs);
@@ -71,6 +80,7 @@ public class DoctorProfileService {
     }
 
     /** Public profile by publicId (no auth required). */
+    @Transactional(readOnly = true)
     public DoctorProfileResponse getPublicProfile(String publicId) {
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
                 .filter(DoctorProfile::isPublic)
@@ -78,9 +88,12 @@ public class DoctorProfileService {
         return toResponse(profile);
     }
 
-    /** * Get profile by publicId.
-     * Allows access if profile is public OR if requester is an ADMIN in any center where the doctor works.
+    /**
+     * Returns a doctor profile by publicId.
+     * Accessible if the profile is public, OR if the requester is an ACTIVE ADMIN
+     * in at least one center where the doctor is also an ACTIVE member.
      */
+    @Transactional(readOnly = true)
     public DoctorProfileResponse getPublicProfile(String publicId, User requester) {
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
@@ -90,15 +103,8 @@ public class DoctorProfileService {
         }
 
         if (requester != null) {
-            boolean hasAccess = centerMembershipRepository.findByUserAndStatus(requester, MembershipStatus.ACTIVE)
-                    .stream()
-                    .filter(reqM -> reqM.getRole() == MembershipRole.ADMIN)
-                    .anyMatch(reqM -> {
-                        // Active membership
-                        return centerMembershipRepository.findByUserAndCenter(profile.getUser(), reqM.getCenter())
-                                .filter(docM -> docM.getStatus() == MembershipStatus.ACTIVE) // <-- KRYTYCZNY FILTR
-                                .isPresent();
-                    });
+            boolean hasAccess = centerMembershipRepository
+                    .existsSharedActiveCenterWhereRequesterIsAdmin(profile.getUser(), requester);
 
             if (hasAccess) {
                 return toResponse(profile);
@@ -109,6 +115,7 @@ public class DoctorProfileService {
     }
 
     /** Public search — filterable by specialization code and/or city. */
+    @Transactional(readOnly = true)
     public Page<DoctorProfileResponse> search(String specialization, String city, Pageable pageable) {
         boolean hasSpec = specialization != null && !specialization.isBlank();
         boolean hasCity = city != null && !city.isBlank();
@@ -126,6 +133,7 @@ public class DoctorProfileService {
     }
 
     /** Returns public list of active centers where the doctor works. */
+    @Transactional(readOnly = true)
     public List<MedicalCenterResponse> getAffiliatedCenters(String publicId) {
         // Find doctor profile
         DoctorProfile profile = profileRepository.findByPublicId(publicId)
@@ -147,7 +155,7 @@ public class DoctorProfileService {
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 
-    public String generatePublicId(User user) {
+    private String generatePublicId(User user) {
         String base = (user.getFirstName() + "-" + user.getLastName())
                 .toLowerCase()
                 .replaceAll("[^a-z0-9]+", "-")

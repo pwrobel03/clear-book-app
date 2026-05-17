@@ -5,7 +5,6 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Getter
@@ -71,35 +70,12 @@ public class Appointment {
     }
 
     /**
-     * Helper method to extract the date part from the startTime for easier frontend rendering and grouping.
+     * Convenience accessor returning the date portion of startTime.
+     * Used in domain/service code, e.g. for building notification messages.
+     * Date formatting for display purposes belongs in the DTO/frontend layer.
      */
     @Transient
     public LocalDate getDate() {
-        if (this.startTime != null) {
-            return this.startTime.toLocalDate();
-        }
-        return null;
-    }
-
-    /**
-     * Helper method to return a nicely formatted date string (e.g., "25.12.2026") for frontend display.
-     */
-    @Transient
-    public String getFormattedDate() {
-        if (this.startTime != null) {
-            return this.startTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-        }
-        return "";
-    }
-
-    /**
-     * Helper method to return a nicely formatted time string (e.g., "14:30") for frontend display.
-     */
-    @Transient
-    public String getFormattedTime() {
-        if (this.startTime != null) {
-            return this.startTime.format(DateTimeFormatter.ofPattern("HH:mm"));
-        }
-        return "";
+        return startTime != null ? startTime.toLocalDate() : null;
     }
 }

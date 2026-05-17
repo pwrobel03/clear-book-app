@@ -45,13 +45,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     /**
      * PATIENT: Fetches the patient's appointments, optionally filtered by status.
-     * Uses JOIN FETCH to eagerly load block → doctor and block → center,
-     * avoiding N+1 queries when mapping to AppointmentResponse.
+     * Uses JOIN FETCH to eagerly load block → doctor → doctorProfile and block → center,
+     * eliminating N+1 queries when mapping publicId in AppointmentResponse.
      * Ordered by start time descending (most recent first).
      */
     @Query(value = "SELECT a FROM Appointment a " +
             "JOIN FETCH a.block b " +
-            "JOIN FETCH b.doctor " +
+            "JOIN FETCH b.doctor d " +
+            "LEFT JOIN FETCH d.doctorProfile " +
             "JOIN FETCH b.center " +
             "JOIN FETCH a.service " +
             "WHERE a.patient = :patient " +
@@ -68,12 +69,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     /**
      * DOCTOR: Fetches the doctor's appointments (via block ownership), optionally filtered by status.
-     * Uses JOIN FETCH to eagerly load the associated service for DTO mapping.
+     * Uses JOIN FETCH to eagerly load block → doctor → doctorProfile, center, service and patient,
+     * eliminating N+1 queries when mapping publicId in AppointmentResponse.
      * Ordered by start time ascending (chronological order for the day view).
      */
     @Query(value = "SELECT a FROM Appointment a " +
             "JOIN FETCH a.block b " +
-            "JOIN FETCH b.doctor " +
+            "JOIN FETCH b.doctor d " +
+            "LEFT JOIN FETCH d.doctorProfile " +
             "JOIN FETCH b.center " +
             "JOIN FETCH a.service " +
             "JOIN FETCH a.patient " +
@@ -99,6 +102,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     @Query("UPDATE Appointment a SET a.status = 'CANCELLED' " +
             "WHERE a.status = 'RESERVED' AND a.reservedUntil < CURRENT_TIMESTAMP")
     int cancelExpiredReservations();
+
+    /**
+     * Counts active (SCHEDULED or non-expired RESERVED) appointments for a given block.
+     * Used to populate appointmentCount in AvailabilityBlockResponse.
+     */
+    @Query("SELECT COUNT(a) FROM Appointment a " +
+            "WHERE a.block = :block " +
+            "AND (a.status = 'SCHEDULED' OR (a.status = 'RESERVED' AND a.reservedUntil > CURRENT_TIMESTAMP))")
+    int countActiveAppointmentsByBlock(@Param("block") AvailabilityBlock block);
 
     boolean existsByService(DoctorService service);
 

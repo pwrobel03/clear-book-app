@@ -10,8 +10,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, UUID> {
@@ -52,4 +56,19 @@ public interface DoctorProfileRepository extends JpaRepository<DoctorProfile, UU
     );
 
     Optional<DoctorProfile> findByUser_Id(UUID userId);
+
+    /**
+     * Batch-loads profiles for a collection of users in a single query.
+     * Use instead of calling findByUser() in a loop to avoid N+1 problems.
+     */
+    List<DoctorProfile> findByUserIn(Collection<User> users);
+
+    /**
+     * Convenience wrapper: returns a userId → DoctorProfile map for the given users.
+     * Any user without a profile is simply absent from the map.
+     */
+    default Map<UUID, DoctorProfile> findProfileMapByUsers(Collection<User> users) {
+        return findByUserIn(users).stream()
+                .collect(Collectors.toMap(dp -> dp.getUser().getId(), dp -> dp));
+    }
 }

@@ -47,7 +47,7 @@ public class NotificationService {
                 "/queue/notifications",
                 dto
         );
-        log.info("Send websocket notification to: {}", user.getEmail());
+        log.info("Sent websocket notification to: {}", user.getEmail());
     }
 
     public Page<NotificationDto> getUserHistory(User user, Pageable pageable) {

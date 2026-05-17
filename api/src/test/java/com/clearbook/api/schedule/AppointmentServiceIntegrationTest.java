@@ -1,6 +1,7 @@
 package com.clearbook.api.schedule;
 
 import com.clearbook.api.AbstractIntegrationTest;
+import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.schedule.dto.*;
 import org.junit.jupiter.api.DisplayName;
@@ -176,7 +177,7 @@ class AppointmentServiceIntegrationTest extends AbstractIntegrationTest {
                     .build();
 
             assertThatThrownBy(() -> appointmentService.confirmAppointment(otherPatient, request))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(ForbiddenException.class)
                     .hasMessageContaining("permission");
         }
     }
@@ -209,7 +210,7 @@ class AppointmentServiceIntegrationTest extends AbstractIntegrationTest {
 
             User intruder = saveUser("intruder@test.com", Role.USER);
             assertThatThrownBy(() -> appointmentService.cancelAppointment(intruder, scheduled.getId()))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(ForbiddenException.class)
                     .hasMessageContaining("permission");
         }
 
@@ -256,7 +257,7 @@ class AppointmentServiceIntegrationTest extends AbstractIntegrationTest {
             User otherDoctor = saveUser("other.doctor@test.com", Role.DOCTOR);
             assertThatThrownBy(() -> appointmentService.cancelAppointmentByDoctor(
                     otherDoctor, scheduled.getId(), "reason"))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(ForbiddenException.class)
                     .hasMessageContaining("permission");
         }
     }

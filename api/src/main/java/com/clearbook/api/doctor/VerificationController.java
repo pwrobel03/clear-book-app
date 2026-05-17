@@ -3,7 +3,6 @@ package com.clearbook.api.doctor;
 import com.clearbook.api.model.DoctorProfile;
 import com.clearbook.api.model.User;
 import com.clearbook.api.model.VerificationStatus;
-import com.clearbook.api.repository.UserRepository;
 import com.clearbook.api.repository.DoctorProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -48,7 +47,8 @@ public class VerificationController {
 
     @GetMapping("/document/{fileName}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') or @securityService.isLicenseOwner(#user, #fileName)")
-    public ResponseEntity<Resource> getDocument(@PathVariable String fileName) throws IOException {
+    public ResponseEntity<Resource> getDocument(@PathVariable String fileName,
+                                                @AuthenticationPrincipal User user) throws IOException {
         // This endpoint allows admins/managers to view any document, but doctors can only view their own uploaded license. The securityService.isLicenseOwner method checks if the current user is the owner of the document.
         Resource resource = fileStorageService.loadFileAsResource(fileName);
 

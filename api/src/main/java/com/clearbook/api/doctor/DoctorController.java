@@ -1,8 +1,8 @@
 package com.clearbook.api.doctor;
 
+import com.clearbook.api.center.dto.MedicalCenterResponse;
 import com.clearbook.api.doctor.dto.DoctorProfileRequest;
 import com.clearbook.api.doctor.dto.DoctorProfileResponse;
-import com.clearbook.api.model.DoctorService;
 import com.clearbook.api.model.User;
 import com.clearbook.api.review.ReviewService;
 import com.clearbook.api.review.dto.ReviewResponse;
@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -72,7 +73,7 @@ public class DoctorController {
 
     /** GET /api/doctors/{publicId}/centers — get affiliated centers */
     @GetMapping("/{publicId}/centers")
-    public ResponseEntity<java.util.List<com.clearbook.api.center.dto.MedicalCenterResponse>> getAffiliatedCenters(
+    public ResponseEntity<List<MedicalCenterResponse>> getAffiliatedCenters(
             @PathVariable String publicId) {
         return ResponseEntity.ok(profileService.getAffiliatedCenters(publicId));
     }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Loader2, Clock, MapPin } from "lucide-react";
+import { Loader2, Clock, MapPin, CalendarX } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 import {
@@ -61,7 +62,9 @@ export function WorkingBlockItem({
     format(new Date(block.endTime), "HH:mm"),
   );
 
-  const handleDelete = async () => {
+  const hasAppointments = block.appointmentCount > 0;
+
+  const performDelete = async () => {
     setIsDeleting(true);
     const result = await deleteWorkingBlockAction(block.id);
     if (result.error) toast.error(result.error);
@@ -95,6 +98,20 @@ export function WorkingBlockItem({
 
   const isLoading = isDeleting || isUpdating;
 
+  const deleteDescription = hasAppointments ? (
+    <span>
+      This shift has{" "}
+      <strong className="text-destructive">
+        {block.appointmentCount} active{" "}
+        {block.appointmentCount === 1 ? "appointment" : "appointments"}
+      </strong>{" "}
+      that will be automatically cancelled and patients will be notified by
+      e-mail. This action cannot be undone.
+    </span>
+  ) : (
+    "This working block has no appointments. It will be permanently deleted."
+  );
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -122,6 +139,15 @@ export function WorkingBlockItem({
             <MapPin size={12} className="opacity-70" />
             {block.centerName}
           </div>
+          {hasAppointments && (
+            <>
+              <div className="w-px h-3 bg-black/10 dark:bg-white/20" />
+              <div className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                <CalendarX size={12} />
+                {block.appointmentCount}
+              </div>
+            </>
+          )}
         </button>
       </PopoverTrigger>
 
@@ -192,14 +218,32 @@ export function WorkingBlockItem({
             >
               Save Changes
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl text-xs font-bold"
-              onClick={handleDelete}
+
+            {/* Always render delete through ConfirmDialog for safety */}
+            <ConfirmDialog
+              title={
+                hasAppointments
+                  ? `Delete shift with ${block.appointmentCount} ${block.appointmentCount === 1 ? "appointment" : "appointments"}?`
+                  : "Delete this shift?"
+              }
+              description={deleteDescription}
+              onConfirm={performDelete}
+              confirmText="Yes, delete shift"
+              cancelText="Keep shift"
+              destructive
             >
-              Delete Entire Shift
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive rounded-xl text-xs font-bold"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <Loader2 size={12} className="animate-spin mr-1" />
+                ) : null}
+                Delete Entire Shift
+              </Button>
+            </ConfirmDialog>
           </div>
         </div>
       </PopoverContent>

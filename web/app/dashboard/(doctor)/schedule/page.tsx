@@ -1,10 +1,11 @@
 import { DashboardHeader } from "@/components/dashboard/header";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { GlassCard, GlassPanel } from "@/components/ui/glass";
-import { Calendar as CalendarIcon, Clock, Building2 } from "lucide-react";
+import { GlassPanel } from "@/components/ui/glass";
+import { Clock, CalendarOff } from "lucide-react";
 import { getMyCentersAction } from "@/lib/actions/centers";
 import { ScheduleCalendarClient } from "./schedule-calendar-client";
 import { ScheduleFormClient } from "./schedule-form-client";
+import { VacationPlannerClient } from "./vacation-planner-client";
 
 export default async function SchedulePage() {
   const centersResult = await getMyCentersAction(); // Fetch centers where the doctor is a member
@@ -22,7 +23,7 @@ export default async function SchedulePage() {
           />
 
           <div className="grid gap-8 lg:grid-cols-3">
-            {/* Left column: Form for creating a new work block */}
+            {/* Left column: Form for creating a new work block + vacation planner */}
             <div className="lg:col-span-1 space-y-6">
               <GlassPanel className="p-6">
                 <div className="flex items-center gap-3 mb-6">
@@ -45,6 +46,27 @@ export default async function SchedulePage() {
                   <ScheduleFormClient centers={centers} />
                 )}
               </GlassPanel>
+
+              {/* Vacation / Leave planner */}
+              {centers.length > 0 && (
+                <GlassPanel className="p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10 text-destructive shadow-inner">
+                      <CalendarOff size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-foreground">
+                        Plan Leave
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Vacation, sick leave, or any absence
+                      </p>
+                    </div>
+                  </div>
+
+                  <VacationPlannerClient centers={centers} />
+                </GlassPanel>
+              )}
             </div>
 
             {/* Right column: Calendar preview (placeholder for now) */}

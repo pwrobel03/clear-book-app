@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -202,32 +203,40 @@ public class MedicalCenterService {
         return centerMapper.toResponse(centerRepository.save(center));
     }
 
-    /** Returns active members of a center (publicly accessible). */
+    /**
+     * Returns active members of a center (publicly accessible).
+     * Doctor profiles are batch-loaded in a single query to avoid N+1.
+     */
+    @Transactional(readOnly = true)
     public List<CenterMemberSummary> getCenterMembers(UUID centerId) {
         MedicalCenter center = centerRepository.findById(centerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Medical center not found."));
 
-        return membershipRepository.findByCenterAndStatus(center, MembershipStatus.ACTIVE)
-                .stream()
+        List<CenterMembership> memberships =
+                membershipRepository.findByCenterAndStatus(center, MembershipStatus.ACTIVE);
+
+        // One query for all profiles instead of one per member
+        List<User> users = memberships.stream().map(CenterMembership::getUser).toList();
+        Map<UUID, DoctorProfile> profileMap = profileRepository.findProfileMapByUsers(users);
+
+        return memberships.stream()
                 .map(m -> {
                     User user = m.getUser();
-                    return profileRepository.findByUser(user)
-                            .map(p -> CenterMemberSummary.builder()
-                                    .membershipId(m.getId())
-                                    .firstName(user.getFirstName())
-                                    .lastName(user.getLastName())
-                                    .publicId(p.getPublicId())
-                                    .specializations(p.getSpecializations().stream()
-                                            .map(Specialization::getCode)
-                                            .collect(Collectors.toSet()))
-                                    .role(m.getRole())
-                                    .build())
-                            .orElseGet(() -> CenterMemberSummary.builder()
-                                    .membershipId(m.getId())
-                                    .firstName(user.getFirstName())
-                                    .lastName(user.getLastName())
-                                    .role(m.getRole())
-                                    .build());
+                    DoctorProfile profile = profileMap.get(user.getId());
+                    CenterMemberSummary.CenterMemberSummaryBuilder builder = CenterMemberSummary.builder()
+                            .membershipId(m.getId())
+                            .firstName(user.getFirstName())
+                            .lastName(user.getLastName())
+                            .role(m.getRole());
+
+                    if (profile != null) {
+                        builder.publicId(profile.getPublicId())
+                               .specializations(profile.getSpecializations().stream()
+                                       .map(Specialization::getCode)
+                                       .collect(Collectors.toSet()));
+                    }
+
+                    return builder.build();
                 })
                 .toList();
     }

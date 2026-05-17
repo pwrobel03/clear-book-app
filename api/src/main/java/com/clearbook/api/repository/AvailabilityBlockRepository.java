@@ -6,6 +6,7 @@ import com.clearbook.api.model.User;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -21,9 +22,10 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     /**
      * PESSIMISTIC LOCKING: Locks the entire working block during the booking process.
      * Prevents other transactions from booking any appointments in this block until finished.
+     * Only locks non-deleted blocks.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT b FROM AvailabilityBlock b WHERE b.id = :id")
+    @Query("SELECT b FROM AvailabilityBlock b WHERE b.id = :id AND b.isDeleted = false")
     Optional<AvailabilityBlock> findByIdWithPessimisticLock(@Param("id") UUID id);
 
     /**
@@ -36,6 +38,7 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
      */
     @Query("SELECT COUNT(b) > 0 FROM AvailabilityBlock b " +
             "WHERE b.doctor = :doctor " +
+            "AND b.isDeleted = false " +
             "AND (b.startTime < :endTime AND b.endTime > :startTime)")
     boolean existsOverlappingBlock(
             @Param("doctor") User doctor,
@@ -50,6 +53,7 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
      */
     @Query("SELECT COUNT(b) > 0 FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
             "AND b.id != :blockId " +
+            "AND b.isDeleted = false " +
             "AND b.startTime < :endTime AND b.endTime > :startTime")
     boolean existsOverlappingBlockExcludingId(
             @Param("doctor") User doctor,
@@ -60,16 +64,22 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
     /**
      * Used by the doctor's calendar to fetch their working blocks in a given timeframe.
      */
+    @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
+            "AND b.isDeleted = false " +
+            "AND b.startTime BETWEEN :from AND :to " +
+            "ORDER BY b.startTime ASC")
     List<AvailabilityBlock> findByDoctorAndStartTimeBetweenOrderByStartTimeAsc(
-            User doctor, LocalDateTime from, LocalDateTime to
+            @Param("doctor") User doctor,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to
     );
 
     /**
      * PUBLIC: Fetches future blocks for a doctor by their user ID,
      * optionally bounded by a date range (for weekly calendar view).
-     * If rangeStart/rangeEnd are null, returns all future blocks.
      */
     @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor.id = :doctorId " +
+            "AND b.isDeleted = false " +
             "AND b.endTime > :now " +
             "AND b.endTime > :rangeStart " +
             "AND b.startTime < :rangeEnd " +
@@ -83,9 +93,10 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
 
     /**
      * Fetches blocks for a doctor within a date range, optionally filtered by center.
-     * Used by the "Clear Schedule" feature to bulk-delete blocks.
+     * Used by the "Clear Schedule" and "Plan Leave" features.
      */
     @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
+            "AND b.isDeleted = false " +
             "AND b.startTime >= :rangeStart AND b.startTime < :rangeEnd " +
             "AND (:center IS NULL OR b.center = :center) " +
             "ORDER BY b.startTime ASC")
@@ -101,10 +112,26 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
      * Used when a doctor leaves a center — all their future availability must be removed.
      */
     @Query("SELECT b FROM AvailabilityBlock b WHERE b.doctor = :doctor " +
-            "AND b.center = :center AND b.endTime > :now")
+            "AND b.center = :center AND b.isDeleted = false AND b.endTime > :now")
     List<AvailabilityBlock> findFutureBlocksByDoctorAndCenter(
             @Param("doctor") User doctor,
             @Param("center") MedicalCenter center,
             @Param("now") LocalDateTime now
     );
+
+    // ── Soft-delete helpers ───────────────────────────────────────────────────
+
+    /**
+     * Marks a single block as deleted without touching the appointments FK.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE AvailabilityBlock b SET b.isDeleted = true WHERE b.id = :id")
+    void softDeleteById(@Param("id") UUID id);
+
+    /**
+     * Marks multiple blocks as deleted in one statement.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("UPDATE AvailabilityBlock b SET b.isDeleted = true WHERE b IN :blocks")
+    void softDeleteAll(@Param("blocks") List<AvailabilityBlock> blocks);
 }

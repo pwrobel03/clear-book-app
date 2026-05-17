@@ -1,5 +1,6 @@
 package com.clearbook.api.schedule;
 
+import com.clearbook.api.exception.ForbiddenException;
 import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.notification.NotificationEvent;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,7 +26,7 @@ import java.util.UUID;
  * slot reservation, confirmation, booking, cancellation, and no-show marking.
  *
  * Race-condition safety is enforced at the database level via pessimistic locking
- * inside {@link #reserveSlot}.
+ * inside {@link #reserveSlot} and {@link #bookAppointment}.
  */
 @Slf4j
 @Service
@@ -53,12 +55,12 @@ public class AppointmentService {
     public List<AvailableSlotResponse> getAvailableSlots(String publicId, UUID serviceId,
                                                          LocalDateTime rangeStart, LocalDateTime rangeEnd) {
         DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new IllegalArgumentException("Doctor not found for publicId: " + publicId));
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found for publicId: " + publicId));
 
         UUID doctorId = profile.getUser().getId();
 
         DoctorService service = doctorServiceRepository.findById(serviceId)
-                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found."));
 
         if (!service.isActive() || !service.getDoctor().getId().equals(doctorId)) {
             throw new IllegalArgumentException("Invalid service for this doctor.");
@@ -136,10 +138,10 @@ public class AppointmentService {
 
         // Pessimistic lock — concurrent transactions block here until we commit
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
-                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Working block not found."));
 
         DoctorService service = doctorServiceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found."));
 
         if (!service.isActive() || !service.getDoctor().equals(block.getDoctor())) {
             throw new IllegalArgumentException("Invalid service selected.");
@@ -180,10 +182,10 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse confirmAppointment(User patient, ConfirmAppointmentRequest request) {
         Appointment appointment = appointmentRepository.findById(request.getAppointmentId())
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getPatient().equals(patient)) {
-            throw new IllegalStateException("You do not have permission to confirm this appointment.");
+            throw new ForbiddenException("You do not have permission to confirm this appointment.");
         }
         if (appointment.getStatus() != AppointmentStatus.RESERVED) {
             throw new IllegalStateException("This appointment cannot be confirmed (status: "
@@ -199,17 +201,17 @@ public class AppointmentService {
         appointment.setReservedUntil(null);
         appointment.setPatientNotes(request.getPatientNotes());
 
-        // log.info("Patient {} confirmed appointment {}.", patient.getId(), appointment.getId());
         Appointment savedAppointment = appointmentRepository.save(appointment);
+        log.info("Patient {} confirmed appointment {}.", patient.getId(), savedAppointment.getId());
 
-        String message = String.format("Patient %s %s has reserved a new appointment on %s at %s.", 
-                        patient.getFirstName(), 
-                        patient.getLastName(), 
+        String message = String.format("Patient %s %s has reserved a new appointment on %s at %s.",
+                        patient.getFirstName(),
+                        patient.getLastName(),
                         savedAppointment.getDate(),
                         savedAppointment.getStartTime());
 
         eventPublisher.publishEvent(new NotificationEvent(
-            savedAppointment.getBlock().getDoctor(), // recipient
+            savedAppointment.getBlock().getDoctor(),
             "📅 New appointment reservation",
             message
         ));
@@ -218,8 +220,9 @@ public class AppointmentService {
     }
 
     /**
-     * Direct booking (reserve + confirm in one step).
-     * Creates a 15-minute hold that the patient must confirm via {@link #confirmAppointment}.
+     * Direct booking — creates a RESERVED appointment in a single step.
+     * The patient must still confirm via {@link #confirmAppointment} within 15 minutes.
+     * Uses pessimistic locking identical to {@link #reserveSlot}.
      */
     @Transactional
     public AppointmentResponse bookAppointment(User patient, BookAppointmentRequest request) {
@@ -227,11 +230,12 @@ public class AppointmentService {
             throw new IllegalArgumentException("Cannot book an appointment in the past.");
         }
 
-        AvailabilityBlock block = blockRepository.findById(request.getBlockId())
-                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+        // Pessimistic lock — same protection as reserveSlot
+        AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
+                .orElseThrow(() -> new ResourceNotFoundException("Working block not found."));
 
         DoctorService service = doctorServiceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found."));
 
         if (!service.isActive()) {
             throw new IllegalStateException("This service is no longer active.");
@@ -247,6 +251,8 @@ public class AppointmentService {
             throw new IllegalArgumentException("Appointment time is outside the working block.");
         }
         if (appointmentRepository.existsOverlappingAppointment(block, start, end)) {
+            log.warn("Race condition prevented in bookAppointment for block {} between {} and {}",
+                    block.getId(), start, end);
             throw new IllegalStateException("This time slot has already been taken by someone else.");
         }
 
@@ -284,7 +290,7 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getPatient().equals(patient)) {
-            throw new IllegalStateException("You do not have permission to view this appointment.");
+            throw new ForbiddenException("You do not have permission to view this appointment.");
         }
         return toResponse(appointment);
     }
@@ -295,10 +301,10 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse cancelAppointment(User patient, UUID appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getPatient().equals(patient)) {
-            throw new IllegalStateException("You do not have permission to cancel this appointment.");
+            throw new ForbiddenException("You do not have permission to cancel this appointment.");
         }
         if (appointment.getStatus() != AppointmentStatus.SCHEDULED
                 && appointment.getStatus() != AppointmentStatus.RESERVED) {
@@ -309,16 +315,16 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment.setReservedUntil(null);
 
-        // log.info("Patient {} cancelled appointment {}.", patient.getId(), appointmentId);
+        log.info("Patient {} cancelled appointment {}.", patient.getId(), appointmentId);
 
-        // Notify the doctor about the cancellation
-        String message = String.format("Patient %s %s has cancelled their appointment scheduled for %s. You now have an available slot in your schedule.", 
-                patient.getFirstName(), 
-                patient.getLastName(), 
+        String message = String.format(
+                "Patient %s %s has cancelled their appointment scheduled for %s. You now have an available slot in your schedule.",
+                patient.getFirstName(),
+                patient.getLastName(),
                 appointment.getDate());
 
         eventPublisher.publishEvent(new NotificationEvent(
-                appointment.getBlock().getDoctor(), // recipient
+                appointment.getBlock().getDoctor(),
                 "ℹ️ Appointment Cancellation",
                 message
         ));
@@ -347,7 +353,7 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getBlock().getDoctor().equals(doctor)) {
-            throw new IllegalStateException("You do not have permission to view this appointment.");
+            throw new ForbiddenException("You do not have permission to view this appointment.");
         }
         return toResponse(appointment);
     }
@@ -359,16 +365,14 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse cancelAppointmentByDoctor(User doctor, UUID appointmentId, String reason) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getBlock().getDoctor().equals(doctor)) {
-            throw new IllegalStateException("You do not have permission to modify this appointment.");
+            throw new ForbiddenException("You do not have permission to modify this appointment.");
         }
-
         if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
             throw new IllegalStateException("This appointment is already cancelled.");
         }
-
         if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
             throw new IllegalStateException("Cannot cancel a completed appointment.");
         }
@@ -380,16 +384,16 @@ public class AppointmentService {
         Appointment saved = appointmentRepository.save(appointment);
         publishCancellationEvent(saved, reason);
 
-        // log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
+        log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
 
-        // Notify the patient about the cancellation with the provided reason
-        String message = String.format("Doctor %s %s had to cancel your appointment scheduled for %s. We apologize for any inconvenience.", 
-                doctor.getFirstName(), 
-                doctor.getLastName(), 
+        String message = String.format(
+                "Doctor %s %s had to cancel your appointment scheduled for %s. We apologize for any inconvenience.",
+                doctor.getFirstName(),
+                doctor.getLastName(),
                 appointment.getDate());
 
         eventPublisher.publishEvent(new NotificationEvent(
-                appointment.getPatient(), // recipient
+                appointment.getPatient(),
                 "❌ Appointment has been cancelled.",
                 message
         ));
@@ -404,10 +408,10 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse markAsNoShow(User doctor, UUID appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
 
         if (!appointment.getBlock().getDoctor().equals(doctor)) {
-            throw new IllegalStateException("You do not have permission to modify this appointment.");
+            throw new ForbiddenException("You do not have permission to modify this appointment.");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -422,7 +426,7 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.NO_SHOW);
         appointment.setReservedUntil(null);
 
-        // log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
+        log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
         return toResponse(appointmentRepository.save(appointment));
     }
 
@@ -441,8 +445,16 @@ public class AppointmentService {
         ));
     }
 
+    /**
+     * Maps an Appointment entity to AppointmentResponse.
+     *
+     * doctorPublicId is resolved from the doctor profile already loaded via
+     * JOIN FETCH in the repository queries — no extra SELECT is fired here.
+     * For single-item lookups (findById) the profile is lazily loaded in one
+     * additional query, which is acceptable for a single-row fetch.
+     */
     private AppointmentResponse toResponse(Appointment a) {
-        String publicId = doctorProfileRepository.findByUser(a.getBlock().getDoctor())
+        String publicId = Optional.ofNullable(a.getBlock().getDoctor().getDoctorProfile())
                 .map(DoctorProfile::getPublicId)
                 .orElse("no-id");
 

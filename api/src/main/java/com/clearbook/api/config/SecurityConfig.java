@@ -17,18 +17,17 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Włącza obsługę @PreAuthorize
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
-    private final UserDetailsService userDetailsService; // wstrzykiwana z UserDetailsServiceImpl
+    private final UserDetailsService userDetailsService;
 
-
-    // Definiujemy mechanizm szyfrowania haseł
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -46,17 +45,11 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    // Konfigurujemy główny filtr bezpieczeństwa
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // Wyłączamy CSRF (Cross-Site Request Forgery), ponieważ przy tokenach JWT ten mechanizm nie jest potrzebny
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // Każde zapytanie z frontendu będzie musiało zawierać token JWT
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Reguły dostępu do endpointów
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login",
                                          "/api/auth/verify-email", "/api/auth/forgot-password",
@@ -69,7 +62,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         // Public endpoints (GET only)
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        .requestMatchers(HttpMethod.GET,
                                 "/api/doctors",
                                 "/api/doctors/",
                                 "/api/doctors/**",

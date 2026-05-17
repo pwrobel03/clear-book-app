@@ -2,6 +2,7 @@ package com.clearbook.api.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -40,6 +41,11 @@ public class AvailabilityBlock {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean isDeleted = false;
 
     @PrePersist
     protected void onCreate() {
