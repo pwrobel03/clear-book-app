@@ -229,7 +229,7 @@ export default function CentersPage() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <DashboardHeader title="My Centers" />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
-        <div className="mx-auto max-w-4xl space-y-10">
+        <div className="mx-auto max-w-5xl space-y-10">
           <CreateCenterFormWrapper onCreated={load} />
 
           {pending.length > 0 && (

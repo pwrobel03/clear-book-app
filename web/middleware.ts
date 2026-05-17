@@ -31,9 +31,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Niezalogowany użytkownik wchodzi na chronioną stronę -> na logowanie
+  // Not logged in user tries to access protected route -> redirect to login
   if (!token && !isPublic) {
-    return NextResponse.redirect(new URL("/auth", request.url));
+    const loginUrl = new URL("/auth", request.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

@@ -1,5 +1,6 @@
 package com.clearbook.api.schedule;
 
+import com.clearbook.api.exception.ResourceNotFoundException;
 import com.clearbook.api.model.*;
 import com.clearbook.api.repository.*;
 import com.clearbook.api.schedule.dto.*;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,6 +29,7 @@ public class ScheduleService {
     private final MedicalCenterRepository centerRepository;
     private final CenterMembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final DoctorProfileRepository doctorProfileRepository;
 
     /**
      * DOCTOR LOGIC: Creates a new working block for the doctor.
@@ -35,6 +38,10 @@ public class ScheduleService {
     public AvailabilityBlockResponse createWorkingBlock(User doctor, CreateBlockRequest request) {
         if (!request.getStartTime().isBefore(request.getEndTime())) {
             throw new IllegalArgumentException("Start time must be before end time.");
+        }
+
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot create a working block in the past.");
         }
 
         if (blockRepository.existsOverlappingBlock(doctor, request.getStartTime(), request.getEndTime())) {
@@ -228,6 +235,11 @@ public class ScheduleService {
     @Transactional
     public AppointmentResponse reserveSlot(User patient, ReserveSlotRequest request) {
 
+        // Block reservations in the past
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot reserve a time slot in the past.");
+        }
+
         // Pessimistic Lock on the block (other transactions wait here)
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
                 .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
@@ -290,8 +302,7 @@ public class ScheduleService {
         // Check if the hold has expired
         if (appointment.getReservedUntil() != null &&
                 appointment.getReservedUntil().isBefore(LocalDateTime.now())) {
-            appointment.setStatus(AppointmentStatus.CANCELLED);
-            appointmentRepository.save(appointment);
+            appointmentRepository.delete(appointment);
             throw new IllegalStateException("Your reservation time has expired. Please select the time slot again.");
         }
 
@@ -302,6 +313,23 @@ public class ScheduleService {
 
         log.info("Patient {} confirmed appointment {}.", patient.getId(), appointment.getId());
         return toResponse(appointmentRepository.save(appointment));
+    }
+
+    /**
+     * PATIENT: Returns details of a specific appointment.
+     * Ensures that the requesting patient is the owner of the appointment.
+     */
+    @Transactional(readOnly = true)
+    public AppointmentResponse getAppointmentDetails(User patient, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
+
+        // Weryfikacja, czy wizyta faktycznie należy do zalogowanego pacjenta
+        if (!appointment.getPatient().equals(patient)) {
+            throw new IllegalStateException("You do not have permission to view this appointment.");
+        }
+
+        return toResponse(appointment);
     }
 
     /**
@@ -418,7 +446,17 @@ public class ScheduleService {
      * The actual race condition protection happens at reservation time (pessimistic lock).
      */
     @Transactional(readOnly = true)
-    public List<AvailableSlotResponse> getAvailableSlots(UUID doctorId, UUID serviceId) {
+    public List<AvailableSlotResponse> getAvailableSlots(String publicId, UUID serviceId,
+                                                         LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+
+        // 1. Pobieramy profil lekarza na podstawie publicId
+        DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found for publicId: " + publicId));
+
+        // Z profilu wyciągamy ID użytkownika (lekarza)
+        UUID doctorId = profile.getUser().getId();
+
+        // 2. Walidacja usługi
         DoctorService service = doctorServiceRepository.findById(serviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Service not found."));
 
@@ -427,8 +465,21 @@ public class ScheduleService {
         }
 
         int duration = service.getDurationMinutes();
+        LocalDateTime now = LocalDateTime.now(); // Zmienna 'now', którą już dodaliśmy wcześniej
+
+        // --- DODAJ TEN FRAGMENT ---
+        // Jeśli frontend nie przekazał daty początkowej, szukaj od "teraz"
+        if (rangeStart == null) {
+            rangeStart = now;
+        }
+        // Jeśli frontend nie przekazał daty końcowej, szukaj np. miesiąc do przodu
+        if (rangeEnd == null) {
+            rangeEnd = rangeStart.plusMonths(1);
+        }
+
+        // 3. Pobranie przyszłych bloków dostępności na podstawie wewnętrznego UUID lekarza
         List<AvailabilityBlock> futureBlocks = blockRepository.findFutureBlocksByDoctorId(
-                doctorId, LocalDateTime.now());
+                doctorId, LocalDateTime.now(), rangeStart, rangeEnd);
 
         List<AvailableSlotResponse> slots = new ArrayList<>();
 
@@ -437,34 +488,43 @@ public class ScheduleService {
 
             LocalDateTime cursor = block.getStartTime();
 
-            // If the block has already started, snap cursor to next clean interval
-            if (cursor.isBefore(LocalDateTime.now())) {
-                cursor = LocalDateTime.now().plusMinutes(1);
-                // Round up to next 5-minute mark for clean UX
+            // Jeśli blok już się rozpoczął, przesuwamy kursor na następny pełny interwał
+            if (cursor.isBefore(now)) {
+                cursor = now.plusMinutes(1);
+
+                // Bezpieczniejsze zaokrąglanie do pełnych 5 minut w górę
                 int minute = cursor.getMinute();
-                int roundedUp = ((minute / 5) + 1) * 5;
-                cursor = cursor.withMinute(0).withSecond(0).withNano(0).plusMinutes(roundedUp);
+                int remainder = minute % 5;
+                if (remainder != 0) {
+                    cursor = cursor.plusMinutes(5 - remainder);
+                }
+                cursor = cursor.withSecond(0).withNano(0);
             }
 
+            // Szukamy wolnych slotów wewnątrz bloku
             while (!cursor.plusMinutes(duration).isAfter(block.getEndTime())) {
                 LocalDateTime slotEnd = cursor.plusMinutes(duration);
 
-                // Check if this candidate slot overlaps with any occupied appointment
+                // Sprawdzamy, czy ten kandydat na slot nie nakłada się na istniejące rezerwacje
                 boolean isOccupied = false;
                 for (Appointment app : occupied) {
-                    // Expired RESERVED appointments don't count as occupied
-                    if (app.getStatus() == AppointmentStatus.RESERVED &&
+                    // Wygasłe (nieopłacone w czasie) rezerwacje ignorujemy
+                    boolean isExpiredReservation = app.getStatus() == AppointmentStatus.RESERVED &&
                             app.getReservedUntil() != null &&
-                            app.getReservedUntil().isBefore(LocalDateTime.now())) {
+                            app.getReservedUntil().isBefore(now);
+
+                    if (isExpiredReservation) {
                         continue;
                     }
 
+                    // Logika nakładania się przedziałów czasowych (overlap)
                     if (cursor.isBefore(app.getEndTime()) && slotEnd.isAfter(app.getStartTime())) {
                         isOccupied = true;
                         break;
                     }
                 }
 
+                // Jeśli slot jest wolny, dodajemy do listy
                 if (!isOccupied) {
                     slots.add(AvailableSlotResponse.builder()
                             .blockId(block.getId())
@@ -475,6 +535,7 @@ public class ScheduleService {
                             .build());
                 }
 
+                // Przesuwamy kursor o czas trwania usługi, aby szukać kolejnego slotu
                 cursor = cursor.plusMinutes(duration);
             }
         }
@@ -486,16 +547,136 @@ public class ScheduleService {
      * PUBLIC: Returns all active services offered by a specific doctor.
      */
     @Transactional(readOnly = true)
-    public List<DoctorServiceResponse> getDoctorServices(UUID doctorId) {
-        User doctor = findDoctorById(doctorId);
-        return doctorServiceRepository.findAllByDoctorAndActiveTrue(doctor).stream()
+    public List<DoctorServiceResponse> getDoctorServices(String publicId) {
+        // 1. Najpierw znajdujesz profil lekarza po jego publicId
+        DoctorProfile profile = doctorProfileRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found."));
+
+        // 2. Z profilu wyciągasz encję User (lekarza) i szukasz jego usług
+        User doctor = profile.getUser();
+
+        return doctorServiceRepository.findAllByDoctorAndActiveTrue(doctor)
+                .stream()
+                .map(this::toServiceResponse)
+                .toList();
+    }
+
+    /**
+     * DOCTOR LOGIC: Returns all services offered by the doctor, including inactive ones.
+     * Inactive services are needed to show the history of appointments that were booked with them.
+     */
+    @Transactional(readOnly = true)
+    public List<DoctorServiceResponse> getMyServices(User doctor) {
+        return doctorServiceRepository.findByDoctor(doctor).stream()
                 .map(s -> DoctorServiceResponse.builder()
                         .id(s.getId())
                         .name(s.getName())
                         .durationMinutes(s.getDurationMinutes())
                         .price(s.getPrice())
+                        .active(s.isActive())
                         .build())
-                .toList();
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * DOCTOR LOGIC: Creates a new doctor service.
+     */
+    @Transactional
+    public DoctorServiceResponse createDoctorService(User doctor, CreateDoctorServiceRequest request) {
+        DoctorService service = DoctorService.builder()
+                .doctor(doctor)
+                .name(request.getName())
+                .durationMinutes(request.getDurationMinutes())
+                .price(request.getPrice())
+                .active(true) // Nowa usługa jest domyślnie aktywna
+                .build();
+
+        service = doctorServiceRepository.save(service);
+
+        return DoctorServiceResponse.builder()
+                .id(service.getId())
+                .name(service.getName())
+                .durationMinutes(service.getDurationMinutes())
+                .price(service.getPrice())
+                .active(service.isActive())
+                .build();
+    }
+    
+    /**
+     * DOCTOR LOGIC: Updates an existing doctor service.
+     */
+    @Transactional
+    public DoctorServiceResponse updateDoctorService(User doctor, UUID serviceId, CreateDoctorServiceRequest request) {
+        DoctorService service = doctorServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to edit this service.");
+        }
+
+        // Check if there are any appointments booked with this service
+        if (appointmentRepository.existsByService(service)) {
+            // (Copy-on-Write)
+            service.setActive(false);
+            doctorServiceRepository.save(service);
+
+            // Create a new service with the updated details, linked to the same doctor
+            DoctorService newVersion = DoctorService.builder()
+                    .doctor(doctor)
+                    .name(request.getName())
+                    .durationMinutes(request.getDurationMinutes())
+                    .price(request.getPrice())
+                    .active(true)
+                    .build();
+
+            newVersion = doctorServiceRepository.save(newVersion);
+
+            return DoctorServiceResponse.builder()
+                    .id(newVersion.getId())
+                    .name(newVersion.getName())
+                    .durationMinutes(newVersion.getDurationMinutes())
+                    .price(newVersion.getPrice())
+                    .active(newVersion.isActive())
+                    .build();
+        }
+
+        // If no appointments are linked, we can safely update the existing service
+        service.setName(request.getName());
+        service.setDurationMinutes(request.getDurationMinutes());
+        service.setPrice(request.getPrice());
+        service = doctorServiceRepository.save(service);
+
+        // Return the updated service details
+        return DoctorServiceResponse.builder()
+                .id(service.getId())
+                .name(service.getName())
+                .durationMinutes(service.getDurationMinutes())
+                .price(service.getPrice())
+                .active(service.isActive())
+                .build();
+    }
+
+    /**
+     * DOCTOR LOGIC: Deactivates a doctor service.
+     * If there are any appointments booked with this service, it cannot be deleted but will be marked as inactive (soft delete).
+     * Inactive services won't appear in the booking form for new appointments, but historical appointments remain linked to them for reporting.
+     */
+    @Transactional
+    public void deactivateDoctorService(User doctor, UUID serviceId) {
+        DoctorService service = doctorServiceRepository.findById(serviceId)
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to deactivate this service.");
+        }
+
+        if (appointmentRepository.existsByService(service)) {
+            throw new IllegalStateException("Cannot deactivate a service that has booked appointments.");
+        }
+
+        // Zamiast usuwać z bazy, zmieniamy status (Soft Delete)
+        service.setActive(false);
+        doctorServiceRepository.save(service);
     }
 
     // ── PATIENT ENDPOINTS ──
@@ -536,6 +717,75 @@ public class ScheduleService {
         return toResponse(appointmentRepository.save(appointment));
     }
 
+    @Transactional
+    public AppointmentResponse bookAppointment(User patient, BookAppointmentRequest request) {
+        // Block bookings in the past
+        if (!request.getStartTime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Cannot book an appointment in the past.");
+        }
+
+        AvailabilityBlock block = blockRepository.findById(request.getBlockId())
+                .orElseThrow(() -> new IllegalArgumentException("Working block not found."));
+
+        DoctorService service = doctorServiceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new IllegalArgumentException("Service not found."));
+
+        if (!service.isActive()) {
+            throw new IllegalStateException("This service is no longer active.");
+        }
+
+        if (!service.getDoctor().equals(block.getDoctor())) {
+            throw new IllegalArgumentException("This service does not belong to the block's doctor.");
+        }
+
+        LocalDateTime start = request.getStartTime();
+        LocalDateTime end = request.getEndTime();
+
+        // Check if the requested time slot fits within the block's time boundaries
+        if (start.isBefore(block.getStartTime()) || end.isAfter(block.getEndTime())) {
+            throw new IllegalArgumentException("Appointment time is completely or partially outside the working block.");
+        }
+
+        // Overlap check: ensure no existing appointment (except expired RESERVED) overlaps with the requested time slot
+        boolean isOverlapping = appointmentRepository.existsOverlappingAppointment(block, start, end);
+        if (isOverlapping) {
+            throw new IllegalStateException("This time slot has already been taken by someone else.");
+        }
+
+        // Create a new appointment with SCHEDULED status (since we're booking directly, no need for RESERVED state here)
+        Appointment appointment = Appointment.builder()
+                .block(block)
+                .patient(patient)
+                .service(service)
+                .startTime(start)
+                .endTime(end)
+                .status(AppointmentStatus.RESERVED)
+                .reservedUntil(LocalDateTime.now().plusMinutes(15))
+                .patientNotes(request.getPatientNotes())
+                .build();
+
+        appointment = appointmentRepository.save(appointment);
+
+        // Return the appointment details, including doctor and service info for confirmation page
+        return AppointmentResponse.builder()
+                .id(appointment.getId())
+                .blockId(block.getId())
+                .patientId(patient.getId())
+                .serviceId(service.getId())
+                .serviceName(service.getName())
+                .serviceDurationMinutes(service.getDurationMinutes())
+                .doctorFirstName(block.getDoctor().getFirstName())
+                .doctorLastName(block.getDoctor().getLastName())
+                .centerName(block.getCenter().getName())
+                .startTime(appointment.getStartTime())
+                .endTime(appointment.getEndTime())
+                .status(appointment.getStatus())
+                .reservedUntil(appointment.getReservedUntil())
+                .patientNotes(appointment.getPatientNotes())
+                .createdAt(appointment.getCreatedAt())
+                .build();
+    }
+
     // ── DOCTOR ENDPOINTS ──
 
     /**
@@ -548,6 +798,69 @@ public class ScheduleService {
                 .map(this::toResponse);
     }
 
+    /**
+     * DOCTOR: Cancels an appointment and provides a reason.
+     */
+    @Transactional
+    public AppointmentResponse cancelAppointmentByDoctor(User doctor, UUID appointmentId, String reason) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        // Verify that the doctor owns the block to which this appointment belongs
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to modify this appointment.");
+        }
+
+        // Only SCHEDULED or RESERVED appointments can be cancelled by the doctor
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointment.setDoctorNotes(reason); // Save the cancellation reason in doctor notes for future reference
+        appointment.setReservedUntil(null);
+
+        log.info("Doctor {} cancelled appointment {} with reason: {}", doctor.getId(), appointmentId, reason);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    /**
+     * DOCTOR: Marks an appointment as NO_SHOW.
+     */
+    @Transactional
+    public AppointmentResponse markAsNoShow(User doctor, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment not found."));
+
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to modify this appointment.");
+        }
+
+        // Status NO_SHOW is set when the patient did not show up for a SCHEDULED appointment.
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(appointment.getStartTime())) {
+            throw new IllegalStateException("You cannot mark an appointment as NO_SHOW before it starts.");
+        }
+        if (now.isAfter(appointment.getStartTime().plusMinutes(15))) {
+            throw new IllegalStateException("You can only mark an appointment as NO_SHOW within 15 minutes of its start time.");
+        }
+
+        appointment.setStatus(AppointmentStatus.NO_SHOW);
+        appointment.setReservedUntil(null);
+
+        log.info("Doctor {} marked appointment {} as NO_SHOW.", doctor.getId(), appointmentId);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentResponse getDoctorAppointmentDetails(User doctor, UUID appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
+
+        // Sprawdzamy, czy lekarz z bloku roboczego to nasz zalogowany lekarz
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new IllegalStateException("You do not have permission to view this appointment.");
+        }
+
+        return toResponse(appointment);
+    }
+
     // ── Private helpers ──
 
     private User findDoctorById(UUID doctorId) {
@@ -556,9 +869,28 @@ public class ScheduleService {
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found."));
     }
 
-    // ── Mapping helper ──
+    // ── Mapping helpers ──
 
+    /**
+     * Converts a DoctorService entity to a DoctorServiceResponse DTO.
+     */
+    private DoctorServiceResponse toServiceResponse(DoctorService s) {
+        return DoctorServiceResponse.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .durationMinutes(s.getDurationMinutes())
+                .price(s.getPrice())
+                .build();
+    }
+
+    /**
+     * Converts an Appointment entity to an AppointmentResponse DTO.
+     */
     private AppointmentResponse toResponse(Appointment a) {
+        String publicId = doctorProfileRepository.findByUser(a.getBlock().getDoctor())
+                .map(DoctorProfile::getPublicId)
+                .orElse("no-id");
+
         return AppointmentResponse.builder()
                 .id(a.getId())
                 .blockId(a.getBlock().getId())
@@ -566,11 +898,17 @@ public class ScheduleService {
                 .serviceId(a.getService().getId())
                 .serviceName(a.getService().getName())
                 .serviceDurationMinutes(a.getService().getDurationMinutes())
+                .doctorFirstName(a.getBlock().getDoctor().getFirstName())
+                .doctorLastName(a.getBlock().getDoctor().getLastName())
+                .doctorPublicId(publicId)
+                .centerId(a.getBlock().getCenter().getId())
+                .centerName(a.getBlock().getCenter().getName())
                 .startTime(a.getStartTime())
                 .endTime(a.getEndTime())
                 .status(a.getStatus())
                 .reservedUntil(a.getReservedUntil())
                 .patientNotes(a.getPatientNotes())
+                .doctorNotes(a.getDoctorNotes())
                 .createdAt(a.getCreatedAt())
                 .build();
     }

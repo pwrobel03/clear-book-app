@@ -34,7 +34,6 @@ const navByRole: Record<UserRole, NavItem[]> = {
       href: "/dashboard/appointments",
       icon: Calendar,
       label: "Appointments",
-      soon: true,
     },
     {
       href: "/dashboard/doctors",
@@ -50,6 +49,16 @@ const navByRole: Record<UserRole, NavItem[]> = {
       href: "/dashboard/schedule",
       icon: Calendar,
       label: "My Schedule",
+    },
+    {
+      href: "/dashboard/appointments",
+      icon: Calendar,
+      label: "Appointments",
+    },
+    {
+      label: "Services",
+      href: "/dashboard/services",
+      icon: Stethoscope,
     },
     { href: "/dashboard/centers", icon: Building2, label: "My Centers" },
     { href: "/dashboard/invite", icon: Key, label: "Invite Code" },

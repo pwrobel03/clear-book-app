@@ -138,32 +138,105 @@ public class ScheduleController {
         return ResponseEntity.ok(result);
     }
 
-    // ── PUBLIC ENDPOINTS (no authentication required) ──
+    // ── DOCTOR SERVICE MANAGEMENT ──
 
     /**
-     * PUBLIC: Returns available time slots for a specific doctor and service.
-     * These are virtual slots dynamically calculated from AvailabilityBlocks minus existing appointments.
-     * No authentication required — this is what the patient sees on the booking page.
+     * DOCTOR: Creates a new service offering.
      */
-    @GetMapping("/doctors/{doctorId}/slots")
-    public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
-            @PathVariable UUID doctorId,
-            @RequestParam UUID serviceId) {
+    @PostMapping("/services")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<DoctorServiceResponse> createService(
+            @AuthenticationPrincipal User doctor,
+            @Valid @RequestBody CreateDoctorServiceRequest request) {
 
-        List<AvailableSlotResponse> slots = scheduleService.getAvailableSlots(doctorId, serviceId);
-        return ResponseEntity.ok(slots);
+        DoctorServiceResponse service = scheduleService.createDoctorService(doctor, request);
+        return ResponseEntity.ok(service);
     }
 
     /**
-     * PUBLIC: Returns all active services offered by a specific doctor.
-     * Used by patients to choose a service before seeing available time slots.
+     * DOCTOR: Returns all services (including inactive) for the authenticated doctor.
      */
-    @GetMapping("/doctors/{doctorId}/services")
-    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(
-            @PathVariable UUID doctorId) {
+    @GetMapping("/services")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<List<DoctorServiceResponse>> getMyServices(
+            @AuthenticationPrincipal User doctor) {
 
-        List<DoctorServiceResponse> services = scheduleService.getDoctorServices(doctorId);
+        List<DoctorServiceResponse> services = scheduleService.getMyServices(doctor);
         return ResponseEntity.ok(services);
+    }
+
+    /**
+     * DOCTOR: Updates an existing service.
+     */
+    @PutMapping("/services/{serviceId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<DoctorServiceResponse> updateService(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID serviceId,
+            @Valid @RequestBody CreateDoctorServiceRequest request) {
+
+        DoctorServiceResponse updated = scheduleService.updateDoctorService(doctor, serviceId, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * DOCTOR: Deactivates a service (soft delete).
+     */
+    @DeleteMapping("/services/{serviceId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<MessageResponse> deactivateService(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID serviceId) {
+
+        scheduleService.deactivateDoctorService(doctor, serviceId);
+        return ResponseEntity.ok(new MessageResponse("Service deactivated successfully."));
+    }
+
+    /**
+     * DOCTOR: Cancels an appointment with a mandatory reason.
+     */
+    @PostMapping("/doctor-appointments/{appointmentId}/cancel")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> cancelAppointmentByDoctor(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId,
+            @Valid @RequestBody DoctorCancelRequest request) {
+
+        AppointmentResponse response = scheduleService.cancelAppointmentByDoctor(doctor, appointmentId, request.getReason());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * DOCTOR: Marks an appointment as a no-show.
+     */
+    @PostMapping("/doctor-appointments/{appointmentId}/no-show")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> markAppointmentAsNoShow(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.markAsNoShow(doctor, appointmentId);
+        return ResponseEntity.ok(response);
+    }
+
+    // ── PUBLIC ENDPOINTS (no authentication required) ──
+
+    /**
+     */
+    @GetMapping("/doctors/{publicId}/slots")
+    public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
+            @PathVariable String publicId,
+            @RequestParam UUID serviceId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        return ResponseEntity.ok(scheduleService.getAvailableSlots(publicId, serviceId, start, end));
+    }
+
+    /**
+     */
+    @GetMapping("/doctors/{publicId}/services")
+    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(@PathVariable String publicId) {
+        return ResponseEntity.ok(scheduleService.getDoctorServices(publicId));
     }
 
     // ── PATIENT ENDPOINTS ──
@@ -184,6 +257,19 @@ public class ScheduleController {
     }
 
     /**
+     * PATIENT: Returns details of a single appointment by its ID.
+     */
+    @GetMapping("/my-appointments/{appointmentId}")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> getAppointmentDetails(
+            @AuthenticationPrincipal User patient,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.getAppointmentDetails(patient, appointmentId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * PATIENT: Cancels an appointment.
      * Only SCHEDULED or RESERVED appointments can be cancelled.
      */
@@ -195,6 +281,19 @@ public class ScheduleController {
 
         AppointmentResponse cancelled = scheduleService.cancelAppointment(patient, appointmentId);
         return ResponseEntity.ok(cancelled);
+    }
+
+    /**
+     * PATIENT: Books an appointment (soft lock for 15 minutes).
+     */
+    @PostMapping("/appointments")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @AuthenticationPrincipal User patient,
+            @Valid @RequestBody BookAppointmentRequest request) {
+
+        AppointmentResponse response = scheduleService.bookAppointment(patient, request);
+        return ResponseEntity.ok(response);
     }
 
     // ── DOCTOR APPOINTMENT ENDPOINTS ──
@@ -212,5 +311,18 @@ public class ScheduleController {
 
         Page<AppointmentResponse> appointments = scheduleService.getDoctorAppointments(doctor, status, pageable);
         return ResponseEntity.ok(appointments);
+    }
+
+    /**
+     * DOCTOR: Returns details of a single appointment for the doctor.
+     */
+    @GetMapping("/doctor-appointments/{appointmentId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> getDoctorAppointmentDetails(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId) {
+
+        AppointmentResponse response = scheduleService.getDoctorAppointmentDetails(doctor, appointmentId);
+        return ResponseEntity.ok(response);
     }
 }

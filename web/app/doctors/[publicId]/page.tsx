@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Award,
   Lock,
+  LogIn,
 } from "lucide-react";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
@@ -17,19 +18,8 @@ import {
   getDoctorAffiliatedCentersAction,
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
-import { log } from "node:console";
-
-// TODO: This page is the public profile of a doctor. It shows basic information about the doctor (name, specializations, bio) and a CTA to book an appointment (which leads to the auth page for now, since only authenticated users will be able to book appointments). If the doctor has chosen to keep their profile private, we show a message saying that the profile is private and they should contact the medical facility directly.
-
-// TODO: We should also add some kind of notification system to notify doctor when they receive a new invitation, but for now they will have to check the "My Centers" page manually to see if they received any new invitations.
-
-// TODO: We should also add some kind of "Share this doctor" functionality to this page (like sharing the doctor profile link on social media, etc.) but we will implement that in the future, so for now it's just a simple page without any sharing features.
-
-// TODO: We should also add some kind of "Write a review" functionality to this page, so users can share their experience with the doctor and help other users make informed decisions, but we will implement that in the future, so for now it's just a simple page without any review features. User have to had a verified appointment with the doctor to be able to write a review, but we will implement that in the future, so for now it's just a simple page without any review features.
-
-// TODO: We should also add some kind of "View on map" functionality to this page, so users can see the location of the medical facilities where the doctor works on a map and get directions to them, but we will implement that in the future, so for now it's just a simple page without any map features.
-
-// TODO: We should split this page into multiple subpages (public profile, reviews, etc.) but for now we will keep everything in one place to speed up development.
+import { getServerSession } from "@/lib/server/session";
+import { DoctorBookingClient } from "./booking-client";
 
 export default async function DoctorProfilePage({
   params,
@@ -38,10 +28,11 @@ export default async function DoctorProfilePage({
 }) {
   const { publicId } = await params;
 
-  const [doctorResult, centers, specResult] = await Promise.all([
+  const [doctorResult, centers, specResult, session] = await Promise.all([
     getDoctorByPublicIdAction(publicId),
     getDoctorAffiliatedCentersAction(publicId),
     getSpecializationsAction(),
+    getServerSession(),
   ]);
 
   // 404 - doctor not found
@@ -49,7 +40,7 @@ export default async function DoctorProfilePage({
     notFound();
   }
 
-  // Private profile - doctor exists but has chosen to keep their profile private
+  // Private profile
   if (doctorResult.error === "PRIVATE_PROFILE") {
     return (
       <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
@@ -58,7 +49,7 @@ export default async function DoctorProfilePage({
 
         <Navbar />
 
-        <main className="relative z-10 mx-auto w-full max-w-2xl px-6 py-24 text-center flex-1">
+        <main className="relative z-20 mx-auto w-full max-w-2xl px-2 sm:px-6 py-24 text-center flex-1">
           <GlassPanel className="p-10 md:p-14">
             <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-black/5 dark:bg-white/5 shadow-inner border border-black/5 dark:border-white/10">
               <Lock size={40} className="text-muted-foreground" />
@@ -96,15 +87,19 @@ export default async function DoctorProfilePage({
 
   const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`.toUpperCase();
 
+  const isAuthenticated = !!session;
+  const isPatient = session?.role === "USER";
+  const isDoctor = session?.role === "DOCTOR";
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
-      {/* ── ATMOSPHERIC BLOBS ── */}
+      {/* ── Atmospheric blobs ── */}
       <div className="pointer-events-none absolute top-[10%] left-[10%] h-[500px] w-[500px] rounded-full bg-primary/20 blur-[140px] dark:bg-primary/10" />
       <div className="pointer-events-none absolute bottom-[10%] right-[10%] h-[600px] w-[600px] rounded-full bg-accent/20 blur-[140px] dark:bg-accent/15" />
 
       <Navbar />
 
-      <main className="relative z-10 mx-auto w-full max-w-5xl px-6 py-10 flex-1">
+      <main className="relative z-10 mx-auto w-full max-w-5xl px-0 sm:px-6 py-10 flex-1">
         <Link
           href="/doctors"
           className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-8 group"
@@ -116,7 +111,7 @@ export default async function DoctorProfilePage({
           Back to Search
         </Link>
 
-        {/* Private profile notice */}
+        {/* Private profile notice (still accessible via direct link) */}
         {!doctor.public && (
           <GlassPanel className="mb-8 border-warning/60 bg-warning/60 p-5">
             <div className="flex items-center gap-3 text-warning-foreground font-medium text-sm">
@@ -129,9 +124,9 @@ export default async function DoctorProfilePage({
           </GlassPanel>
         )}
 
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left Column: Profile & Info */}
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid gap-8">
+          {/* ── Left Column: Profile & Info ──────────────────────────── */}
+          <div className="space-y-8">
             <GlassPanel className="p-8 md:p-10">
               <div className="flex flex-col md:flex-row gap-8 items-start">
                 <div className="h-32 w-32 shrink-0 rounded-3xl bg-primary flex items-center justify-center text-4xl font-black text-primary-foreground shadow-2xl">
@@ -176,6 +171,7 @@ export default async function DoctorProfilePage({
               </div>
             </GlassPanel>
 
+            {/* Affiliated Centers */}
             <section className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
@@ -204,7 +200,7 @@ export default async function DoctorProfilePage({
                           />
                         </div>
                         <div>
-                          <p className="font-bold text-foreground group-hover:text-accent transition-colors">
+                          <p className="font-bold text-foreground">
                             {center.name}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -219,9 +215,9 @@ export default async function DoctorProfilePage({
             </section>
           </div>
 
-          {/* Right Column: Booking Widget Placeholder */}
-          <div className="space-y-8">
-            <GlassPanel className="p-8 sticky top-24 border-accent/20">
+          {/* ── Right Column: Booking ─────────────────────────────────── */}
+          <div className="space-y-6">
+            <GlassPanel className="p-2 sm:p-6 sticky top-24 border-accent/20">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-lg">
                   <CalendarDays size={20} />
@@ -231,19 +227,47 @@ export default async function DoctorProfilePage({
                 </h3>
               </div>
 
-              <div className="space-y-6">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Create an account or sign in to book with Dr.{" "}
-                  {doctor.lastName}.
-                </p>
+              {/* Not logged in → CTA */}
+              {!isAuthenticated && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Create an account or sign in to book with Dr.{" "}
+                    {doctor.lastName}.
+                  </p>
+                  <Link href={`/auth?redirect=/doctors/${publicId}`}>
+                    <Button className="w-full rounded-2xl gap-2">
+                      <LogIn size={16} />
+                      Sign in to book
+                    </Button>
+                  </Link>
+                  <Link href={`/auth?redirect=/doctors/${publicId}`}>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-2xl mt-2"
+                    >
+                      Create account
+                    </Button>
+                  </Link>
+                </div>
+              )}
 
-                <Link
-                  href="/auth"
-                  className="flex w-full items-center justify-center rounded-2xl bg-accent px-4 py-3 font-bold text-accent-foreground shadow-lg transition-colors hover:bg-accent-dark"
-                >
-                  Get started
-                </Link>
-              </div>
+              {/* Logged in as DOCTOR → informational */}
+              {isDoctor && (
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  You are signed in as a doctor. Only patients can book
+                  appointments.
+                </p>
+              )}
+
+              {/* Logged in as PATIENT → booking form */}
+              {isPatient && (
+                <DoctorBookingClient
+                  doctorId={publicId}
+                  isAuthenticated={true}
+                  userRole="USER"
+                  doctorLastName={doctor.lastName}
+                />
+              )}
             </GlassPanel>
           </div>
         </div>
