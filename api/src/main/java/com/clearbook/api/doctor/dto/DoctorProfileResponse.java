@@ -26,6 +26,8 @@ public class DoctorProfileResponse {
     private String licenseNumber;
     private String photoUrl;
     private boolean isPublic;
+    private Double averageRating;
+    private Integer totalReviews;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

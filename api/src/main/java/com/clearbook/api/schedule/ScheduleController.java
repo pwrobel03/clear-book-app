@@ -26,52 +26,21 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ScheduleController {
 
-    private final ScheduleService scheduleService;
+    private final AvailabilityService availabilityService;
+    private final AppointmentService appointmentService;
+    private final DoctorServiceManager doctorServiceManager;
 
-    /**
-     * DOCTOR LOGIC: Creates a new working block.
-     * Only users with the DOCTOR role can access this.
-     */
+    // ── Availability blocks ───────────────────────────────────────────────────
+
     @PostMapping("/blocks")
     @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<?> createWorkingBlock(
+    public ResponseEntity<AvailabilityBlockResponse> createWorkingBlock(
             @AuthenticationPrincipal User doctor,
             @Valid @RequestBody CreateBlockRequest request) {
 
-        AvailabilityBlockResponse block = scheduleService.createWorkingBlock(doctor, request);
-        return ResponseEntity.ok(block);
+        return ResponseEntity.ok(availabilityService.createWorkingBlock(doctor, request));
     }
 
-    /**
-     * PATIENT LOGIC: Holds a time slot for 15 minutes.
-     * Only users with the PATIENT role can access this.
-     */
-    @PostMapping("/reserve")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> reserveSlot(
-            @AuthenticationPrincipal User patient,
-            @Valid @RequestBody ReserveSlotRequest request) {
-
-        AppointmentResponse reservation = scheduleService.reserveSlot(patient, request);
-        return ResponseEntity.ok(reservation);
-    }
-
-    /**
-     * PATIENT LOGIC: Confirms the reserved appointment.
-     */
-    @PostMapping("/confirm")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> confirmAppointment(
-            @AuthenticationPrincipal User patient,
-            @Valid @RequestBody ConfirmAppointmentRequest request) {
-
-        AppointmentResponse confirmedAppointment = scheduleService.confirmAppointment(patient, request);
-        return ResponseEntity.ok(confirmedAppointment);
-    }
-
-    /**
-     * DOCTOR: Fetches the doctor's working blocks in a given timeframe.
-     */
     @GetMapping("/blocks")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<List<AvailabilityBlockResponse>> getDoctorBlocks(
@@ -79,95 +48,69 @@ public class ScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
 
-        List<AvailabilityBlockResponse> blocks = scheduleService.getDoctorBlocks(doctor, start, end);
-        return ResponseEntity.ok(blocks);
+        return ResponseEntity.ok(availabilityService.getDoctorBlocks(doctor, start, end));
     }
 
-    /**
-     * DOCTOR: Copies schedule from one week to future weeks.
-     */
     @PostMapping("/blocks/copy")
     @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<?> copyWeekSchedule(
+    public ResponseEntity<MessageResponse> copyWeekSchedule(
             @AuthenticationPrincipal User doctor,
             @Valid @RequestBody CopyWeekRequest request) {
 
-        scheduleService.copyWeekSchedule(doctor, request);
+        availabilityService.copyWeekSchedule(doctor, request);
         return ResponseEntity.ok(new MessageResponse(
                 "Schedule copied successfully for " + request.getWeeksToCopy() + " weeks"));
     }
 
-    /**
-     * DOCTOR: Deletes a working block and cancels associated appointments.
-     */
     @DeleteMapping("/blocks/{blockId}")
     @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<?> deleteWorkingBlock(
+    public ResponseEntity<MessageResponse> deleteWorkingBlock(
             @AuthenticationPrincipal User doctor,
             @PathVariable UUID blockId) {
 
-        scheduleService.deleteWorkingBlock(doctor, blockId);
-        return ResponseEntity.ok(new MessageResponse("Working block and associated appointments deleted successfully."));
+        availabilityService.deleteWorkingBlock(doctor, blockId);
+        return ResponseEntity.ok(new MessageResponse("Working block deleted successfully."));
     }
 
-    /**
-     * DOCTOR: Updates a working block's timeframe (Safe Shrink).
-     */
     @PutMapping("/blocks/{blockId}")
     @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<?> updateWorkingBlockTime(
+    public ResponseEntity<MessageResponse> updateWorkingBlockTime(
             @AuthenticationPrincipal User doctor,
             @PathVariable UUID blockId,
             @Valid @RequestBody UpdateWorkingBlockRequest request) {
 
-        scheduleService.updateWorkingBlockTime(doctor, blockId, request);
+        availabilityService.updateWorkingBlockTime(doctor, blockId, request);
         return ResponseEntity.ok(new MessageResponse("Working block updated successfully."));
     }
 
-    /**
-     * DOCTOR: Clears all working blocks (and cancels their appointments) within a date range.
-     * Optionally scoped to a specific center via centerId in the request body.
-     */
     @PostMapping("/blocks/clear")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<ClearScheduleResponse> clearSchedule(
             @AuthenticationPrincipal User doctor,
             @Valid @RequestBody ClearScheduleRequest request) {
 
-        ClearScheduleResponse result = scheduleService.clearSchedule(doctor, request);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(availabilityService.clearSchedule(doctor, request));
     }
 
-    // ── DOCTOR SERVICE MANAGEMENT ──
+    // ── Doctor services ───────────────────────────────────────────────────────
 
-    /**
-     * DOCTOR: Creates a new service offering.
-     */
     @PostMapping("/services")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<DoctorServiceResponse> createService(
             @AuthenticationPrincipal User doctor,
             @Valid @RequestBody CreateDoctorServiceRequest request) {
 
-        DoctorServiceResponse service = scheduleService.createDoctorService(doctor, request);
-        return ResponseEntity.ok(service);
+        return ResponseEntity.ok(doctorServiceManager.createService(doctor, request));
     }
 
-    /**
-     * DOCTOR: Returns all services (including inactive) for the authenticated doctor.
-     */
     @GetMapping("/services")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<List<DoctorServiceResponse>> getMyServices(
             @AuthenticationPrincipal User doctor) {
 
-        List<DoctorServiceResponse> services = scheduleService.getMyServices(doctor);
-        return ResponseEntity.ok(services);
+        return ResponseEntity.ok(doctorServiceManager.getMyServices(doctor));
     }
 
-    /**
-     * DOCTOR: Updates an existing service.
-     */
     @PutMapping("/services/{serviceId}")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<DoctorServiceResponse> updateService(
@@ -175,76 +118,67 @@ public class ScheduleController {
             @PathVariable UUID serviceId,
             @Valid @RequestBody CreateDoctorServiceRequest request) {
 
-        DoctorServiceResponse updated = scheduleService.updateDoctorService(doctor, serviceId, request);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(doctorServiceManager.updateService(doctor, serviceId, request));
     }
 
-    /**
-     * DOCTOR: Deactivates a service (soft delete).
-     */
     @DeleteMapping("/services/{serviceId}")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<MessageResponse> deactivateService(
             @AuthenticationPrincipal User doctor,
             @PathVariable UUID serviceId) {
 
-        scheduleService.deactivateDoctorService(doctor, serviceId);
+        doctorServiceManager.deactivateService(doctor, serviceId);
         return ResponseEntity.ok(new MessageResponse("Service deactivated successfully."));
     }
 
-    /**
-     * DOCTOR: Cancels an appointment with a mandatory reason.
-     */
-    @PostMapping("/doctor-appointments/{appointmentId}/cancel")
-    @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<AppointmentResponse> cancelAppointmentByDoctor(
-            @AuthenticationPrincipal User doctor,
-            @PathVariable UUID appointmentId,
-            @Valid @RequestBody DoctorCancelRequest request) {
+    // ── Public (no auth) ──────────────────────────────────────────────────────
 
-        AppointmentResponse response = scheduleService.cancelAppointmentByDoctor(doctor, appointmentId, request.getReason());
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * DOCTOR: Marks an appointment as a no-show.
-     */
-    @PostMapping("/doctor-appointments/{appointmentId}/no-show")
-    @PreAuthorize("hasRole('DOCTOR')")
-    public ResponseEntity<AppointmentResponse> markAppointmentAsNoShow(
-            @AuthenticationPrincipal User doctor,
-            @PathVariable UUID appointmentId) {
-
-        AppointmentResponse response = scheduleService.markAsNoShow(doctor, appointmentId);
-        return ResponseEntity.ok(response);
-    }
-
-    // ── PUBLIC ENDPOINTS (no authentication required) ──
-
-    /**
-     */
     @GetMapping("/doctors/{publicId}/slots")
     public ResponseEntity<List<AvailableSlotResponse>> getAvailableSlots(
             @PathVariable String publicId,
             @RequestParam UUID serviceId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        return ResponseEntity.ok(scheduleService.getAvailableSlots(publicId, serviceId, start, end));
+
+        return ResponseEntity.ok(appointmentService.getAvailableSlots(publicId, serviceId, start, end));
     }
 
-    /**
-     */
     @GetMapping("/doctors/{publicId}/services")
-    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(@PathVariable String publicId) {
-        return ResponseEntity.ok(scheduleService.getDoctorServices(publicId));
+    public ResponseEntity<List<DoctorServiceResponse>> getDoctorServices(
+            @PathVariable String publicId) {
+
+        return ResponseEntity.ok(doctorServiceManager.getDoctorServices(publicId));
     }
 
-    // ── PATIENT ENDPOINTS ──
+    // ── Patient appointments ──────────────────────────────────────────────────
 
-    /**
-     * PATIENT: Returns paginated list of the patient's appointments.
-     * Optionally filtered by status query param (e.g., ?status=SCHEDULED).
-     */
+    @PostMapping("/reserve")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> reserveSlot(
+            @AuthenticationPrincipal User patient,
+            @Valid @RequestBody ReserveSlotRequest request) {
+
+        return ResponseEntity.ok(appointmentService.reserveSlot(patient, request));
+    }
+
+    @PostMapping("/confirm")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> confirmAppointment(
+            @AuthenticationPrincipal User patient,
+            @Valid @RequestBody ConfirmAppointmentRequest request) {
+
+        return ResponseEntity.ok(appointmentService.confirmAppointment(patient, request));
+    }
+
+    @PostMapping("/appointments")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @AuthenticationPrincipal User patient,
+            @Valid @RequestBody BookAppointmentRequest request) {
+
+        return ResponseEntity.ok(appointmentService.bookAppointment(patient, request));
+    }
+
     @GetMapping("/my-appointments")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<Page<AppointmentResponse>> getMyAppointments(
@@ -252,56 +186,29 @@ public class ScheduleController {
             @RequestParam(required = false) AppointmentStatus status,
             @PageableDefault(size = 10) Pageable pageable) {
 
-        Page<AppointmentResponse> appointments = scheduleService.getPatientAppointments(patient, status, pageable);
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(appointmentService.getPatientAppointments(patient, status, pageable));
     }
 
-    /**
-     * PATIENT: Returns details of a single appointment by its ID.
-     */
     @GetMapping("/my-appointments/{appointmentId}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<AppointmentResponse> getAppointmentDetails(
             @AuthenticationPrincipal User patient,
             @PathVariable UUID appointmentId) {
 
-        AppointmentResponse response = scheduleService.getAppointmentDetails(patient, appointmentId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(appointmentService.getAppointmentDetails(patient, appointmentId));
     }
 
-    /**
-     * PATIENT: Cancels an appointment.
-     * Only SCHEDULED or RESERVED appointments can be cancelled.
-     */
     @PostMapping("/my-appointments/{appointmentId}/cancel")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<AppointmentResponse> cancelAppointment(
             @AuthenticationPrincipal User patient,
             @PathVariable UUID appointmentId) {
 
-        AppointmentResponse cancelled = scheduleService.cancelAppointment(patient, appointmentId);
-        return ResponseEntity.ok(cancelled);
+        return ResponseEntity.ok(appointmentService.cancelAppointment(patient, appointmentId));
     }
 
-    /**
-     * PATIENT: Books an appointment (soft lock for 15 minutes).
-     */
-    @PostMapping("/appointments")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<AppointmentResponse> bookAppointment(
-            @AuthenticationPrincipal User patient,
-            @Valid @RequestBody BookAppointmentRequest request) {
+    // ── Doctor appointments ───────────────────────────────────────────────────
 
-        AppointmentResponse response = scheduleService.bookAppointment(patient, request);
-        return ResponseEntity.ok(response);
-    }
-
-    // ── DOCTOR APPOINTMENT ENDPOINTS ──
-
-    /**
-     * DOCTOR: Returns paginated list of all appointments across the doctor's blocks.
-     * Optionally filtered by status.
-     */
     @GetMapping("/doctor-appointments")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<Page<AppointmentResponse>> getDoctorAppointments(
@@ -309,20 +216,35 @@ public class ScheduleController {
             @RequestParam(required = false) AppointmentStatus status,
             @PageableDefault(size = 20) Pageable pageable) {
 
-        Page<AppointmentResponse> appointments = scheduleService.getDoctorAppointments(doctor, status, pageable);
-        return ResponseEntity.ok(appointments);
+        return ResponseEntity.ok(appointmentService.getDoctorAppointments(doctor, status, pageable));
     }
 
-    /**
-     * DOCTOR: Returns details of a single appointment for the doctor.
-     */
     @GetMapping("/doctor-appointments/{appointmentId}")
     @PreAuthorize("hasRole('DOCTOR')")
     public ResponseEntity<AppointmentResponse> getDoctorAppointmentDetails(
             @AuthenticationPrincipal User doctor,
             @PathVariable UUID appointmentId) {
 
-        AppointmentResponse response = scheduleService.getDoctorAppointmentDetails(doctor, appointmentId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(appointmentService.getDoctorAppointmentDetails(doctor, appointmentId));
+    }
+
+    @PostMapping("/doctor-appointments/{appointmentId}/cancel")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> cancelAppointmentByDoctor(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId,
+            @Valid @RequestBody DoctorCancelRequest request) {
+
+        return ResponseEntity.ok(
+                appointmentService.cancelAppointmentByDoctor(doctor, appointmentId, request.getReason()));
+    }
+
+    @PostMapping("/doctor-appointments/{appointmentId}/no-show")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<AppointmentResponse> markAppointmentAsNoShow(
+            @AuthenticationPrincipal User doctor,
+            @PathVariable UUID appointmentId) {
+
+        return ResponseEntity.ok(appointmentService.markAsNoShow(doctor, appointmentId));
     }
 }

@@ -105,6 +105,8 @@ export interface DoctorProfileResponse {
   licenseNumber: string | null
   photoUrl: string | null
   public: boolean
+  averageRating: number;
+  totalReviews: number;
   createdAt: string
   updatedAt: string
 }
@@ -127,4 +129,18 @@ export interface SpringPage<T> {
   totalPages: number
   size: number
   number: number
+}
+
+export interface ReviewResponse {
+  id: string
+  appointmentId: string
+  rating: number
+  patientComment: string
+  doctorReply?: string
+  repliedAt?: string
+  createdAt: string
+  patientDisplayName: string
+  doctorId: string
+  doctorFirstName: string
+  doctorLastName: string
 }

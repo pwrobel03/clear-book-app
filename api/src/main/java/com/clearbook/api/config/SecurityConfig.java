@@ -59,6 +59,12 @@ public class SecurityConfig {
                 // Reguły dostępu do endpointów
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Swagger UI / OpenAPI spec — public available for testing and documentation
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         // Public endpoints (GET only)
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/doctors",

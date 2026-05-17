@@ -116,12 +116,12 @@ export function AppointmentDetailClient({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  console.log(
-    "Rendering AppointmentDetailClient with appointment:",
-    appointment,
-  );
-  console.log("Is doctor:", isDoctor);
-  console.log("User role:", userRole);
+  // console.log(
+  //   "Rendering AppointmentDetailClient with appointment:",
+  //   appointment,
+  // );
+  // console.log("Is doctor:", isDoctor);
+  // console.log("User role:", userRole);
 
   return (
     <div className="space-y-6">
