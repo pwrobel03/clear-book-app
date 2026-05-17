@@ -430,6 +430,32 @@ public class AppointmentService {
         return toResponse(appointmentRepository.save(appointment));
     }
 
+    /**
+     * Saves or updates the doctor's internal notes for an appointment.
+     * Notes can be added to SCHEDULED or COMPLETED appointments.
+     * For CANCELLED appointments the doctorNotes field holds the cancellation reason
+     * and must not be overwritten here.
+     */
+    @Transactional
+    public AppointmentResponse saveDoctorNotes(User doctor, UUID appointmentId, String notes) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found."));
+
+        if (!appointment.getBlock().getDoctor().equals(doctor)) {
+            throw new ForbiddenException("You do not have permission to modify this appointment.");
+        }
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot edit notes on a cancelled appointment.");
+        }
+        if (appointment.getStatus() == AppointmentStatus.RESERVED) {
+            throw new IllegalStateException("Cannot add notes to a pending reservation.");
+        }
+
+        appointment.setDoctorNotes(notes);
+        log.info("Doctor {} saved notes for appointment {}.", doctor.getId(), appointmentId);
+        return toResponse(appointmentRepository.save(appointment));
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void publishCancellationEvent(Appointment app, String reason) {
@@ -462,6 +488,8 @@ public class AppointmentService {
                 .id(a.getId())
                 .blockId(a.getBlock().getId())
                 .patientId(a.getPatient().getId())
+                .patientFirstName(a.getPatient().getFirstName())
+                .patientLastName(a.getPatient().getLastName())
                 .serviceId(a.getService().getId())
                 .serviceName(a.getService().getName())
                 .serviceDurationMinutes(a.getService().getDurationMinutes())

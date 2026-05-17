@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Search, ArrowLeft } from "lucide-react";
 import {
@@ -7,12 +8,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
+import { Pagination } from "@/components/ui/pagination";
 
 import {
   getDoctorsAction,
   getSpecializationsAction,
 } from "@/lib/actions/doctor";
 import type { DoctorProfileResponse } from "@/types/api";
+
+export const metadata: Metadata = {
+  title: "Find a Doctor | ClearBook",
+  description:
+    "Browse and search doctors by specialization and city. Book an appointment online in minutes.",
+};
 
 // TODO: This page is the main public directory of doctors. It shows a list of all doctors registered in the system with basic information about them (name, specializations, bio). Users can search for doctors by specialization and city. Each doctor card links to the doctor's public profile page.
 
@@ -78,12 +86,13 @@ function DoctorCard({
 export default async function DoctorsSearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ specialization?: string; city?: string }>;
+  searchParams: Promise<{ specialization?: string; city?: string; page?: string }>;
 }) {
-  const { specialization = "", city = "" } = await searchParams;
+  const { specialization = "", city = "", page: pageParam = "0" } = await searchParams;
+  const page = Math.max(0, parseInt(pageParam, 10) || 0);
 
   const [doctorsResult, specResult] = await Promise.all([
-    getDoctorsAction(specialization, city),
+    getDoctorsAction(specialization, city, page),
     getSpecializationsAction(),
   ]);
 
@@ -166,15 +175,31 @@ export default async function DoctorsSearchPage({
             </Link>
           </GlassPanel>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {doctorsResult.content.map((doctor) => (
-              <DoctorCard
-                key={doctor.id}
-                doctor={doctor}
-                specLabels={specLabels}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {doctorsResult.content.map((doctor) => (
+                <DoctorCard
+                  key={doctor.id}
+                  doctor={doctor}
+                  specLabels={specLabels}
+                />
+              ))}
+            </div>
+
+            <Pagination
+              currentPage={doctorsResult.number}
+              totalPages={doctorsResult.totalPages}
+              buildHref={(p) => {
+                const params = new URLSearchParams();
+                if (specialization) params.set("specialization", specialization);
+                if (city) params.set("city", city);
+                if (p > 0) params.set("page", String(p));
+                const qs = params.toString();
+                return `/doctors${qs ? `?${qs}` : ""}`;
+              }}
+              className="mt-10"
+            />
+          </>
         )}
       </main>
     </div>

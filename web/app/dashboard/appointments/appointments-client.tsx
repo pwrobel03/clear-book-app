@@ -7,7 +7,6 @@ import {
   Clock,
   MapPin,
   Stethoscope,
-  Loader2,
   X,
   CheckCircle2,
   AlertCircle,
@@ -23,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CancelReasonDialog } from "@/components/ui/cancel-reason-dialog";
 import { cn } from "@/lib/utils";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { useRouter } from "next/navigation";
@@ -35,6 +36,8 @@ import {
   type AppointmentResponse,
   type AppointmentStatus,
 } from "@/lib/actions/booking";
+
+// ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<
   AppointmentStatus,
@@ -67,13 +70,31 @@ const STATUS_CONFIG: Record<
   },
 };
 
-// --- TRZY ZAKŁADKI ---
-type Tab = "upcoming" | "completed" | "cancelled";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "upcoming", label: "Upcoming" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled / No Show" },
-];
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function AppointmentCardSkeleton() {
+  return (
+    <div className="rounded-3xl border border-white/60 dark:border-white/5 bg-gradient-to-br from-white/70 to-white/30 dark:from-white/[0.04] dark:to-transparent p-5 space-y-4 animate-pulse">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-black/5 dark:bg-white/10" />
+          <div className="space-y-2">
+            <div className="h-4 w-32 rounded bg-black/5 dark:bg-white/10" />
+            <div className="h-3 w-24 rounded bg-black/5 dark:bg-white/10" />
+          </div>
+        </div>
+        <div className="h-6 w-20 rounded-full bg-black/5 dark:bg-white/10" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="h-4 w-full rounded bg-black/5 dark:bg-white/10" />
+        <div className="h-4 w-full rounded bg-black/5 dark:bg-white/10" />
+        <div className="h-4 col-span-2 rounded bg-black/5 dark:bg-white/10" />
+      </div>
+    </div>
+  );
+}
+
+// ── Appointment card ───────────────────────────────────────────────────────────
 
 function AppointmentCard({
   appointment,
@@ -83,8 +104,8 @@ function AppointmentCard({
   isDoctor,
 }: {
   appointment: AppointmentResponse;
-  onCancel: (id: string) => void;
-  onNoShow: (id: string) => void;
+  onCancel: (id: string, reason?: string) => Promise<void>;
+  onNoShow: (id: string) => Promise<void>;
   cancelling: boolean;
   isDoctor: boolean;
 }) {
@@ -94,12 +115,10 @@ function AppointmentCard({
   const end = new Date(appointment.endTime);
   const now = new Date();
 
-  // Logika widoczności przycisków
   const canCancel =
     appointment.status === "SCHEDULED" ||
     (!isDoctor && appointment.status === "RESERVED");
 
-  // Weryfikacja okienka 15-minutowego dla lekarza
   const canNoShow =
     isDoctor &&
     appointment.status === "SCHEDULED" &&
@@ -118,12 +137,15 @@ function AppointmentCard({
       end: reservedUntil,
     });
 
+  const patientLabel = appointment.patientFirstName
+    ? `${appointment.patientFirstName} ${appointment.patientLastName}`
+    : "Patient";
+
   return (
     <GlassCard
       className={cn(
         "p-5 space-y-4 transition-all",
-        (appointment.status === "CANCELLED" ||
-          appointment.status === "NO_SHOW") &&
+        (appointment.status === "CANCELLED" || appointment.status === "NO_SHOW") &&
           "opacity-60",
       )}
     >
@@ -142,10 +164,7 @@ function AppointmentCard({
             </p>
             {isDoctor ? (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Pacjent:{" "}
-                {appointment.patientFirstName
-                  ? `${appointment.patientFirstName} ${appointment.patientLastName}`
-                  : appointment.patientId.substring(0, 8)}
+                Patient: {patientLabel}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -163,9 +182,7 @@ function AppointmentCard({
       <div className="grid grid-cols-2 gap-3 text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Calendar size={14} className="shrink-0 text-accent" />
-          <span className="font-medium">
-            {format(start, "EEE, MMM d, yyyy")}
-          </span>
+          <span className="font-medium">{format(start, "EEE, MMM d, yyyy")}</span>
         </div>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Clock size={14} className="shrink-0 text-accent" />
@@ -196,46 +213,70 @@ function AppointmentCard({
       )}
 
       {(canCancel || canNoShow) && (
-        <div className="pt-1 flex gap-2">
-          {canCancel && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10 hover:text-red-600"
-              disabled={cancelling}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onCancel(appointment.id);
-              }}
+        <div className="pt-1 flex gap-2" onClick={(e) => e.stopPropagation()}>
+          {canCancel && isDoctor && (
+            <CancelReasonDialog
+              onConfirm={(reason) => onCancel(appointment.id, reason)}
             >
-              {cancelling ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <X size={14} />
-              )}{" "}
-              Cancel Reservation
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10 hover:text-red-600"
+                disabled={cancelling}
+              >
+                <X size={14} /> Cancel
+              </Button>
+            </CancelReasonDialog>
+          )}
+          {canCancel && !isDoctor && (
+            <ConfirmDialog
+              title="Cancel appointment"
+              description="Are you sure you want to cancel this appointment? This action cannot be undone."
+              confirmText="Yes, cancel"
+              destructive
+              onConfirm={() => onCancel(appointment.id)}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl text-red-500 border-red-400/30 hover:bg-red-500/10 hover:text-red-600"
+                disabled={cancelling}
+              >
+                <X size={14} /> Cancel
+              </Button>
+            </ConfirmDialog>
           )}
           {canNoShow && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 rounded-xl text-orange-500 border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                onNoShow(appointment.id);
-              }}
+            <ConfirmDialog
+              title="Mark as no-show"
+              description="Mark this patient as a no-show? This action is irreversible and the appointment slot will be freed."
+              confirmText="Yes, mark as no-show"
+              destructive
+              onConfirm={() => onNoShow(appointment.id)}
             >
-              <UserMinus size={14} /> No Show
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 rounded-xl text-orange-500 border-orange-400/30 hover:bg-orange-500/10 hover:text-orange-600"
+              >
+                <UserMinus size={14} /> No Show
+              </Button>
+            </ConfirmDialog>
           )}
         </div>
       )}
     </GlassCard>
   );
 }
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
+type Tab = "upcoming" | "completed" | "cancelled";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "upcoming", label: "Upcoming" },
+  { id: "completed", label: "Completed" },
+  { id: "cancelled", label: "Cancelled / No Show" },
+];
 
 const PAGE_SIZE = 10;
 
@@ -258,12 +299,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
     if (activeTab === "upcoming") {
       const promises = [
-        fetchAction({
-          status: "SCHEDULED",
-          page: 0,
-          size: 50,
-          sort: "startTime,asc",
-        }),
+        fetchAction({ status: "SCHEDULED", page: 0, size: 50, sort: "startTime,asc" }),
       ];
       if (!isDoctor)
         promises.push(fetchAction({ status: "RESERVED", page: 0, size: 50 }));
@@ -271,80 +307,43 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       const results = await Promise.all(promises);
       const all: AppointmentResponse[] = results
         .flatMap((r) => r.data?.content ?? [])
-        // Filtrujemy te, które już się zakończyły. Scheduler za chwilę zmieni im status na backendzie.
         .filter((a) => !isPast(new Date(a.endTime)))
-        .sort(
-          (a, b) =>
-            new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-        );
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
       setAppointments(all);
       setTotalPages(0);
     } else if (activeTab === "completed") {
-      const result = await fetchAction({
-        status: "COMPLETED",
-        page,
-        size: PAGE_SIZE,
-        sort: "startTime,desc",
-      });
+      const result = await fetchAction({ status: "COMPLETED", page, size: PAGE_SIZE, sort: "startTime,desc" });
       setAppointments(result.data?.content ?? []);
       setTotalPages(result.data?.totalPages ?? 0);
     } else {
       const [cancelled, noShow] = await Promise.all([
-        fetchAction({
-          status: "CANCELLED",
-          page,
-          size: PAGE_SIZE,
-          sort: "startTime,desc",
-        }),
-        fetchAction({
-          status: "NO_SHOW",
-          page,
-          size: PAGE_SIZE,
-          sort: "startTime,desc",
-        }),
+        fetchAction({ status: "CANCELLED", page, size: PAGE_SIZE, sort: "startTime,desc" }),
+        fetchAction({ status: "NO_SHOW", page, size: PAGE_SIZE, sort: "startTime,desc" }),
       ]);
 
       const all: AppointmentResponse[] = [
         ...(cancelled.data?.content ?? []),
         ...(noShow.data?.content ?? []),
-      ].sort(
-        (a, b) =>
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
-      );
+      ].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       setAppointments(all);
-      setTotalPages(
-        Math.max(cancelled.data?.totalPages ?? 0, noShow.data?.totalPages ?? 0),
-      );
+      setTotalPages(Math.max(cancelled.data?.totalPages ?? 0, noShow.data?.totalPages ?? 0));
     }
-
     setIsLoading(false);
   }, [activeTab, page, isDoctor]);
 
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
-  useEffect(() => {
-    setPage(0);
-  }, [activeTab]);
+  useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
+  useEffect(() => { setPage(0); }, [activeTab]);
 
-  const handleCancel = async (id: string) => {
+  const handleCancel = async (id: string, reason?: string) => {
     setActionId(id);
     let result;
     if (isDoctor) {
-      const reason = prompt(
-        "Provide the reason for cancelling the appointment:",
-      );
-      if (!reason) {
-        setActionId(null);
-        return;
-      }
-      result = await cancelByDoctorAction(id, reason);
+      result = await cancelByDoctorAction(id, reason ?? "");
     } else {
       result = await cancelAppointmentAction(id);
     }
-
     if (result.error) toast.error(result.error);
     else {
       toast.success("Appointment cancelled successfully.");
@@ -354,17 +353,11 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
   };
 
   const handleNoShow = async (id: string) => {
-    if (
-      !confirm(
-        "Oznaczyć tę wizytę jako nieodbytą? Opcja ta jest nieodwracalna.",
-      )
-    )
-      return;
     setActionId(id);
     const result = await markAsNoShowAction(id);
     if (result.error) toast.error(result.error);
     else {
-      toast.success("Appointment marked as no-show successfully.");
+      toast.success("Appointment marked as no-show.");
       fetchAppointments();
     }
     setActionId(null);
@@ -372,9 +365,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <DashboardHeader
-        title={isDoctor ? "Patient appointments" : "My appointments"}
-      />
+      <DashboardHeader title={isDoctor ? "Patient Appointments" : "My Appointments"} />
       <main className="flex-1 overflow-y-auto p-6 relative z-10">
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="flex items-center justify-between">
@@ -382,8 +373,8 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
               title={isDoctor ? "Manage Appointments" : "My Appointments"}
               description={
                 isDoctor
-                  ? "Check your schedule, cancel appointments or mark patients as no-show."
-                  : "Manage your upcoming appointments and review your treatment history."
+                  ? "View your schedule, cancel appointments, or mark patients as no-show."
+                  : "Manage your upcoming appointments and review your visit history."
               }
             />
             <Button
@@ -393,13 +384,11 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
               onClick={fetchAppointments}
               disabled={isLoading}
             >
-              <RefreshCw
-                size={16}
-                className={isLoading ? "animate-spin" : ""}
-              />
+              <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
             </Button>
           </div>
 
+          {/* Tabs */}
           <div className="flex flex-wrap gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-2xl w-fit">
             {TABS.map((tab) => (
               <button
@@ -417,9 +406,12 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
             ))}
           </div>
 
+          {/* Content */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="animate-spin text-primary" size={32} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <AppointmentCardSkeleton key={i} />
+              ))}
             </div>
           ) : appointments.length === 0 ? (
             <GlassPanel className="py-16 text-center border-dashed">
@@ -432,8 +424,13 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
                 {activeTab === "upcoming"
                   ? "No upcoming appointments"
                   : activeTab === "completed"
-                    ? "No completed appointments"
+                    ? "No completed appointments yet"
                     : "No cancelled appointments"}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeTab === "upcoming" && !isDoctor
+                  ? "Browse doctors to book your first appointment."
+                  : "Nothing to show here."}
               </p>
             </GlassPanel>
           ) : (
@@ -441,9 +438,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
               {appointments.map((appointment) => (
                 <div
                   key={appointment.id}
-                  onClick={() =>
-                    router.push(`/dashboard/appointments/${appointment.id}`)
-                  }
+                  onClick={() => router.push(`/dashboard/appointments/${appointment.id}`)}
                   className="cursor-pointer hover:scale-[1.01] transition-transform"
                 >
                   <AppointmentCard
@@ -458,32 +453,32 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
             </div>
           )}
 
-          {(activeTab === "completed" || activeTab === "cancelled") &&
-            totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-xl"
-                  disabled={page === 0 || isLoading}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <span className="text-sm font-bold">
-                  Strona {page + 1} z {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-xl"
-                  disabled={page >= totalPages - 1 || isLoading}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
-            )}
+          {/* Pagination */}
+          {(activeTab === "completed" || activeTab === "cancelled") && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-4">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-xl"
+                disabled={page === 0 || isLoading}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <span className="text-sm font-bold text-foreground">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-xl"
+                disabled={page >= totalPages - 1 || isLoading}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     </div>

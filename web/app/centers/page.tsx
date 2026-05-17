@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Medical Centers | ClearBook",
+  description:
+    "Find medical centers and clinics near you. Browse by city and book appointments with qualified doctors.",
+};
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/navbar";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
+import { Pagination } from "@/components/ui/pagination";
 import { getCentersAction } from "@/lib/actions/centers";
 import { TYPE_LABELS } from "@/lib/constants/labels";
 import type { MedicalCenterResponse } from "@/types/api";
@@ -60,10 +68,11 @@ function CenterCard({ center }: { center: MedicalCenterResponse }) {
 export default async function CentersListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ city?: string }>;
+  searchParams: Promise<{ city?: string; page?: string }>;
 }) {
-  const { city = "" } = await searchParams;
-  const result = await getCentersAction(city);
+  const { city = "", page: pageParam = "0" } = await searchParams;
+  const page = Math.max(0, parseInt(pageParam, 10) || 0);
+  const result = await getCentersAction(city, page);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background flex flex-col">
@@ -148,11 +157,26 @@ export default async function CentersListPage({
             )}
           </GlassPanel>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
-            {result.content.map((center) => (
-              <CenterCard key={center.id} center={center} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 md:grid-cols-2">
+              {result.content.map((center) => (
+                <CenterCard key={center.id} center={center} />
+              ))}
+            </div>
+
+            <Pagination
+              currentPage={result.number}
+              totalPages={result.totalPages}
+              buildHref={(p) => {
+                const params = new URLSearchParams();
+                if (city) params.set("city", city);
+                if (p > 0) params.set("page", String(p));
+                const qs = params.toString();
+                return `/centers${qs ? `?${qs}` : ""}`;
+              }}
+              className="mt-10"
+            />
+          </>
         )}
       </main>
     </div>

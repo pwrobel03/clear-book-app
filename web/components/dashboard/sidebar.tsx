@@ -13,9 +13,11 @@ import {
   ShieldCheck,
   User,
   LogOut,
+  BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
+import { useSidebarStore } from "@/store/sidebar";
 import type { UserRole } from "@/types/session";
 import { SidebarNotifications } from "./sidebard-notifications";
 
@@ -26,6 +28,7 @@ type NavItem = {
   icon: React.ElementType;
   label: string;
   soon?: boolean;
+  onClick?: () => void;
 };
 
 const navByRole: Record<UserRole, NavItem[]> = {
@@ -37,11 +40,11 @@ const navByRole: Record<UserRole, NavItem[]> = {
       label: "Appointments",
     },
     {
-      href: "/dashboard/doctors",
+      href: "/doctors",
       icon: Stethoscope,
       label: "Find a Doctor",
-      soon: true,
     },
+    { href: "/centers", icon: Building2, label: "Medical Centers" },
     { href: "/dashboard/profile", icon: User, label: "Profile", soon: true },
   ],
   DOCTOR: [
@@ -63,6 +66,7 @@ const navByRole: Record<UserRole, NavItem[]> = {
     },
     { href: "/dashboard/centers", icon: Building2, label: "My Centers" },
     { href: "/dashboard/invite", icon: Key, label: "Invite Code" },
+    { href: "/dashboard/reports", icon: BarChart2, label: "Reports" },
     { href: "/dashboard/profile", icon: User, label: "Profile" },
   ],
   ADMIN: [
@@ -111,12 +115,17 @@ function NavItem({ item, active }: { item: NavItem; active: boolean }) {
   );
 
   if (item.soon) return <div>{content}</div>;
-  return <Link href={item.href}>{content}</Link>;
+  return <Link href={item.href} onClick={item.onClick}>{content}</Link>;
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Called after a nav link is clicked — used to close the mobile drawer */
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -124,12 +133,18 @@ export function Sidebar() {
 
   if (!user) return null;
 
-  const nav = navByRole[user.role] ?? [];
+  // Inject the close callback into every nav item
+  const nav: NavItem[] = (navByRole[user.role] ?? []).map((item) => ({
+    ...item,
+    onClick: onNavigate,
+  }));
+
   const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
 
   async function handleLogout() {
+    onNavigate?.();
     clearUser();
-    await logoutAction(); // server action — redirects to /auth
+    await logoutAction();
   }
 
   return (
