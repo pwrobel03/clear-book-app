@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format, isPast, isWithinInterval, addMinutes } from "date-fns";
 import {
   Calendar,
@@ -291,8 +291,15 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
+  // Tracks which (tab, page) combination is currently expected.
+  // Prevents a slow in-flight request from overwriting state after the user
+  // has already navigated to a different tab (stale response problem).
+  const fetchKeyRef = useRef(0);
+
   const fetchAppointments = useCallback(async () => {
     setIsLoading(true);
+    const fetchKey = ++fetchKeyRef.current; // capture snapshot at call time
+
     const fetchAction = isDoctor
       ? getDoctorAppointmentsListAction
       : getMyAppointmentsAction;
@@ -305,6 +312,8 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
         promises.push(fetchAction({ status: "RESERVED", page: 0, size: 50 }));
 
       const results = await Promise.all(promises);
+      if (fetchKey !== fetchKeyRef.current) return; // stale — a newer fetch already started
+
       const all: AppointmentResponse[] = results
         .flatMap((r) => r.data?.content ?? [])
         .filter((a) => !isPast(new Date(a.endTime)))
@@ -314,6 +323,8 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       setTotalPages(0);
     } else if (activeTab === "completed") {
       const result = await fetchAction({ status: "COMPLETED", page, size: PAGE_SIZE, sort: "startTime,desc" });
+      if (fetchKey !== fetchKeyRef.current) return;
+
       setAppointments(result.data?.content ?? []);
       setTotalPages(result.data?.totalPages ?? 0);
     } else {
@@ -321,6 +332,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
         fetchAction({ status: "CANCELLED", page, size: PAGE_SIZE, sort: "startTime,desc" }),
         fetchAction({ status: "NO_SHOW", page, size: PAGE_SIZE, sort: "startTime,desc" }),
       ]);
+      if (fetchKey !== fetchKeyRef.current) return;
 
       const all: AppointmentResponse[] = [
         ...(cancelled.data?.content ?? []),
