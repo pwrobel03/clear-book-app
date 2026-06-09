@@ -29,25 +29,39 @@ public class FileStorageService {
         }
     }
 
-    public String storeFile(MultipartFile file) {
-        // Zabezpieczenie przed atakami Path Traversal i nadpisywaniem plików
-        String originalName = StringUtils.cleanPath(file.getOriginalFilename());
-        String extension = originalName.substring(originalName.lastIndexOf("."));
+    /** Allowed MIME types for license documents. */
+    private static final java.util.Set<String> ALLOWED_MIME_TYPES = java.util.Set.of(
+            "application/pdf",
+            "image/jpeg",
+            "image/jpg",
+            "image/png"
+    );
 
-        // Generujemy unikalną nazwę pliku, żeby lekarze nie nadpisali sobie nawzajem "licencja.pdf"
+    public String storeFile(MultipartFile file) {
+        // Validate MIME type — licenses must be PDF or a photo of the document
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException(
+                    "Invalid file type. Only PDF, JPG and PNG are accepted for license documents.");
+        }
+
+        // Derive a safe extension from the known MIME type (never from user-supplied filename)
+        String extension = switch (contentType.toLowerCase()) {
+            case "application/pdf"  -> ".pdf";
+            case "image/png"        -> ".png";
+            default                 -> ".jpg"; // image/jpeg and image/jpg
+        };
+
+        // UUID prefix guarantees uniqueness and eliminates any path-traversal risk
         String newFileName = UUID.randomUUID() + extension;
 
         try {
-            if (newFileName.contains("..")) {
-                throw new RuntimeException("Plik zawiera niedozwolone znaki w nazwie: " + newFileName);
-            }
-
             Path targetLocation = this.fileStorageLocation.resolve(newFileName);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-
+            log.info("Stored license file: {}", newFileName);
             return newFileName;
         } catch (IOException ex) {
-            throw new RuntimeException("Nie udało się zapisać pliku " + newFileName, ex);
+            throw new RuntimeException("Failed to save file: " + newFileName, ex);
         }
     }
 

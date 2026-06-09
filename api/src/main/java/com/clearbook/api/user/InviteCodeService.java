@@ -5,6 +5,7 @@ import com.clearbook.api.model.User;
 import com.clearbook.api.repository.InviteCodeRepository;
 import com.clearbook.api.user.dto.InviteCodeResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,14 +48,22 @@ public class InviteCodeService {
             return toResponse(inviteCode);
         }
 
-        // If no record exists at all, create a brand new one
+        // If no record exists at all, create a brand new one.
+        // A concurrent request from the same user could race here and also try INSERT;
+        // the unique constraint on user_id would throw DataIntegrityViolationException.
+        // We catch it and return whatever the winning transaction persisted.
         InviteCode newCode = InviteCode.builder()
                 .user(user)
                 .code(generateUniqueCode())
                 .expiresAt(LocalDateTime.now().plusHours(TTL_HOURS))
                 .build();
 
-        inviteCodeRepository.save(newCode);
+        try {
+            inviteCodeRepository.save(newCode);
+        } catch (DataIntegrityViolationException e) {
+            return toResponse(inviteCodeRepository.findByUser(user)
+                    .orElseThrow(() -> new IllegalStateException("Invite code conflict but no record found.", e)));
+        }
         return toResponse(newCode);
     }
 
