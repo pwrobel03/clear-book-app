@@ -5,8 +5,9 @@ Creates availability blocks (working shifts) for each doctor.
 
 Coverage window
 ---------------
-  • 4 weeks back  – past blocks required by seed_past_appointments
-  • 2 weeks ahead – future blocks visible to patients for booking
+  Controlled by ``past_weeks`` and ``future_weeks`` parameters:
+    • past_weeks   (default 4) – history required for COMPLETED/CANCELLED seed
+    • future_weeks (default 8) – visible calendar for patient booking
 
 Schedule
 --------
@@ -22,11 +23,18 @@ from seed.helpers import uid, now_ts
 
 def seed_availability_blocks(
     cur,
-    doctor_data: list[dict],
-    center_ids:  list[str],
+    doctor_data:  list[dict],
+    center_ids:   list[str],
+    past_weeks:   int = 4,
+    future_weeks: int = 8,
 ) -> dict:
     """
-    Ensure all Mon-Fri blocks exist for the 6-week window.
+    Ensure all Mon-Fri blocks exist for the requested window.
+
+    Parameters
+    ----------
+    past_weeks   : weeks of history to create (for past appointment seeding)
+    future_weeks : weeks ahead to create (visible to patients for booking)
 
     Returns
     -------
@@ -35,8 +43,13 @@ def seed_availability_blocks(
         Value : block_id (str UUID)
     """
     today   = date.today()
-    start_d = today - timedelta(weeks=4)
-    end_d   = today + timedelta(weeks=2)
+    start_d = today - timedelta(weeks=past_weeks)
+    end_d   = today + timedelta(weeks=future_weeks)
+
+    print(
+        f"  Window: {start_d}  →  {end_d}  "
+        f"({past_weeks} wks back, {future_weeks} wks ahead)"
+    )
 
     block_map: dict = {}
     new_count = 0
@@ -57,7 +70,8 @@ def seed_availability_blocks(
 
                 cur.execute(
                     "SELECT id FROM availability_blocks "
-                    "WHERE doctor_id=%s AND center_id=%s AND DATE(start_time)=%s",
+                    "WHERE doctor_id=%s AND center_id=%s AND DATE(start_time)=%s "
+                    "AND is_deleted = false",
                     (doc_id, center_id, current),
                 )
                 row = cur.fetchone()
@@ -70,8 +84,9 @@ def seed_availability_blocks(
                     cur.execute(
                         """
                         INSERT INTO availability_blocks
-                            (id, doctor_id, center_id, start_time, end_time, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                            (id, doctor_id, center_id,
+                             start_time, end_time, is_deleted, created_at)
+                        VALUES (%s, %s, %s, %s, %s, false, %s)
                         """,
                         (bid, doc_id, center_id, bs, be, now_ts()),
                     )

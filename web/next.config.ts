@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // so the Docker runtime stage can run with just `node server.js`
   output: "standalone",
 
+  // Increase Server Action body size limit for license file uploads.
+  // Default is 1 MB; doctors upload PDF/image documents up to 5 MB.
+  serverActions: {
+    bodySizeLimit: "5mb",
+  },
+
   // WŁĄCZENIE FUNKCJI FORBIDDEN() I UNAUTHORIZED()
   experimental: {
     authInterrupts: true,

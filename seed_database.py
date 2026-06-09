@@ -47,6 +47,8 @@ def main() -> None:
     print(f"  doctors      : {args.doctors}")
     print(f"  patients     : {args.patients}")
     print(f"  appts/patient: {args.min_appts}–{args.max_appts}")
+    print(f"  past weeks   : {args.past_weeks}")
+    print(f"  future weeks : {args.future_weeks}")
     print(f"  reset        : {args.reset}")
     print(f"  dry-run      : {args.dry_run}")
     print("=" * 60 + "\n")
@@ -99,7 +101,11 @@ def main() -> None:
 
         # ── 7. Availability blocks (Mon–Fri, 4 wks back + 2 wks ahead) ───────
         print("\n─── 7. Availability blocks ───────────────────────────────────")
-        block_map = seed_availability_blocks(cur, doctor_data, center_ids)
+        block_map = seed_availability_blocks(
+            cur, doctor_data, center_ids,
+            past_weeks=args.past_weeks,
+            future_weeks=args.future_weeks,
+        )
 
         # ── 8. Appointments (per-patient, load-balanced across doctors) ───────
         print("\n─── 8. Appointments (per-patient) ────────────────────────────")

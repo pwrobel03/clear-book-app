@@ -75,6 +75,14 @@ def parse_args() -> argparse.Namespace:
         help="Maximum appointments per patient (default: 10)",
     )
     p.add_argument(
+        "--past-weeks", type=int, default=4, dest="past_weeks",
+        help="How many weeks of past availability blocks to create (default: 4)",
+    )
+    p.add_argument(
+        "--future-weeks", type=int, default=8, dest="future_weeks",
+        help="How many weeks of future availability blocks to create (default: 8)",
+    )
+    p.add_argument(
         "--reset", action="store_true",
         help="Delete all previously seeded data before inserting",
     )

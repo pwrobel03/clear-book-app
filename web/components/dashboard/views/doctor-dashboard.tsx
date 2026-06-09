@@ -5,6 +5,7 @@ import { format, isToday } from "date-fns";
 import {
   Calendar,
   Building2,
+  ExternalLink,
   Key,
   RefreshCw,
   Copy,
@@ -24,6 +25,7 @@ import type { SessionUser } from "@/types/session";
 import {
   getInviteCodeAction,
   refreshInviteCodeAction,
+  getProfileAction,
 } from "@/lib/actions/doctor";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { PageHeader } from "../page-header";
@@ -202,15 +204,17 @@ export function DoctorDashboard({ user }: { user: SessionUser }) {
   const [todayAppts, setTodayAppts] = useState<AppointmentResponse[]>([]);
   const [activeCenters, setActiveCenters] = useState<number | null>(null);
   const [monthReport, setMonthReport] = useState<MonthlyReport | null>(null);
+  const [publicId, setPublicId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadAll() {
       setDataLoading(true);
 
-      const [apptResult, centersResult, reportResult] = await Promise.all([
+      const [apptResult, centersResult, reportResult, profileResult] = await Promise.all([
         getDoctorAppointmentsListAction({ status: "SCHEDULED", size: 50 }),
         getMyCentersAction(),
         getMonthlyReportAction(today.getFullYear(), today.getMonth() + 1),
+        getProfileAction(),
       ]);
 
       // Filter for today
@@ -225,6 +229,7 @@ export function DoctorDashboard({ user }: { user: SessionUser }) {
       setActiveCenters(centers.filter((c) => c.status === "ACTIVE").length);
 
       setMonthReport(reportResult.data ?? null);
+      setPublicId(profileResult.data?.publicId ?? null);
       setDataLoading(false);
     }
     loadAll();
@@ -236,10 +241,23 @@ export function DoctorDashboard({ user }: { user: SessionUser }) {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <main className="flex-1 overflow-y-auto relative z-10">
-        <PageHeader
-          title={`Welcome, Dr. ${user.lastName}`}
-          description="Here's your practice at a glance."
-        />
+        <div className="flex items-start justify-between gap-4">
+          <PageHeader
+            title={`Welcome, Dr. ${user.lastName}`}
+            description="Here's your practice at a glance."
+          />
+          {publicId && (
+            <Link
+              href={`/doctors/${publicId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 flex shrink-0 items-center gap-1.5 rounded-xl border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              <ExternalLink size={13} />
+              View public profile
+            </Link>
+          )}
+        </div>
 
         <div className="space-y-8 max-w-5xl mx-auto">
 

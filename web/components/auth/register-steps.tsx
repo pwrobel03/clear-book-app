@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import {
   User,
@@ -221,7 +221,7 @@ export function PersonalDetailsStep({
             <FormControl>
               <div className="relative">
                 <Mail
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10"
                   size={18}
                 />
                 <Input
@@ -247,7 +247,7 @@ export function PersonalDetailsStep({
               <FormControl>
                 <div className="relative">
                   <Lock
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10"
                     size={18}
                   />
                   <Input
@@ -279,7 +279,7 @@ export function PersonalDetailsStep({
               <FormControl>
                 <div className="relative">
                   <Lock
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10"
                     size={18}
                   />
                   <Input
@@ -347,6 +347,9 @@ interface DoctorVerificationStepProps {
   setSelectedFile: (file: File | null) => void;
 }
 
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
 export function DoctorVerificationStep({
   onBack,
   onSubmit,
@@ -356,6 +359,29 @@ export function DoctorVerificationStep({
 }: DoctorVerificationStepProps) {
   const { control } = useFormContext<RegisterFormData>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, onChange: (...args: unknown[]) => void) => {
+      const file = e.target.files?.[0] ?? null;
+      setFileError(null);
+
+      if (file) {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          setFileError(
+            `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_FILE_SIZE_MB} MB.`
+          );
+          // Reset input so the same file can be re-selected after removing it
+          e.target.value = "";
+          return;
+        }
+      }
+
+      setSelectedFile(file);
+      onChange(e.target.files);
+    },
+    [setSelectedFile]
+  );
 
   return (
     <div className="space-y-5">
@@ -380,11 +406,7 @@ export function DoctorVerificationStep({
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
                   className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    setSelectedFile(file);
-                    onChange(e.target.files);
-                  }}
+                  onChange={(e) => handleFileChange(e, onChange)}
                   {...rest}
                 />
                 {selectedFile ? (
@@ -397,6 +419,7 @@ export function DoctorVerificationStep({
                       type="button"
                       onClick={() => {
                         setSelectedFile(null);
+                        setFileError(null);
                         onChange(undefined);
                         if (fileInputRef.current)
                           fileInputRef.current.value = "";
@@ -418,10 +441,14 @@ export function DoctorVerificationStep({
                         Click to upload document
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        PDF, JPG, or PNG (Max 10 MB)
+                        PDF, JPG, or PNG — max {MAX_FILE_SIZE_MB} MB
                       </p>
                     </div>
                   </button>
+                )}
+                {/* Client-side file size error */}
+                {fileError && (
+                  <p className="mt-2 text-xs text-destructive">{fileError}</p>
                 )}
               </div>
             </FormControl>
