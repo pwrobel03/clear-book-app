@@ -328,9 +328,14 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       setAppointments(result.data?.content ?? []);
       setTotalPages(result.data?.totalPages ?? 0);
     } else {
+      // We load all cancelled and no-show items in a single pass (up to 200 each).
+      // Mixing two statuses in one paginated list is fundamentally broken at the
+      // database level — the only correct solutions are a backend multi-status
+      // endpoint or separate sub-tabs. For now, loading all is fine because the
+      // total volume of cancelled appointments per user is always small.
       const [cancelled, noShow] = await Promise.all([
-        fetchAction({ status: "CANCELLED", page, size: PAGE_SIZE, sort: "startTime,desc" }),
-        fetchAction({ status: "NO_SHOW", page, size: PAGE_SIZE, sort: "startTime,desc" }),
+        fetchAction({ status: "CANCELLED", page: 0, size: 200, sort: "startTime,desc" }),
+        fetchAction({ status: "NO_SHOW",   page: 0, size: 200, sort: "startTime,desc" }),
       ]);
       if (fetchKey !== fetchKeyRef.current) return;
 
@@ -340,7 +345,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       ].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       setAppointments(all);
-      setTotalPages(Math.max(cancelled.data?.totalPages ?? 0, noShow.data?.totalPages ?? 0));
+      setTotalPages(0); // no pagination — full list
     }
     setIsLoading(false);
   }, [activeTab, page, isDoctor]);
