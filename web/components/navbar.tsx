@@ -3,6 +3,7 @@ import { getServerSession } from "@/lib/server/session";
 import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 import { NotificationBell } from "./dashboard/notification-bell";
 import { ThemeToggle } from "./theme-toggle";
+import { BrandLogo } from "./ui/brand-logo";
 
 export async function Navbar() {
   const session = await getServerSession();
@@ -16,11 +17,7 @@ export async function Navbar() {
           href="/"
           className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-xs font-black text-primary-foreground">
-              CB
-            </span>
-          </div>
+          <BrandLogo size={32} />
           <span className="font-bold text-foreground">ClearBook</span>
         </Link>
 

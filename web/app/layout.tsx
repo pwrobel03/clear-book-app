@@ -17,6 +17,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ClearBook — System Rezerwacji Wizyt",
   description: "Rezerwuj wizyty lekarskie szybko i wygodnie",
+  icons: {
+    icon: [
+      { url: "/logo.png", media: "(prefers-color-scheme: light)" },
+      { url: "/logo_white.png", media: "(prefers-color-scheme: dark)" },
+    ],
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

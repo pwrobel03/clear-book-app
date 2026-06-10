@@ -20,6 +20,7 @@ import { useAuthStore } from "@/store/auth";
 import { useSidebarStore } from "@/store/sidebar";
 import type { UserRole } from "@/types/session";
 import { SidebarNotifications } from "./sidebard-notifications";
+import { BrandLogo } from "@/components/ui/brand-logo";
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
@@ -115,7 +116,11 @@ function NavItem({ item, active }: { item: NavItem; active: boolean }) {
   );
 
   if (item.soon) return <div>{content}</div>;
-  return <Link href={item.href} onClick={item.onClick}>{content}</Link>;
+  return (
+    <Link href={item.href} onClick={item.onClick}>
+      {content}
+    </Link>
+  );
 }
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -150,12 +155,13 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden rounded-3xl bg-primary-dark shadow-glass">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-          <span className="text-xs font-black text-white">CB</span>
-        </div>
+      <Link
+        href="/"
+        className="flex items-center gap-2.5 border-b border-white/10 px-4 py-5"
+      >
+        <BrandLogo size={32} alwaysWhite />
         <span className="text-sm font-bold text-white">ClearBook</span>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
