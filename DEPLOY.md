@@ -56,13 +56,21 @@ In OCI Console → **Networking** → **Virtual Cloud Networks** → your VCN
 
 Do **not** open port 8080 or 3000 — they are internal only.
 
-Also disable the OS firewall (Ubuntu ships with `iptables` managed by OCI):
+OCI Ubuntu VMs have **two independent firewalls** — the OCI Security List (cloud level)
+AND the OS-level `iptables`. Both must allow the traffic.
+
 ```bash
-sudo iptables -F         # flush rules
-sudo netfilter-persistent save  # make permanent (if installed)
-# or simply:
-sudo ufw disable
+# Open ports 80 and 443 in iptables (INSERT preserves existing rules including SSH)
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+
+# Persist rules across reboots
+sudo apt-get install -y iptables-persistent
+sudo netfilter-persistent save
 ```
+
+> ⚠️  Do NOT use `iptables -F` (flush) — it removes all rules including the one
+> that allows your SSH connection, and you will be locked out of the VM.
 
 ---
 

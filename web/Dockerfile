@@ -22,6 +22,13 @@ COPY . .
 
 ARG SPRING_API_URL=http://backend:8080
 ENV SPRING_API_URL=${SPRING_API_URL}
+
+# WebSocket URL for STOMP notifications — baked into the client-side bundle.
+# In Docker production: wss://<domain>/ws (nginx proxies to backend:8080/ws).
+# In local dev: falls back to ws://localhost:8080/ws (set in notification-listener.tsx).
+ARG NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL}
+
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
