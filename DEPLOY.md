@@ -37,6 +37,10 @@ internally. The browser never calls the Spring API directly — only nginx is ex
 4. Add your SSH public key
 5. In **Primary VNIC**: assign a public IP
 
+> **Default SSH user**: For **Canonical Ubuntu** images the default user is `ubuntu`.
+> If you choose an **Oracle Linux** image (heavily promoted by OCI), the user is `opc`.
+> This guide assumes Ubuntu — adjust the username if you switch images.
+
 > **ARM64 note**: If you use the Ampere (A1) shape, the `eclipse-temurin:25`
 > image must exist for `linux/arm64`. Verify on Docker Hub before deploying.
 > If unavailable, use `eclipse-temurin:21-jre-noble` and update `api/Dockerfile`.
@@ -231,17 +235,25 @@ clearbook_postgres    running (healthy)
 
 ## Step 8 — Certificate Auto-Renewal
 
-Add a cron job on the VM to renew the certificate every 60 days:
+Cron runs with a minimal `PATH` environment — commands like `docker` are not
+found unless you use the full binary path. Using `/usr/bin/docker` ensures the
+job runs correctly regardless of the cron environment.
 
 ```bash
 crontab -e
 ```
 
-Add this line:
+Add these lines (note full paths and `MAILTO` to suppress silent mail errors):
 ```cron
+MAILTO=""
 0 3 * * * cd /home/ubuntu/clearbook && \
-  docker compose --profile certbot run --rm certbot renew --quiet && \
-  docker compose exec nginx nginx -s reload >> /var/log/certbot-renew.log 2>&1
+  /usr/bin/docker compose --profile certbot run --rm certbot renew --quiet && \
+  /usr/bin/docker compose exec nginx nginx -s reload >> /var/log/certbot-renew.log 2>&1
+```
+
+Verify the path to docker on your VM before saving:
+```bash
+which docker   # should output /usr/bin/docker
 ```
 
 ---
@@ -262,16 +274,44 @@ docker compose logs -f backend
 docker compose logs -f frontend
 docker compose logs -f nginx
 
-# Run database seed
-docker compose exec backend sh  # then run your seed commands
-# Or from outside: connect with psych to postgres-db
-
-# Stop all services
+# Stop all services (data volumes are preserved)
 docker compose down
 
-# Full reset (WARNING: deletes all data volumes)
+# Full reset — WARNING: -v deletes ALL named volumes including the database!
 docker compose down -v
 ```
+
+### Database Backup & Restore
+
+Named Docker volumes are safe from accidental deletion during normal operation,
+but `docker compose down -v` wipes them permanently. Keep regular backups.
+
+```bash
+# ── Create a backup ────────────────────────────────────────────────────────────
+# pg_dump with -F c (custom format) supports selective table restore later.
+docker compose exec postgres-db \
+  pg_dump -U ${DB_USER} -d ${DB_NAME} -F c \
+  > backup_$(date +%F).dump
+
+# ── Restore from a backup ──────────────────────────────────────────────────────
+# The database must exist but be empty (or freshly created).
+docker exec -i $(docker compose ps -q postgres-db) \
+  pg_restore -U ${DB_USER} -d ${DB_NAME} -1 < backup_2025-01-01.dump
+
+# ── Automated daily backup via cron (add to crontab -e) ───────────────────────
+# Keeps 30 days of backups in ~/clearbook/backups/
+MAILTO=""
+0 2 * * * mkdir -p /home/ubuntu/clearbook/backups && \
+  /usr/bin/docker compose -f /home/ubuntu/clearbook/docker-compose.yaml \
+  exec -T postgres-db pg_dump -U clearbook_user -d clearbook_db -F c \
+  > /home/ubuntu/clearbook/backups/backup_$(date +\%F).dump && \
+  find /home/ubuntu/clearbook/backups -name "*.dump" -mtime +30 -delete \
+  >> /var/log/db-backup.log 2>&1
+```
+
+> 💡 For production consider also copying backups to OCI Object Storage
+> (`oci os object put`) or a remote location — a backup on the same VM
+> is lost if the VM is destroyed.
 
 ---
 
