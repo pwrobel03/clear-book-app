@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Link, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { BrandLogo } from "@/components/ui/brand-logo";
+import Link from "next/link";
 
 // TODO: We should split this page into multiple subpages (login, register, etc.) but for now we will keep everything in one place to speed up development.
 
@@ -22,10 +23,13 @@ function BrandPanel() {
       <div className="pointer-events-none absolute top-1/4 -left-16 h-64 w-64 rounded-full bg-primary-light/10 blur-3xl" />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center gap-3">
+      <Link
+        href="/"
+        className="relative z-10 flex items-center gap-3 cursor-pointer"
+      >
         <BrandLogo size={40} alwaysWhite />
         <span className="text-xl font-bold tracking-tight">ClearBook</span>
-      </div>
+      </Link>
 
       {/* Main Content & Glassmorphism Card */}
       <div className="relative z-10 mt-auto mb-12 space-y-10">

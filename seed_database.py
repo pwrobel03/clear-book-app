@@ -24,18 +24,19 @@ except ImportError:
     sys.exit("Missing psycopg2. Install: pip install psycopg2-binary")
 
 from seed.config import parse_args, DB_CONFIG, SEED_PASSWORD
-from seed.reset import reset_seeded_data
+from seed.reset import reset_seeded_data, full_reset_data
 from seed.data.centers import MEDICAL_CENTERS
 from seed.data.doctors import generate_doctors
 from seed.data.patients import make_patients
 
-from seed.seeders.centers      import seed_medical_centers
-from seed.seeders.doctors      import seed_doctors, seed_dummy_license, load_specializations
-from seed.seeders.memberships  import seed_memberships
-from seed.seeders.patients     import seed_patients
-from seed.seeders.blocks       import seed_availability_blocks
-from seed.seeders.appointments import seed_appointments_per_patient
-from seed.seeders.reviews      import seed_reviews
+from seed.seeders.centers         import seed_medical_centers
+from seed.seeders.doctors         import seed_doctors, seed_dummy_license, load_specializations
+from seed.seeders.memberships     import seed_memberships
+from seed.seeders.patients        import seed_patients
+from seed.seeders.blocks          import seed_availability_blocks
+from seed.seeders.appointments    import seed_appointments_per_patient
+from seed.seeders.reviews         import seed_reviews
+from seed.seeders.fixed_accounts  import seed_fixed_accounts
 
 
 def main() -> None:
@@ -50,6 +51,7 @@ def main() -> None:
     print(f"  past weeks   : {args.past_weeks}")
     print(f"  future weeks : {args.future_weeks}")
     print(f"  reset        : {args.reset}")
+    print(f"  full-reset   : {args.full_reset}")
     print(f"  dry-run      : {args.dry_run}")
     print("=" * 60 + "\n")
 
@@ -69,7 +71,11 @@ def main() -> None:
 
     try:
         # ── Optional reset ────────────────────────────────────────────────────
-        if args.reset:
+        if args.full_reset:
+            print("─── Full Reset ───────────────────────────────────────────")
+            full_reset_data(cur)
+            print()
+        elif args.reset:
             print("─── Reset ────────────────────────────────────────────────")
             reset_seeded_data(cur)
             print()
@@ -85,6 +91,14 @@ def main() -> None:
         # ── 3. Dummy licence PDF ──────────────────────────────────────────────
         print("\n─── 3. Dummy licence PDF ─────────────────────────────────────")
         seed_dummy_license(Path(__file__).resolve().parent)
+
+        # ── 3b. Fixed demo accounts (mmarcjan / pwrobel / bkozyra) ───────────
+        print("\n─── 3b. Fixed demo accounts ──────────────────────────────────")
+        seed_fixed_accounts(
+            cur, center_ids, spec_map,
+            past_weeks=args.past_weeks,
+            future_weeks=args.future_weeks,
+        )
 
         # ── 4. Doctors · profiles · services ─────────────────────────────────
         print("\n─── 4. Doctors · profiles · services ────────────────────────")

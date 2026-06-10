@@ -84,7 +84,15 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--reset", action="store_true",
-        help="Delete all previously seeded data before inserting",
+        help="Delete previously seeded demo data (@clearbook.demo / @example.com / fixed accounts)",
+    )
+    p.add_argument(
+        "--full-reset", action="store_true", dest="full_reset",
+        help=(
+            "Delete ALL data except Spring Boot's own accounts "
+            "(admin@/patient@/doctor@ clearbook.com). "
+            "Use this to wipe manually registered users too."
+        ),
     )
     p.add_argument(
         "--dry-run", action="store_true",
