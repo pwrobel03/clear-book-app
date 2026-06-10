@@ -83,6 +83,7 @@ public interface AvailabilityBlockRepository extends JpaRepository<AvailabilityB
             "AND b.endTime > :now " +
             "AND b.endTime > :rangeStart " +
             "AND b.startTime < :rangeEnd " +
+            "AND b.center.status = com.clearbook.api.model.CenterStatus.ACTIVE " +
             "ORDER BY b.startTime")
     List<AvailabilityBlock> findFutureBlocksByDoctorId(
             @Param("doctorId") UUID doctorId,

@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Star } from "lucide-react";
+import { Link, Star } from "lucide-react";
+import { BrandLogo } from "@/components/ui/brand-logo";
 
 // TODO: We should split this page into multiple subpages (login, register, etc.) but for now we will keep everything in one place to speed up development.
 
@@ -22,9 +23,7 @@ function BrandPanel() {
 
       {/* Header */}
       <div className="relative z-10 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shadow-lg">
-          <span className="text-sm font-black text-accent-foreground">CB</span>
-        </div>
+        <BrandLogo size={40} alwaysWhite />
         <span className="text-xl font-bold tracking-tight">ClearBook</span>
       </div>
 
@@ -91,9 +90,7 @@ export default function AuthPage() {
       <div className="flex flex-col bg-background">
         <div className="flex items-center justify-between px-8 pt-6">
           <div className="flex items-center gap-2 lg:invisible">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-xs font-black text-accent">CB</span>
-            </div>
+            <BrandLogo size={32} />
             <span className="text-sm font-bold text-foreground">ClearBook</span>
           </div>
           <ThemeToggle />

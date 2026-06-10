@@ -52,8 +52,19 @@ public class AvailabilityService {
         MedicalCenter center = centerRepository.findById(request.getCenterId())
                 .orElseThrow(() -> new IllegalArgumentException("Medical center not found."));
 
-        if (!membershipRepository.existsByUserAndCenter(doctor, center)) {
-            throw new IllegalStateException("You are not a member of this medical center.");
+        // Verify the doctor has an ACTIVE membership at this center
+        CenterMembership membership = membershipRepository.findByUserAndCenter(doctor, center)
+                .orElseThrow(() -> new IllegalStateException("You are not a member of this medical center."));
+
+        if (membership.getStatus() != MembershipStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "Your membership at this medical center is not active (status: " + membership.getStatus() + ").");
+        }
+
+        // Verify the center itself has been approved
+        if (center.getStatus() != CenterStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "This medical center is not yet approved or is suspended (status: " + center.getStatus() + ").");
         }
 
         AvailabilityBlock block = AvailabilityBlock.builder()
@@ -105,6 +116,10 @@ public class AvailabilityService {
                 LocalDateTime newStart = original.getStartTime().plusDays(daysToAdd);
                 LocalDateTime newEnd = original.getEndTime().plusDays(daysToAdd);
 
+                // Skip blocks whose center is no longer active (suspended / pending re-approval)
+                if (original.getCenter().getStatus() != CenterStatus.ACTIVE) {
+                    continue;
+                }
                 if (!blockRepository.existsOverlappingBlock(doctor, newStart, newEnd)) {
                     newBlocks.add(AvailabilityBlock.builder()
                             .doctor(doctor)
