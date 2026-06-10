@@ -26,6 +26,7 @@ interface ReviewData {
   id: string;
   rating: number;
   patientComment: string;
+  createdAt?: string;
   doctorReply?: string | null;
   repliedAt?: string | null;
   updatedAt?: string | null;
@@ -74,7 +75,8 @@ export function AppointmentReviewSection({
   const handlePatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) return toast.error("Please select a star rating.");
-    if (!comment.trim()) return toast.error("Please write a comment before submitting.");
+    if (!comment.trim())
+      return toast.error("Please write a comment before submitting.");
 
     setIsSubmitting(true);
 
@@ -99,6 +101,7 @@ export function AppointmentReviewSection({
   };
 
   const handlePatientDelete = async () => {
+    if (!review) return;
     setIsSubmitting(true);
     const result = await deleteReviewAction(review.id);
 
@@ -119,6 +122,7 @@ export function AppointmentReviewSection({
   // --- LOGIKA LEKARZA ---
   const handleDoctorReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!review) return;
     if (!replyText.trim()) return toast.error("Response cannot be empty.");
 
     setIsSubmitting(true);
@@ -136,6 +140,7 @@ export function AppointmentReviewSection({
 
   const handleDoctorReplyEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!review) return;
     if (!editedReplyText.trim())
       return toast.error("Response cannot be empty.");
 
@@ -153,6 +158,7 @@ export function AppointmentReviewSection({
   };
 
   const handleDoctorReplyDelete = async () => {
+    if (!review) return;
     setIsSubmitting(true);
     const result = await deleteReplyAction(review.id);
 
@@ -387,7 +393,7 @@ export function AppointmentReviewSection({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setEditedReplyText(review.doctorReply);
+                        setEditedReplyText(review.doctorReply ?? "");
                         setIsEditingReply(true);
                       }}
                       className="h-6 px-2 py-0 text-muted-foreground hover:text-foreground"

@@ -125,6 +125,22 @@ export interface PendingDoctorResponse {
 /** @deprecated Use PendingDoctorResponse */
 export type PendingDoctor = PendingDoctorResponse
 
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export interface ReviewResponse {
+  id: string
+  rating: number
+  patientComment: string
+  patientDisplayName: string
+  isAnonymous?: boolean
+  patientFirstName?: string
+  patientLastName?: string
+  createdAt: string
+  updatedAt?: string | null
+  doctorReply?: string | null
+  repliedAt?: string | null
+}
+
 // ─── Pagination (Spring Data) ─────────────────────────────────────────────────
 
 export interface SpringPage<T> {

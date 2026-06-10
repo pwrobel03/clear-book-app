@@ -5,7 +5,6 @@ import { Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/auth";
 import { useSidebarStore } from "@/store/sidebar";
-import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 
 const roleLabel: Record<string, string> = {
   USER: "Patient",
@@ -21,7 +20,11 @@ interface DashboardHeaderProps {
   actions?: React.ReactNode;
 }
 
-export function DashboardHeader({ title, description, actions }: DashboardHeaderProps) {
+export function DashboardHeader({
+  title,
+  description,
+  actions,
+}: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const openSidebar = useSidebarStore((s) => s.open);
 
@@ -45,7 +48,9 @@ export function DashboardHeader({ title, description, actions }: DashboardHeader
                 : "Dashboard")}
           </h1>
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </p>
           )}
         </div>
       </div>

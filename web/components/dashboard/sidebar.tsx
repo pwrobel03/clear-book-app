@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { logoutAction } from "@/lib/actions/auth";
 import {
   LayoutDashboard,
@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
-import { useSidebarStore } from "@/store/sidebar";
 import type { UserRole } from "@/types/session";
 import { SidebarNotifications } from "./sidebard-notifications";
 import { BrandLogo } from "@/components/ui/brand-logo";
@@ -132,7 +131,6 @@ interface SidebarProps {
 
 export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const clearUser = useAuthStore((s) => s.clearUser);
 

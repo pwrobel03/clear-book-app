@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -21,7 +21,7 @@ import { toast } from "sonner";
 
 import { loginSchema, type LoginFormData } from "@/lib/schemas/auth";
 
-export function LoginForm() {
+function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
@@ -59,6 +59,7 @@ export function LoginForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+
         <FormField
           control={form.control}
           name="email"
@@ -145,5 +146,13 @@ export function LoginForm() {
         </Button>
       </form>
     </Form>
+  );
+}
+
+export function LoginForm() {
+  return (
+    <Suspense>
+      <LoginFormInner />
+    </Suspense>
   );
 }

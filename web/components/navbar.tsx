@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getServerSession } from "@/lib/server/session";
-import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 import { NotificationBell } from "./dashboard/notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 import { BrandLogo } from "./ui/brand-logo";

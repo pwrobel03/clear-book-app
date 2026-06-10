@@ -226,21 +226,6 @@ function CenterCard({
   );
 }
 
-function EmptyState({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ElementType;
-  label: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/20 dark:border-white/10 py-16 text-center bg-card/20 backdrop-blur-sm">
-      <Icon size={32} className="text-muted-foreground/50" />
-      <p className="text-sm font-medium text-foreground">{label}</p>
-    </div>
-  );
-}
-
 export default function VerificationsPage() {
   const [doctors, setDoctors] = useState<PendingDoctor[]>([]);
   const [centers, setCenters] = useState<PendingCenter[]>([]);
