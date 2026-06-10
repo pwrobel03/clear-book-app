@@ -23,6 +23,12 @@ WORKDIR /app
 
 # Create a non-root user for security
 RUN groupadd --system appgroup && useradd --system --gid appgroup appuser
+
+# Create the uploads directory before dropping to non-root so the app can write
+# license PDFs and other uploaded files. Mounted as a named volume in production.
+RUN mkdir -p /app/uploads/licenses && \
+    chown -R appuser:appgroup /app/uploads
+
 USER appuser
 
 COPY --from=builder /app/target/*.jar app.jar

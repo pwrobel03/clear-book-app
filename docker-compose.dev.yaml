@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ClearBook — Local Development Overrides
+# ─────────────────────────────────────────────────────────────────────────────
+# Merges on top of docker-compose.yaml for local development.
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up
+#
+# Changes vs. production:
+#   - backend port 8080 and frontend port 3000 are exposed to the host
+#   - nginx is disabled (use direct ports instead)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  backend:
+    ports:
+      - "8080:8080"
+
+  frontend:
+    ports:
+      - "3000:3000"
+
+  # Disable nginx in local dev — access backend and frontend directly.
+  nginx:
+    profiles:
+      - nginx-disabled

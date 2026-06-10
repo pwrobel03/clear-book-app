@@ -22,6 +22,8 @@ COPY . .
 
 ARG SPRING_API_URL=http://backend:8080
 ENV SPRING_API_URL=${SPRING_API_URL}
+# Disable Next.js telemetry during build
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
 
@@ -36,6 +38,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Non-root user for security
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
