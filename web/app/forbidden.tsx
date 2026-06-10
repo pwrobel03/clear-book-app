@@ -11,7 +11,7 @@ export default function Forbidden() {
         Access Denied (403)
       </h1>
       <p className="mt-4 max-w-md text-sm text-muted-foreground">
-        You don't have permission to access this page. Please contact the
+        You don&apos;t have permission to access this page. Please contact the
         administrator if you believe this is an error.
       </p>
       <div className="mt-8 flex gap-4">

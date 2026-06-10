@@ -52,9 +52,9 @@ function BrandPanel() {
             ))}
           </div>
           <p className="text-sm leading-relaxed text-white/90">
-            "ClearBook has completely transformed how I manage my practice. The
+            &ldquo;ClearBook has completely transformed how I manage my practice. The
             scheduling is seamless, and my patients love how easy it is to book
-            an appointment."
+            an appointment.&rdquo;
           </p>
           <div className="mt-5 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-accent to-[#102240] p-[2px]">

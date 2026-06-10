@@ -232,7 +232,7 @@ export function AppointmentDetailClient({
               <div className="mb-6 p-5 border border-border/60 rounded-2xl space-y-3">
                 <h3 className="font-bold flex items-center gap-2 text-foreground">
                   <NotebookPen size={17} className="text-accent" />
-                  Doctor's notes
+                  Doctor&apos;s notes
                 </h3>
                 <textarea
                   value={doctorNotesDraft}
@@ -269,7 +269,7 @@ export function AppointmentDetailClient({
               <div className="mb-6 p-5 bg-accent/5 border border-accent/20 rounded-2xl">
                 <h3 className="font-bold flex items-center gap-2 mb-2 text-accent">
                   <NotebookPen size={17} />
-                  Doctor's notes
+                  Doctor&apos;s notes
                 </h3>
                 <p className="text-sm text-foreground/80 whitespace-pre-wrap">
                   {appointment.doctorNotes}
@@ -382,7 +382,7 @@ export function AppointmentDetailClient({
                   <User size={20} />
                 </div>
                 <div>
-                  <p className="font-bold text-sm">Doctor's Profile</p>
+                  <p className="font-bold text-sm">Doctor&apos;s Profile</p>
                   <p className="text-xs text-muted-foreground">
                     View reviews and profile information.
                   </p>

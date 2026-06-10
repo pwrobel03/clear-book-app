@@ -42,7 +42,7 @@ export function ServiceManagerClient() {
 
     if (!result.error && result.data) {
       const activeServices = result.data.filter((s) => {
-        const isActive = s.active !== false && (s as any).isActive !== false;
+        const isActive = s.active !== false && (s as { isActive?: boolean }).isActive !== false;
         return isActive;
       });
 

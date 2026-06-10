@@ -132,7 +132,7 @@ export default async function CenterDashboardPage({ params }: Props) {
                 <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
                   Module for managing appointments will be available soon. In
                   the meantime, you can invite doctors to your center and manage
-                  their roles in the "Staff" tab.
+                  their roles in the &ldquo;Staff&rdquo; tab.
                 </p>
               </GlassPanel>
             </TabsContent>
@@ -169,7 +169,7 @@ export default async function CenterDashboardPage({ params }: Props) {
                         Center Settings
                       </h3>
                       <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                        Edit your center's information, manage working hours,
+                        Edit your center&apos;s information, manage working hours,
                         and configure other settings related to how your center
                         operates within the ClearBook system.
                       </p>

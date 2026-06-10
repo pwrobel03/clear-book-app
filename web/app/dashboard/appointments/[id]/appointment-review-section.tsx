@@ -22,11 +22,23 @@ import {
   deleteReplyAction,
 } from "@/lib/actions/review";
 
+interface ReviewData {
+  id: string;
+  rating: number;
+  patientComment: string;
+  doctorReply?: string | null;
+  repliedAt?: string | null;
+  updatedAt?: string | null;
+  isAnonymous?: boolean;
+  patientFirstName?: string;
+  patientLastName?: string;
+}
+
 interface AppointmentReviewSectionProps {
   appointmentId: string;
   status: string;
   isDoctor: boolean;
-  initialReview: any | null;
+  initialReview: ReviewData | null;
 }
 
 export function AppointmentReviewSection({
@@ -35,7 +47,7 @@ export function AppointmentReviewSection({
   isDoctor,
   initialReview,
 }: AppointmentReviewSectionProps) {
-  const [review, setReview] = useState<any>(initialReview);
+  const [review, setReview] = useState<ReviewData | null>(initialReview);
 
   // Stany formularza pacjenta
   const [isEditing, setIsEditing] = useState(false);
@@ -354,7 +366,7 @@ export function AppointmentReviewSection({
           </div>
 
           <p className="text-sm text-foreground/90 italic mb-1">
-            "{review.patientComment}"
+            &ldquo;{review.patientComment}&rdquo;
           </p>
           {isEdited && (
             <p className="text-[11px] text-muted-foreground mb-4">(Edited)</p>
@@ -365,7 +377,7 @@ export function AppointmentReviewSection({
             <div className="mt-6 p-4 bg-background/50 rounded-xl border border-border">
               <div className="flex justify-between items-start mb-2">
                 <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground block">
-                  Doctor's Reply:
+                  Doctor&apos;s Reply:
                 </span>
 
                 {/* Doctor reply actions */}
