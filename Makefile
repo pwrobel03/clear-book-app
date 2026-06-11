@@ -33,7 +33,7 @@ logs-backend: ## Tail backend logs only
 logs-frontend: ## Tail frontend logs only
 	$(COMPOSE) logs -f frontend
 
-clean: ## Stop containers and remove images + volumes (full reset)
+clean: ## Full reset: stop containers, remove images + volumes (fixes schema errors)
 	$(COMPOSE) down --volumes --rmi local
 
 db: ## Open a psql shell inside the PostgreSQL container

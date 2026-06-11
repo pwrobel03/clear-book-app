@@ -12,7 +12,7 @@
 #   ./setup.sh -d                            # build + start (background)
 #   ./setup.sh --no-start                    # only create .env, skip Docker
 # ─────────────────────────────────────────────────────────────────────────────
-set -euo pipefail
+set -eo pipefail
 
 COMPOSE_CMD="docker compose -f docker-compose.yaml -f docker-compose.dev.yaml"
 
@@ -86,4 +86,4 @@ echo "🐳  Building and starting containers…"
 echo "   (first build takes a few minutes — subsequent starts are fast)"
 echo ""
 
-$COMPOSE_CMD up --build "${DOCKER_FLAGS[@]}"
+$COMPOSE_CMD up --build ${DOCKER_FLAGS[@]+"${DOCKER_FLAGS[@]}"}

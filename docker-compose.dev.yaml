@@ -27,6 +27,12 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # ── Hibernate schema management ────────────────────────────────────────
+      # Use "none" instead of "validate" in local dev.
+      # Flyway already manages the full schema via versioned migrations —
+      # Hibernate's extra validation step is redundant and breaks startup
+      # when a named Docker volume exists from an older migration state.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
       # ── Route all outbound email to the local MailHog SMTP server ──────────
       # These override the values in application.properties at runtime.
       SPRING_MAIL_HOST: mailhog
