@@ -37,11 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {/* WebSocket for real-time notifications — lives here (root layout) so
               it persists across ALL pages (public + dashboard). ensureConnected()
               exits early when the user is not authenticated (token = null). */}
