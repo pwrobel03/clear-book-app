@@ -41,7 +41,6 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange
         >
           {/* WebSocket for real-time notifications — lives here (root layout) so
               it persists across ALL pages (public + dashboard). ensureConnected()
