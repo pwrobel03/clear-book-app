@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { LogOut } from "lucide-react";
 import { getServerSession } from "@/lib/server/session";
+import { logoutAction } from "@/lib/actions/auth";
 import { NotificationBell } from "./dashboard/notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 import { BrandLogo } from "./ui/brand-logo";
+import { NavbarMobileMenu } from "./navbar-mobile-menu";
 
 export async function Navbar() {
   const session = await getServerSession();
@@ -20,39 +23,43 @@ export async function Navbar() {
           <span className="font-bold text-foreground">ClearBook</span>
         </Link>
 
-        {/* Linki i akcje */}
-        <div className="flex items-center gap-5">
+        {/* ── Desktop nav (sm+) ───────────────────────────────── */}
+        <div className="hidden md:flex items-center gap-5">
           <Link
             href="/centers"
-            className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:block"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Centers
           </Link>
           <Link
             href="/doctors"
-            className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:block"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             Find a Doctor
           </Link>
 
-          <div className="hidden h-4 w-px bg-border sm:block" />
+          <div className="h-4 w-px bg-border" />
 
           {isAuth ? (
             <div className="flex items-center gap-3">
-              {/* Test Notification Button - Only visible in development environment */}
-              {/* {process.env.NODE_ENV === "development" && (
-                <TestNotificationButton />
-              )} */}
-
               <NotificationBell />
               <ThemeToggle />
-
               <Link
                 href="/dashboard"
-                className="ml-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark"
               >
                 Go to Dashboard
               </Link>
+              {/* Logout — desktop */}
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  aria-label="Wyloguj się"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40"
+                >
+                  <LogOut size={15} />
+                </button>
+              </form>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -65,12 +72,19 @@ export async function Navbar() {
               </Link>
               <Link
                 href="/auth"
-                className="hidden rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark sm:inline-flex"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-dark"
               >
-                Get started
+                Register now
               </Link>
             </div>
           )}
+        </div>
+
+        {/* ── Mobile: theme + bell + hamburger ────────────────── */}
+        <div className="flex md:hidden items-center gap-2">
+          {isAuth && <NotificationBell />}
+          <ThemeToggle />
+          <NavbarMobileMenu isAuth={isAuth} />
         </div>
       </div>
     </header>
