@@ -2,24 +2,86 @@
 # ClearBook — Local Development Overrides
 # ─────────────────────────────────────────────────────────────────────────────
 # Merges on top of docker-compose.yaml for local development.
-# Usage: docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up
+#
+# Usage (one-shot):
+#   ./setup.sh
+#
+# Usage (manual):
+#   docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
 #
 # Changes vs. production:
 #   - backend port 8080 and frontend port 3000 are exposed to the host
-#   - nginx is disabled (use direct ports instead)
+#   - NEXT_PUBLIC_WS_URL points to localhost instead of the production domain
+#   - Email is routed to MailHog (no real SMTP credentials needed)
+#   - nginx is disabled — access backend and frontend via direct ports
+#   - MailHog web UI available at http://localhost:8025
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
 
+  postgres-db:
+    ports:
+      - "5432:5432"   # Expose to host so the seed script can connect from outside Docker
+    volumes:
+      # Mount the combined schema SQL so PostgreSQL runs it automatically on
+      # the FIRST startup of a fresh volume (docker-entrypoint-initdb.d).
+      # On subsequent starts the data directory already exists and this file
+      # is ignored — existing data is preserved.
+      - ./scripts/init-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+
   backend:
     ports:
       - "8080:8080"
+    environment:
+      # ── Schema management (local dev only) ────────────────────────────────
+      # Flyway 11.x (bundled with Spring Boot 4.0) does not yet recognise
+      # PostgreSQL 18 and silently skips all migrations on a fresh database,
+      # leaving the schema empty and the app unable to start.
+      # Fix: The schema is created by PostgreSQL's init script mechanism
+      # (scripts/init-schema.sql mounted into /docker-entrypoint-initdb.d/).
+      # PostgreSQL runs it once on fresh volume init — before the backend
+      # starts — so all tables are ready when Hibernate connects.
+      # Hibernate runs with ddl-auto=none: it uses the existing schema as-is.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: "false"
+      # ── Route all outbound email to the local MailHog SMTP server ──────────
+      # These override the values in application.properties at runtime.
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: "1025"
+      EMAIL_USERNAME: local@clearbook.dev
+      EMAIL_2FA_PASSWORD: not-needed
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+    depends_on:
+      mailhog:
+        condition: service_started
 
   frontend:
     ports:
       - "3000:3000"
+    build:
+      args:
+        # In local dev the browser connects directly to localhost:8080 (nginx
+        # is disabled). Override the production wss://<DOMAIN>/ws value so the
+        # STOMP WebSocket URL baked into the JS bundle is correct.
+        NEXT_PUBLIC_WS_URL: ws://localhost:8080/ws
 
-  # Disable nginx in local dev — access backend and frontend directly.
+  # ── Disable nginx in local dev ─────────────────────────────────────────────
+  # Direct-port access is simpler and avoids TLS certificate setup locally.
   nginx:
     profiles:
       - nginx-disabled
+
+  # ── Local SMTP / email catcher ─────────────────────────────────────────────
+  # Captures all outbound email from the backend so you can inspect
+  # verification links, password resets, etc. without a real mail server.
+  # Web UI: http://localhost:8025
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: clearbook_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP (backend → MailHog)
+      - "8025:8025"   # Web UI (browser → MailHog)
+    networks:
+      - clearbook-net
