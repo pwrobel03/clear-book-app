@@ -11,17 +11,18 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-
   # ── Database ────────────────────────────────────────────────────────────────
   postgres-db:
     image: postgres:18.3
     container_name: clearbook_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER:     ${DB_USER}
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB:       ${DB_NAME}
-      PGDATA:            /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${DB_NAME}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Europe/Warsaw
+      PGTZ: Europe/Warsaw
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -42,15 +43,16 @@ services:
     container_name: clearbook_backend
     restart: unless-stopped
     environment:
-      SPRING_DATASOURCE_URL:      jdbc:postgresql://postgres-db:5432/${DB_NAME}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET:                   ${JWT_SECRET}
-      JWT_ACCESS_EXPIRATION_MS:     ${JWT_ACCESS_EXPIRATION_MS:-900000}
-      JWT_REFRESH_EXPIRATION_DAYS:  ${JWT_REFRESH_EXPIRATION_DAYS:-7}
-      EMAIL_USERNAME:               ${EMAIL_USERNAME}
-      EMAIL_2FA_PASSWORD:           ${EMAIL_2FA_PASSWORD}
-      FRONTEND_URL:                 ${FRONTEND_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION_MS: ${JWT_ACCESS_EXPIRATION_MS:-900000}
+      JWT_REFRESH_EXPIRATION_DAYS: ${JWT_REFRESH_EXPIRATION_DAYS:-7}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_2FA_PASSWORD: ${EMAIL_2FA_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL}
+      TZ: Europe/Warsaw
     volumes:
       # Persistent storage for doctor license PDFs and other uploaded files
       - uploads-data:/app/uploads
@@ -78,6 +80,8 @@ services:
     image: clearbook-frontend:latest
     container_name: clearbook_frontend
     restart: unless-stopped
+    environment:
+      SPRING_API_URL: http://backend:8080
     depends_on:
       - backend
     networks:

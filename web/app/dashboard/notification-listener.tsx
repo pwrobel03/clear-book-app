@@ -14,6 +14,7 @@ import { useNotificationStore } from "@/store/notification";
 
 let stompClient: Client | null = null;
 let connectingPromise: Promise<void> | null = null;
+let mountCount = 0; // track concurrent mounts to avoid premature disconnect
 
 async function ensureConnected(): Promise<void> {
   // Already active — nothing to do
@@ -33,11 +34,14 @@ async function ensureConnected(): Promise<void> {
     stompClient = new Client({
       brokerURL: wsUrl,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
+      // 10 s reconnect delay — short enough to recover quickly, long enough to
+      // avoid hammering the server after a backend restart or deployment.
+      reconnectDelay: 10000,
+      // Heartbeat: 25 s matches the nginx/server idle timeout expectations.
+      // 4 s was too aggressive through a TLS+nginx proxy and caused spurious drops.
+      heartbeatIncoming: 25000,
+      heartbeatOutgoing: 25000,
       onConnect: () => {
-        console.log("[STOMP] Connected.");
         stompClient!.subscribe("/user/queue/notifications", (message) => {
           const notification = JSON.parse(message.body);
           useNotificationStore.getState().addNotification(notification);
@@ -49,6 +53,10 @@ async function ensureConnected(): Promise<void> {
       },
       onStompError: (frame) => {
         console.error("[STOMP] Broker error:", frame.headers["message"]);
+      },
+      onWebSocketError: () => {
+        // Suppress the noisy browser console error on expected reconnects.
+        // The client handles reconnection automatically via reconnectDelay.
       },
       onDisconnect: () => {
         stompClient = null;
@@ -63,10 +71,17 @@ async function ensureConnected(): Promise<void> {
   return connectingPromise;
 }
 
-function disconnect(): void {
-  if (stompClient?.active) {
-    stompClient.deactivate();
-    stompClient = null;
+async function disconnect(): Promise<void> {
+  const client = stompClient;
+  stompClient = null;
+  if (client) {
+    try {
+      await client.deactivate();
+    } catch {
+      // "WebSocket is closed before the connection is established" is expected
+      // when the component unmounts while a reconnection attempt is in flight.
+      // Safe to ignore — the client is being torn down intentionally.
+    }
   }
 }
 
@@ -74,8 +89,15 @@ function disconnect(): void {
 
 export function GlobalNotificationListener() {
   useEffect(() => {
+    mountCount++;
     ensureConnected();
-    return () => { disconnect(); };
+
+    return () => {
+      mountCount--;
+      if (mountCount === 0) {
+        disconnect();
+      }
+    };
   }, []);
 
   return null;

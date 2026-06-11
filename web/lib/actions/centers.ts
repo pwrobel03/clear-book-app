@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache"
 
 import { springFetch } from "@/lib/server/spring"
-import { callApi, callApiVoid } from "@/lib/server/api-action"
-import type { 
-  MedicalCenterResponse, 
-  SpringPage, 
+import { callApi, callApiVoid, normalizeSpringPage } from "@/lib/server/api-action"
+import type {
+  MedicalCenterResponse,
+  SpringPage,
+  NormalizedSpringPage,
   MembershipResponse,
   ActionResult,
   MembershipRole,
@@ -41,15 +42,16 @@ export async function getCentersAction(
   city?: string,
   page = 0,
   size = 12,
-): Promise<SpringPage<MedicalCenterResponse>> {
+): Promise<NormalizedSpringPage<MedicalCenterResponse>> {
   const params = new URLSearchParams({ size: String(size), page: String(page) });
   if (city) params.set("city", city);
 
   try {
     const res = await springFetch(`/api/centers?${params}`, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to fetch centers");
-    return res.json();
-  } catch (error) {
+    const raw: SpringPage<MedicalCenterResponse> = await res.json();
+    return normalizeSpringPage(raw, page, size);
+  } catch {
     return { content: [], totalElements: 0, totalPages: 0, size, number: page };
   }
 }

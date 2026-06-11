@@ -165,26 +165,39 @@ FRONTEND_URL=https://clearbook.yourdomain.com
 ## Step 6 — Bootstrap SSL Certificate (first time only)
 
 On the first deployment, no certificate exists yet, so we need to:
-1. Start nginx with the HTTP-only bootstrap config
-2. Run certbot to issue the certificate
-3. Switch to the full HTTPS config
+1. Build all images and create Docker-managed volumes
+2. Start nginx with the HTTP-only bootstrap config (serves the ACME challenge over HTTP)
+3. Run certbot to issue the certificate
+4. Switch to the full HTTPS config
 
 ```bash
 cd ~/clearbook
 
-# ── 6a. Start services with bootstrap nginx (HTTP only) ──────────────────────
-# Temporarily override the nginx config to HTTP-only bootstrap
-docker compose up -d postgres-db backend frontend
+# ── 6a. Build images and create named volumes without starting services ───────
+# This builds backend + frontend images and creates all Docker named volumes
+# (postgres-data, uploads-data, certbot-certs, certbot-webroot) so the bootstrap
+# nginx can mount certbot-webroot by its Docker Compose volume name.
+docker compose create --build
 
-docker run --rm \
+# ── 6b. Start services (without nginx — it needs the cert first) ─────────────
+docker compose start postgres-db backend frontend
+
+# ── 6c. Start HTTP-only bootstrap nginx ──────────────────────────────────────
+# conf.d/ files are included INSIDE nginx's http{} block — no events{}/http{}
+# wrappers in nginx.bootstrap.conf (that caused the "not allowed here" error).
+# The project prefix in the volume name matches directory name "clearbook".
+docker run -d \
   -v $(pwd)/nginx/nginx.bootstrap.conf:/etc/nginx/conf.d/default.conf:ro \
-  -v $(pwd):/var/www/certbot \
+  -v clearbook_certbot-webroot:/var/www/certbot \
   -p 80:80 \
   --network clearbook_clearbook-net \
   --name clearbook_nginx_bootstrap \
   nginx:alpine
 
-# In a second terminal — run certbot
+# Verify it started cleanly (should show "start worker process" with no errors)
+docker logs clearbook_nginx_bootstrap
+
+# ── 6d. Issue the SSL certificate ─────────────────────────────────────────────
 docker compose --profile certbot run --rm certbot certonly \
   --webroot \
   --webroot-path /var/www/certbot \
@@ -193,10 +206,9 @@ docker compose --profile certbot run --rm certbot certonly \
   --no-eff-email \
   -d clearbook.yourdomain.com
 
-# Stop the bootstrap nginx
+# ── 6e. Stop bootstrap nginx and start the full stack with HTTPS ───────────────
 docker stop clearbook_nginx_bootstrap
-
-# ── 6b. Start the full stack with HTTPS nginx ─────────────────────────────────
+docker rm clearbook_nginx_bootstrap
 docker compose up -d
 ```
 
@@ -204,6 +216,12 @@ Verify the certificate was issued:
 ```bash
 ls /var/lib/docker/volumes/clearbook_certbot-certs/_data/live/
 ```
+
+> **Volume naming note**: Docker Compose prefixes volume names with the project name,
+> which defaults to the directory name. If you cloned to `~/clearbook`, the prefix
+> is `clearbook` and the volume is `clearbook_certbot-webroot`.
+> If you used a different directory name, adjust the `-v` flag accordingly,
+> or check with: `docker volume ls | grep certbot`
 
 ---
 
@@ -254,6 +272,103 @@ MAILTO=""
 Verify the path to docker on your VM before saving:
 ```bash
 which docker   # should output /usr/bin/docker
+```
+
+---
+
+## Step 9 — Seed the Database (first time only)
+
+The seed script populates the database with demo doctors, patients, and
+appointments. It runs inside Docker so it can reach `postgres-db` without
+exposing the database port.
+
+```bash
+cd ~/clearbook
+
+# Make the wrapper executable (only needed once)
+chmod +x scripts/run_in_docker.sh
+
+# ── Verify the connection (no writes) ────────────────────────────────────────
+./scripts/run_in_docker.sh seed_database.py --dry-run
+
+# ── Full seed (80 doctors, 200 patients, ~8 weeks future schedule) ────────────
+./scripts/run_in_docker.sh seed_database.py
+
+# ── Custom parameters (e.g. fewer doctors/patients for a dev server) ──────────
+./scripts/run_in_docker.sh seed_database.py --doctors 20 --patients 50
+
+# ── Re-seed from scratch (keeps manually registered accounts) ─────────────────
+./scripts/run_in_docker.sh seed_database.py --reset
+
+# ── Nuclear option — wipe everything including real user accounts ─────────────
+./scripts/run_in_docker.sh seed_database.py --full-reset
+```
+
+The script will print progress and finish with:
+```
+==============================
+  Seed complete!
+  All demo accounts use password: Demo1234!
+==============================
+```
+
+---
+
+## Step 10 — Schedule Automatic Future Shifts (cron)
+
+As time passes, the seeded doctors' future availability blocks will run out.
+`extend_schedules.py` automatically creates new future blocks for all doctors
+who have an existing schedule pattern.
+
+**How it works:**
+- Looks at each doctor's blocks from the last 28 days to infer their work hours
+  and which clinic they work at on each weekday
+- Creates any missing blocks up to 8 weeks ahead (configurable via `HORIZON_WEEKS`)
+- Fully idempotent — safe to run multiple times, never overwrites existing blocks
+- Skips doctors with no recent schedule (e.g. newly registered, waiting for setup)
+
+**Test it first:**
+```bash
+# Dry-run: prints what would be created without writing anything
+DRY_RUN=1 ./scripts/run_in_docker.sh extend_schedules.py
+
+# Real run
+./scripts/run_in_docker.sh extend_schedules.py
+
+# Extend further ahead (12 weeks instead of the default 8)
+HORIZON_WEEKS=12 ./scripts/run_in_docker.sh extend_schedules.py
+```
+
+**Set up the cron job** (runs every Monday morning at 06:00):
+```bash
+crontab -e
+```
+
+Add the following lines **below** the existing certbot renewal entry:
+```cron
+MAILTO=""
+# Extend future doctor schedules every Monday at 06:00
+0 6 * * 1 cd /home/ubuntu/clearbook && \
+  /usr/bin/docker run --rm \
+    --network clearbook_clearbook-net \
+    -v /home/ubuntu/clearbook:/app -w /app \
+    -e DB_HOST=postgres-db \
+    -e DB_NAME=$(grep '^DB_NAME=' .env | cut -d= -f2) \
+    -e DB_USER=$(grep '^DB_USER=' .env | cut -d= -f2) \
+    -e DB_PASSWORD=$(grep '^DB_PASSWORD=' .env | cut -d= -f2) \
+    -e HORIZON_WEEKS=8 \
+    python:3.11-slim \
+    bash -c "pip install psycopg2-binary -q && python extend_schedules.py" \
+  >> /var/log/extend-schedules.log 2>&1
+```
+
+> **Why Monday at 06:00?** The seed creates 8 weeks of future blocks. Running
+> once a week is more than enough to stay ahead. Running at 06:00 avoids overlap
+> with the 03:00 certbot renewal and 02:00 database backup jobs.
+
+Verify the cron job ran successfully:
+```bash
+cat /var/log/extend-schedules.log
 ```
 
 ---

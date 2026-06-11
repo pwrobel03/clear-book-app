@@ -61,6 +61,10 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        // WebSocket handshake — must be permitted without HttpMethod
+                        // constraint because the Upgrade request is handled differently
+                        // from regular HTTP by Spring Security's filter chain.
+                        .requestMatchers("/ws", "/ws/**").permitAll()
                         // Public endpoints (GET only)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/doctors",
@@ -71,8 +75,7 @@ public class SecurityConfig {
                                 "/api/centers/**",
                                 "/api/specializations",
                                 "/api/specializations/**",
-                                "/api/schedule/doctors/**",
-                                "/ws/**"
+                                "/api/schedule/doctors/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
