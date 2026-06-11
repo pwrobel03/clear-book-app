@@ -75,8 +75,24 @@ def parse_args() -> argparse.Namespace:
         help="Maximum appointments per patient (default: 10)",
     )
     p.add_argument(
+        "--past-weeks", type=int, default=4, dest="past_weeks",
+        help="How many weeks of past availability blocks to create (default: 4)",
+    )
+    p.add_argument(
+        "--future-weeks", type=int, default=8, dest="future_weeks",
+        help="How many weeks of future availability blocks to create (default: 8)",
+    )
+    p.add_argument(
         "--reset", action="store_true",
-        help="Delete all previously seeded data before inserting",
+        help="Delete previously seeded demo data (@clearbook.demo / @example.com / fixed accounts)",
+    )
+    p.add_argument(
+        "--full-reset", action="store_true", dest="full_reset",
+        help=(
+            "Delete ALL data except Spring Boot's own accounts "
+            "(admin@/patient@/doctor@ clearbook.com). "
+            "Use this to wipe manually registered users too."
+        ),
     )
     p.add_argument(
         "--dry-run", action="store_true",

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, UserCircle } from "lucide-react";
+import { Loader2, Save, UserCircle, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import {
 export default function DoctorProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profileExists, setProfileExists] = useState(false);
+  const [publicId, setPublicId] = useState<string | null>(null);
   const [specsList, setSpecsList] = useState<SpecOption[]>([]);
 
   const form = useForm<DoctorProfileFormData>({
@@ -75,6 +77,7 @@ export default function DoctorProfilePage() {
 
         if (profResult.data) {
           setProfileExists(true);
+          setPublicId(profResult.data.publicId ?? null);
           form.reset({
             specializations: profResult.data.specializations ?? [],
             bio: profResult.data.bio ?? "",
@@ -121,9 +124,21 @@ export default function DoctorProfilePage() {
     );
   }
 
+  const previewAction = publicId ? (
+    <Link
+      href={`/doctors/${publicId}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-1.5 rounded-xl border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+    >
+      <ExternalLink size={13} />
+      View as patient
+    </Link>
+  ) : null;
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <DashboardHeader title="My Profile" />
+      <DashboardHeader title="My Profile" actions={previewAction} />
       <main className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-2xl">
           {/* Header */}

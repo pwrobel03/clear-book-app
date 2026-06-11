@@ -25,13 +25,18 @@ interface PaginationProps {
  *   currentPage=9  → [0, null, 7, 8, 9]
  */
 function buildPageRange(current: number, total: number): (number | null)[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i);
+  // Guard: treat undefined / NaN / negative values as no-pages to prevent
+  // NaN from appearing in rendered buttons when Spring's Page format differs.
+  const safeCurrent = Number.isFinite(current) && current >= 0 ? current : 0;
+  const safeTotal   = Number.isFinite(total)   && total   >= 0 ? total   : 0;
+
+  if (safeTotal <= 7) return Array.from({ length: safeTotal }, (_, i) => i);
 
   const range = new Set<number>();
   range.add(0);
-  range.add(total - 1);
+  range.add(safeTotal - 1);
 
-  for (let i = Math.max(0, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+  for (let i = Math.max(0, safeCurrent - 1); i <= Math.min(safeTotal - 1, safeCurrent + 1); i++) {
     range.add(i);
   }
 

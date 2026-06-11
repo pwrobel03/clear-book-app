@@ -1,0 +1,21 @@
+# Dependencies & build output
+node_modules/
+.next/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md

@@ -1,0 +1,19 @@
+# Build artifacts
+target/
+
+# IDE & OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Secrets — never bake into the image
+.env
+*.env
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md

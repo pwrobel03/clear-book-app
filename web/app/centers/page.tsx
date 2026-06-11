@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Form from "next/form";
 import { Building2, MapPin, Phone, Mail, Search } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -85,8 +86,8 @@ export default async function CentersListPage({
       <main className="relative z-10 mx-auto w-full max-w-5xl px-6 py-10 flex-1 flex flex-col">
         {/* Filter bar */}
         <GlassPanel className="mb-10 p-4">
-          <form
-            method="GET"
+          <Form
+            action="/centers"
             className="flex flex-col gap-3 sm:flex-row sm:items-center"
           >
             <div className="relative flex-1">
@@ -113,7 +114,7 @@ export default async function CentersListPage({
                 </Link>
               )}
             </div>
-          </form>
+          </Form>
         </GlassPanel>
 
         {/* Header */}

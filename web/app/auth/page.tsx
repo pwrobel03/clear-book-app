@@ -5,6 +5,8 @@ import { LoginForm } from "@/components/auth/login-form";
 import { RegisterForm } from "@/components/auth/register-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Star } from "lucide-react";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import Link from "next/link";
 
 // TODO: We should split this page into multiple subpages (login, register, etc.) but for now we will keep everything in one place to speed up development.
 
@@ -21,12 +23,13 @@ function BrandPanel() {
       <div className="pointer-events-none absolute top-1/4 -left-16 h-64 w-64 rounded-full bg-primary-light/10 blur-3xl" />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent shadow-lg">
-          <span className="text-sm font-black text-accent-foreground">CB</span>
-        </div>
+      <Link
+        href="/"
+        className="relative z-10 flex items-center gap-3 cursor-pointer"
+      >
+        <BrandLogo size={40} alwaysWhite />
         <span className="text-xl font-bold tracking-tight">ClearBook</span>
-      </div>
+      </Link>
 
       {/* Main Content & Glassmorphism Card */}
       <div className="relative z-10 mt-auto mb-12 space-y-10">
@@ -49,9 +52,9 @@ function BrandPanel() {
             ))}
           </div>
           <p className="text-sm leading-relaxed text-white/90">
-            "ClearBook has completely transformed how I manage my practice. The
+            &ldquo;ClearBook has completely transformed how I manage my practice. The
             scheduling is seamless, and my patients love how easy it is to book
-            an appointment."
+            an appointment.&rdquo;
           </p>
           <div className="mt-5 flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-accent to-[#102240] p-[2px]">
@@ -91,9 +94,7 @@ export default function AuthPage() {
       <div className="flex flex-col bg-background">
         <div className="flex items-center justify-between px-8 pt-6">
           <div className="flex items-center gap-2 lg:invisible">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-xs font-black text-accent">CB</span>
-            </div>
+            <BrandLogo size={32} />
             <span className="text-sm font-bold text-foreground">ClearBook</span>
           </div>
           <ThemeToggle />

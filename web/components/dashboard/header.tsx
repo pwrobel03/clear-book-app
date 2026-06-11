@@ -1,10 +1,10 @@
 "use client";
 
+import React from "react";
 import { Menu } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuthStore } from "@/store/auth";
 import { useSidebarStore } from "@/store/sidebar";
-import { TestNotificationButton } from "@/app/dashboard/test-notification-button";
 
 const roleLabel: Record<string, string> = {
   USER: "Patient",
@@ -15,10 +15,16 @@ const roleLabel: Record<string, string> = {
 
 interface DashboardHeaderProps {
   title?: string;
-  description?: string; // Dodano opcjonalny opis
+  description?: string;
+  /** Optional actions rendered on the right side, before the ThemeToggle. */
+  actions?: React.ReactNode;
 }
 
-export function DashboardHeader({ title, description }: DashboardHeaderProps) {
+export function DashboardHeader({
+  title,
+  description,
+  actions,
+}: DashboardHeaderProps) {
   const user = useAuthStore((s) => s.user);
   const openSidebar = useSidebarStore((s) => s.open);
 
@@ -42,7 +48,9 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
                 : "Dashboard")}
           </h1>
           {description && (
-            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {description}
+            </p>
           )}
         </div>
       </div>
@@ -51,6 +59,7 @@ export function DashboardHeader({ title, description }: DashboardHeaderProps) {
       {/* {process.env.NODE_ENV === "development" && <TestNotificationButton />} */}
 
       <div className="flex items-center gap-3 shrink-0">
+        {actions}
         {user && (
           <span className="text-xs font-medium text-muted-foreground hidden sm:block">
             {user.firstName} {user.lastName}

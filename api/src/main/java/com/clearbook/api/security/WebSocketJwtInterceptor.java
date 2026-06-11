@@ -24,11 +24,13 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor == null) return message;
 
-        // Validate JWT token only during the CONNECT phase of the WebSocket handshake
-        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
+        StompCommand command = accessor.getCommand();
+
+        if (StompCommand.CONNECT.equals(command)) {
+            // On CONNECT: authenticate from the Authorization header and attach the principal
             String authHeader = accessor.getFirstNativeHeader("Authorization");
-
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
                 try {
@@ -36,19 +38,41 @@ public class WebSocketJwtInterceptor implements ChannelInterceptor {
                     if (userEmail != null) {
                         UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
                         if (jwtService.isTokenValid(token, userDetails)) {
-                            // Set the authenticated user in the WebSocket session
-                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities()
-                            );
-                            accessor.setUser(authentication);
-                            log.debug("WebSocket connection authenticated for user: {}", userEmail);
+                            accessor.setUser(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities()));
+                            log.debug("WebSocket CONNECT authenticated for user: {}", userEmail);
+                        } else {
+                            log.warn("WebSocket CONNECT rejected — invalid token for user: {}", userEmail);
                         }
                     }
                 } catch (Exception e) {
-                    log.error("WebSocket authentication failed: {}", e.getMessage());
+                    log.error("WebSocket CONNECT authentication failed: {}", e.getMessage());
+                }
+            }
+
+        } else if (StompCommand.SUBSCRIBE.equals(command) || StompCommand.SEND.equals(command)) {
+            // On SUBSCRIBE / SEND: verify the session principal is still authenticated.
+            // This catches the case where a token expired after the initial handshake
+            // (e.g. the user logged out and their account was disabled or tokens were revoked).
+            java.security.Principal principal = accessor.getUser();
+            if (principal instanceof UsernamePasswordAuthenticationToken auth) {
+                if (auth.getPrincipal() instanceof UserDetails userDetails) {
+                    try {
+                        // Re-load from DB to pick up any account status changes (e.g. BANNED)
+                        UserDetails fresh = userDetailsService.loadUserByUsername(userDetails.getUsername());
+                        if (!fresh.isEnabled() || !fresh.isAccountNonLocked()) {
+                            log.warn("WebSocket {} rejected — account disabled for user: {}",
+                                    command, userDetails.getUsername());
+                            return null; // Drop the message; Spring will close the connection
+                        }
+                    } catch (Exception e) {
+                        log.error("WebSocket {} re-validation failed: {}", command, e.getMessage());
+                        return null;
+                    }
                 }
             }
         }
+
         return message;
     }
 }

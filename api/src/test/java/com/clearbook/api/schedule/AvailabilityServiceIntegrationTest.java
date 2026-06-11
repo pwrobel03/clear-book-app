@@ -98,8 +98,9 @@ class AvailabilityServiceIntegrationTest extends AbstractIntegrationTest {
 
             availabilityService.deleteWorkingBlock(doctor, futureBlock.getId());
 
-            // Block must be gone
-            assertThat(blockRepository.findById(futureBlock.getId())).isEmpty();
+            // Block must be soft-deleted (record stays in DB, isDeleted flag set to true)
+            assertThat(blockRepository.findById(futureBlock.getId()))
+                    .hasValueSatisfying(b -> assertThat(b.isDeleted()).isTrue());
 
             // Appointment must be cancelled
             Appointment reloaded = appointmentRepository.findById(scheduled.getId()).orElseThrow();
@@ -270,7 +271,9 @@ class AvailabilityServiceIntegrationTest extends AbstractIntegrationTest {
 
             assertThat(response.getBlocksDeleted()).isEqualTo(1);
             assertThat(response.getAppointmentsCancelled()).isEqualTo(1);
-            assertThat(blockRepository.findById(futureBlock.getId())).isEmpty();
+            // Block must be soft-deleted (record stays in DB, isDeleted flag set to true)
+            assertThat(blockRepository.findById(futureBlock.getId()))
+                    .hasValueSatisfying(b -> assertThat(b.isDeleted()).isTrue());
             assertThat(appointmentRepository.findById(scheduled.getId()).orElseThrow().getStatus())
                     .isEqualTo(AppointmentStatus.CANCELLED);
         }

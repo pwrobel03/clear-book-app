@@ -140,6 +140,11 @@ public class AppointmentService {
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
                 .orElseThrow(() -> new ResourceNotFoundException("Working block not found."));
 
+        if (block.getCenter().getStatus() != CenterStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "This medical center is not currently accepting appointments.");
+        }
+
         DoctorService service = doctorServiceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found."));
 
@@ -233,6 +238,11 @@ public class AppointmentService {
         // Pessimistic lock — same protection as reserveSlot
         AvailabilityBlock block = blockRepository.findByIdWithPessimisticLock(request.getBlockId())
                 .orElseThrow(() -> new ResourceNotFoundException("Working block not found."));
+
+        if (block.getCenter().getStatus() != CenterStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "This medical center is not currently accepting appointments.");
+        }
 
         DoctorService service = doctorServiceRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found."));

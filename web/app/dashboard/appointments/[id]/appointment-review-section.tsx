@@ -22,11 +22,24 @@ import {
   deleteReplyAction,
 } from "@/lib/actions/review";
 
+interface ReviewData {
+  id: string;
+  rating: number;
+  patientComment: string;
+  createdAt?: string;
+  doctorReply?: string | null;
+  repliedAt?: string | null;
+  updatedAt?: string | null;
+  isAnonymous?: boolean;
+  patientFirstName?: string;
+  patientLastName?: string;
+}
+
 interface AppointmentReviewSectionProps {
   appointmentId: string;
   status: string;
   isDoctor: boolean;
-  initialReview: any | null;
+  initialReview: ReviewData | null;
 }
 
 export function AppointmentReviewSection({
@@ -35,7 +48,7 @@ export function AppointmentReviewSection({
   isDoctor,
   initialReview,
 }: AppointmentReviewSectionProps) {
-  const [review, setReview] = useState<any>(initialReview);
+  const [review, setReview] = useState<ReviewData | null>(initialReview);
 
   // Stany formularza pacjenta
   const [isEditing, setIsEditing] = useState(false);
@@ -62,7 +75,8 @@ export function AppointmentReviewSection({
   const handlePatientSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) return toast.error("Please select a star rating.");
-    if (!comment.trim()) return toast.error("Please write a comment before submitting.");
+    if (!comment.trim())
+      return toast.error("Please write a comment before submitting.");
 
     setIsSubmitting(true);
 
@@ -87,6 +101,7 @@ export function AppointmentReviewSection({
   };
 
   const handlePatientDelete = async () => {
+    if (!review) return;
     setIsSubmitting(true);
     const result = await deleteReviewAction(review.id);
 
@@ -107,6 +122,7 @@ export function AppointmentReviewSection({
   // --- LOGIKA LEKARZA ---
   const handleDoctorReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!review) return;
     if (!replyText.trim()) return toast.error("Response cannot be empty.");
 
     setIsSubmitting(true);
@@ -124,6 +140,7 @@ export function AppointmentReviewSection({
 
   const handleDoctorReplyEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!review) return;
     if (!editedReplyText.trim())
       return toast.error("Response cannot be empty.");
 
@@ -141,6 +158,7 @@ export function AppointmentReviewSection({
   };
 
   const handleDoctorReplyDelete = async () => {
+    if (!review) return;
     setIsSubmitting(true);
     const result = await deleteReplyAction(review.id);
 
@@ -354,7 +372,7 @@ export function AppointmentReviewSection({
           </div>
 
           <p className="text-sm text-foreground/90 italic mb-1">
-            "{review.patientComment}"
+            &ldquo;{review.patientComment}&rdquo;
           </p>
           {isEdited && (
             <p className="text-[11px] text-muted-foreground mb-4">(Edited)</p>
@@ -365,7 +383,7 @@ export function AppointmentReviewSection({
             <div className="mt-6 p-4 bg-background/50 rounded-xl border border-border">
               <div className="flex justify-between items-start mb-2">
                 <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground block">
-                  Doctor's Reply:
+                  Doctor&apos;s Reply:
                 </span>
 
                 {/* Doctor reply actions */}
@@ -375,7 +393,7 @@ export function AppointmentReviewSection({
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setEditedReplyText(review.doctorReply);
+                        setEditedReplyText(review.doctorReply ?? "");
                         setIsEditingReply(true);
                       }}
                       className="h-6 px-2 py-0 text-muted-foreground hover:text-foreground"

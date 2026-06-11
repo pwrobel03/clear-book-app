@@ -75,8 +75,11 @@ def _try_book(
 
     Returns (appointment_id, status) on success, None if no free slot found.
     """
-    is_future   = status == "SCHEDULED"
-    max_lookback = 7 if is_future else 14
+    is_future    = status == "SCHEDULED"
+    # For future appointments: created_at 1–28 days before the visit
+    # (simulates patients booking up to 4 weeks in advance).
+    # For past appointments: created_at 1–14 days before the visit.
+    max_lookback = 28 if is_future else 14
 
     candidates = keys.copy()
     random.shuffle(candidates)
@@ -195,7 +198,9 @@ def seed_appointments_per_patient(
 
     for i, patient_id in enumerate(patient_ids):
         n_total  = random.randint(min_appts, max_appts)
-        n_future = random.randint(1, min(2, n_total))
+        # Allow up to 4 future appointments per patient so the 8-week calendar
+        # looks naturally populated rather than every patient having just 1-2 slots.
+        n_future = random.randint(1, min(4, n_total))
         n_past   = n_total - n_future
 
         # ── Future (SCHEDULED) ────────────────────────────────────────────────

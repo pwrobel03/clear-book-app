@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format, isPast, isWithinInterval, addMinutes } from "date-fns";
 import {
   Calendar,
@@ -291,8 +291,15 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
 
+  // Tracks which (tab, page) combination is currently expected.
+  // Prevents a slow in-flight request from overwriting state after the user
+  // has already navigated to a different tab (stale response problem).
+  const fetchKeyRef = useRef(0);
+
   const fetchAppointments = useCallback(async () => {
     setIsLoading(true);
+    const fetchKey = ++fetchKeyRef.current; // capture snapshot at call time
+
     const fetchAction = isDoctor
       ? getDoctorAppointmentsListAction
       : getMyAppointmentsAction;
@@ -305,6 +312,8 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
         promises.push(fetchAction({ status: "RESERVED", page: 0, size: 50 }));
 
       const results = await Promise.all(promises);
+      if (fetchKey !== fetchKeyRef.current) return; // stale — a newer fetch already started
+
       const all: AppointmentResponse[] = results
         .flatMap((r) => r.data?.content ?? [])
         .filter((a) => !isPast(new Date(a.endTime)))
@@ -314,13 +323,21 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       setTotalPages(0);
     } else if (activeTab === "completed") {
       const result = await fetchAction({ status: "COMPLETED", page, size: PAGE_SIZE, sort: "startTime,desc" });
+      if (fetchKey !== fetchKeyRef.current) return;
+
       setAppointments(result.data?.content ?? []);
       setTotalPages(result.data?.totalPages ?? 0);
     } else {
+      // We load all cancelled and no-show items in a single pass (up to 200 each).
+      // Mixing two statuses in one paginated list is fundamentally broken at the
+      // database level — the only correct solutions are a backend multi-status
+      // endpoint or separate sub-tabs. For now, loading all is fine because the
+      // total volume of cancelled appointments per user is always small.
       const [cancelled, noShow] = await Promise.all([
-        fetchAction({ status: "CANCELLED", page, size: PAGE_SIZE, sort: "startTime,desc" }),
-        fetchAction({ status: "NO_SHOW", page, size: PAGE_SIZE, sort: "startTime,desc" }),
+        fetchAction({ status: "CANCELLED", page: 0, size: 200, sort: "startTime,desc" }),
+        fetchAction({ status: "NO_SHOW",   page: 0, size: 200, sort: "startTime,desc" }),
       ]);
+      if (fetchKey !== fetchKeyRef.current) return;
 
       const all: AppointmentResponse[] = [
         ...(cancelled.data?.content ?? []),
@@ -328,7 +345,7 @@ export function AppointmentsClient({ userRole }: { userRole: string }) {
       ].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
       setAppointments(all);
-      setTotalPages(Math.max(cancelled.data?.totalPages ?? 0, noShow.data?.totalPages ?? 0));
+      setTotalPages(0); // no pagination — full list
     }
     setIsLoading(false);
   }, [activeTab, page, isDoctor]);

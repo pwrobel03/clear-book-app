@@ -7,16 +7,21 @@ import { enUS } from "date-fns/locale";
 import { GlassCard } from "@/components/ui/glass";
 import { Button } from "@/components/ui/button";
 import { getDoctorReviewsAction } from "@/lib/actions/review";
+import { ReviewItem } from "@/types/review";
 
 export function DoctorReviewsSection({ publicId }: { publicId: string }) {
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const fetchReviews = async (pageNum: number) => {
-    pageNum === 0 ? setIsLoading(true) : setIsLoadingMore(true);
+    if (pageNum === 0) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
 
     const result = await getDoctorReviewsAction(publicId, pageNum, 5);
 
@@ -95,14 +100,14 @@ export function DoctorReviewsSection({ publicId }: { publicId: string }) {
             </div>
 
             <p className="text-sm text-foreground/90 italic leading-relaxed">
-              "{review.patientComment}"
+              &ldquo;{review.patientComment}&rdquo;
             </p>
 
             {/* Information about edit */}
             {isEdited && (
               <p className="text-[11px] text-muted-foreground mt-1 mb-2">
                 (Edited on{" "}
-                {format(new Date(review.updatedAt), "d MMMM yyyy", {
+                {format(new Date(review.updatedAt!), "d MMMM yyyy", {
                   locale: enUS,
                 })}
                 )
@@ -112,8 +117,8 @@ export function DoctorReviewsSection({ publicId }: { publicId: string }) {
             {review.doctorReply && (
               <div className="mt-4 p-4 bg-background/50 rounded-xl border border-border">
                 <span className="font-bold text-xs uppercase tracking-wider text-muted-foreground block mb-1">
-                  Doctor's Response (
-                  {format(new Date(review.repliedAt), "d MMM yyyy", {
+                  Doctor&apos;s Response (
+                  {format(new Date(review.repliedAt!), "d MMM yyyy", {
                     locale: enUS,
                   })}
                   ):

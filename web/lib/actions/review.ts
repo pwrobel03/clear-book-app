@@ -2,10 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { springFetch } from "@/lib/server/spring"
-import { callApi } from "@/lib/server/api-action"
-import type { ActionResult } from "@/types/api"
-import type { ReviewResponse } from "@/types/api"
-import type { SpringPage } from "@/types/api"
+import { callApi, normalizeSpringPage } from "@/lib/server/api-action"
+import type { ActionResult, NormalizedSpringPage, ReviewResponse, SpringPage } from "@/types/api"
 
 /**
  * Fetches a review for a specific appointment.
@@ -137,7 +135,7 @@ export async function getDoctorReviewsAction(
   publicId: string,
   page: number = 0,
   size: number = 5
-): Promise<SpringPage<ReviewResponse>> {
+): Promise<NormalizedSpringPage<ReviewResponse>> {
   try {
     const res = await springFetch(`/api/doctors/${publicId}/reviews?page=${page}&size=${size}`, {
       cache: "no-store",
@@ -146,8 +144,9 @@ export async function getDoctorReviewsAction(
     if (!res.ok) {
       return { content: [], totalElements: 0, totalPages: 0, size, number: page };
     }
-    return await res.json();
-  } catch (error) {
+    const raw: SpringPage<ReviewResponse> = await res.json();
+    return normalizeSpringPage(raw, page, size);
+  } catch {
     return { content: [], totalElements: 0, totalPages: 0, size, number: page };
   }
 }

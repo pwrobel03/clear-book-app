@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  Stethoscope,
-  Pencil,
-  X,
-  List,
-} from "lucide-react";
+import { Loader2, Plus, Trash2, Stethoscope, Pencil, List } from "lucide-react";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +34,9 @@ export function ServiceManagerClient() {
 
     if (!result.error && result.data) {
       const activeServices = result.data.filter((s) => {
-        const isActive = s.active !== false && (s as any).isActive !== false;
+        const isActive =
+          s.active !== false &&
+          (s as { isActive?: boolean }).isActive !== false;
         return isActive;
       });
 

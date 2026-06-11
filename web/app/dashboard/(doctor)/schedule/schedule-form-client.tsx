@@ -59,6 +59,12 @@ export function ScheduleFormClient({ centers }: { centers: CenterOption[] }) {
     }
 
     const dateStr = format(date, "yyyy-MM-dd");
+    // NOTE: We intentionally send a wall-clock time string without timezone offset.
+    // Spring deserializes it into LocalDateTime, which is also timezone-agnostic.
+    // This works correctly as long as the server and all users share the same timezone.
+    // TODO (multi-timezone support): append the browser's UTC offset here, e.g.
+    //   new Date(`${dateStr}T${startTime}:00`).toISOString()
+    // and switch the backend entities from LocalDateTime to OffsetDateTime / ZonedDateTime.
     const startIso = `${dateStr}T${startTime}:00`;
     const endIso = `${dateStr}T${endTime}:00`;
 

@@ -19,7 +19,7 @@ import {
 } from "@/lib/actions/doctor";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // IMPORT TOAST
-import { GlassCard, GlassPanel } from "@/components/ui/glass";
+import { GlassCard } from "@/components/ui/glass";
 
 // TODO: This page is currently just a simple interface to show the doctor's invite code and let them refresh it. In the future, we might want to add more features to it (like showing recent invitations, letting doctor manage them, etc.) but for now it's just a simple page to get the invite code and refresh it.
 

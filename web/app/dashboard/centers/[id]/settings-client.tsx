@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { CenterForm } from "@/components/centers/center-form";
 import { updateCenterAction } from "@/lib/actions/centers";
-import type { MedicalCenterResponse } from "@/types/api";
+import type { MedicalCenterResponse, CenterType } from "@/types/api";
 import type { CreateCenterData } from "@/lib/schemas/center";
 
 export function CenterSettingsClient({
@@ -20,7 +20,7 @@ export function CenterSettingsClient({
     phone: center.phone || "",
     email: center.email || "",
     website: center.website || "",
-    type: center.type as any,
+    type: center.type as CenterType,
   };
 
   async function handleUpdate(values: CreateCenterData) {

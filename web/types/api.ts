@@ -122,35 +122,60 @@ export interface PendingDoctorResponse {
   licenseFilePath?: string | null
 }
 
-export interface PendingDoctor {
+/** @deprecated Use PendingDoctorResponse */
+export type PendingDoctor = PendingDoctorResponse
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export interface ReviewResponse {
   id: string
-  email: string
-  firstName: string
-  lastName: string
-  createdAt: string // ISO-8601
-  licenseFilePath?: string | null
+  rating: number
+  patientComment: string
+  patientDisplayName: string
+  isAnonymous?: boolean
+  patientFirstName?: string
+  patientLastName?: string
+  createdAt: string
+  updatedAt?: string | null
+  doctorReply?: string | null
+  repliedAt?: string | null
 }
 
 // ─── Pagination (Spring Data) ─────────────────────────────────────────────────
+//
+// Spring Data ≥ 3.3 / Spring Boot ≥ 4.0 changed Page<T> serialisation:
+// pagination metadata was moved into a nested "page" sub-object.
+//
+// Old (< 3.3) — flat top-level fields:
+//   { content: [...], totalPages: 5, totalElements: 100, number: 0, size: 20 }
+//
+// New (≥ 3.3) — metadata nested under "page":
+//   { content: [...], page: { totalPages: 5, totalElements: 100, number: 0, size: 20 } }
+//
+// Both variants are represented here; use normalizeSpringPage() to get a
+// consistently-shaped object regardless of which format the server returns.
 
 export interface SpringPage<T> {
+  content: T[]
+  // Flat format (Spring Data < 3.3 / Spring Boot < 4.0)
+  totalElements?: number
+  totalPages?: number
+  size?: number
+  number?: number
+  // Nested format (Spring Data ≥ 3.3 / Spring Boot ≥ 4.0)
+  page?: {
+    totalElements: number
+    totalPages: number
+    size: number
+    number: number
+  }
+}
+
+/** Normalised view of a SpringPage — all fields guaranteed to be numbers. */
+export interface NormalizedSpringPage<T> {
   content: T[]
   totalElements: number
   totalPages: number
   size: number
   number: number
-}
-
-export interface ReviewResponse {
-  id: string
-  appointmentId: string
-  rating: number
-  patientComment: string
-  doctorReply?: string
-  repliedAt?: string
-  createdAt: string
-  patientDisplayName: string
-  doctorId: string
-  doctorFirstName: string
-  doctorLastName: string
 }

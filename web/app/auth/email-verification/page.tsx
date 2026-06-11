@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, XCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,10 @@ function VerificationManager() {
   const [message, setMessage] = useState(
     "We are verifying your email address...",
   );
+  // Guards against React Strict Mode double-invocation and accidental double-mount.
+  // The verification token is single-use — a second call would return an error
+  // even though the account was already activated.
+  const hasVerified = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -27,6 +31,9 @@ function VerificationManager() {
       setMessage("Invalid or missing verification token.");
       return;
     }
+
+    if (hasVerified.current) return;
+    hasVerified.current = true;
 
     verifyEmailAction(token).then((result) => {
       if (result.error) {
