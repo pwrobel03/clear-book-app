@@ -58,6 +58,17 @@ else
   else
     warn "openssl not found — set JWT_SECRET manually in .env before starting"
   fi
+
+  # Remove any stale Docker volumes from a previous run.
+  # PostgreSQL skips user/database creation when its data directory already
+  # exists — even if it was left in a broken state. Clearing volumes on a
+  # fresh .env ensures the DB is always initialized with the new credentials.
+  if command -v docker &>/dev/null; then
+    echo ""
+    echo "🗑️  Clearing any stale Docker volumes (ensures clean DB init)…"
+    docker compose -f docker-compose.yaml -f docker-compose.dev.yaml down -v --remove-orphans 2>/dev/null || true
+    ok "Volumes cleared"
+  fi
 fi
 
 echo ""

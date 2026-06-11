@@ -22,17 +22,28 @@ services:
   postgres-db:
     ports:
       - "5432:5432"   # Expose to host so the seed script can connect from outside Docker
+    volumes:
+      # Mount the combined schema SQL so PostgreSQL runs it automatically on
+      # the FIRST startup of a fresh volume (docker-entrypoint-initdb.d).
+      # On subsequent starts the data directory already exists and this file
+      # is ignored — existing data is preserved.
+      - ./scripts/init-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
 
   backend:
     ports:
       - "8080:8080"
     environment:
-      # ── Hibernate schema management ────────────────────────────────────────
-      # Use "none" instead of "validate" in local dev.
-      # Flyway already manages the full schema via versioned migrations —
-      # Hibernate's extra validation step is redundant and breaks startup
-      # when a named Docker volume exists from an older migration state.
+      # ── Schema management (local dev only) ────────────────────────────────
+      # Flyway 11.x (bundled with Spring Boot 4.0) does not yet recognise
+      # PostgreSQL 18 and silently skips all migrations on a fresh database,
+      # leaving the schema empty and the app unable to start.
+      # Fix: The schema is created by PostgreSQL's init script mechanism
+      # (scripts/init-schema.sql mounted into /docker-entrypoint-initdb.d/).
+      # PostgreSQL runs it once on fresh volume init — before the backend
+      # starts — so all tables are ready when Hibernate connects.
+      # Hibernate runs with ddl-auto=none: it uses the existing schema as-is.
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_ENABLED: "false"
       # ── Route all outbound email to the local MailHog SMTP server ──────────
       # These override the values in application.properties at runtime.
       SPRING_MAIL_HOST: mailhog
