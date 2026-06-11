@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/server/session";
 import { AuthInitializer } from "@/components/dashboard/auth-initializer";
-import { GlobalNotificationListener } from "@/app/dashboard/notification-listener";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { MobileSidebarDrawer } from "@/components/dashboard/mobile-sidebar-drawer";
 
@@ -17,9 +16,6 @@ export default async function DashboardLayout({
     <>
       {/* Seeds the Zustand store with server-fetched user data */}
       <AuthInitializer user={user} />
-      {/* WebSocket for real-time notifications — scoped here so it connects on
-          dashboard entry and disconnects on logout (layout unmounts on redirect) */}
-      <GlobalNotificationListener />
 
       <div className="relative flex h-screen overflow-hidden bg-background">
         {/* ── Glassy, Central Light Blobs ── */}

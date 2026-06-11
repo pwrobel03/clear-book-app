@@ -7,20 +7,17 @@ import { getWsTokenAction } from "@/lib/actions/ws";
 import { useNotificationStore } from "@/store/notification";
 
 // ── Module-level singleton ────────────────────────────────────────────────────
-// Keeping the STOMP client outside of React's render tree means that React
-// Strict Mode's intentional double-mount (setup → cleanup → setup) in
-// development does NOT create two simultaneous WebSocket connections.
-// A single instance is shared across all mounts of this component.
+// Keeping the STOMP client outside React's render tree prevents React Strict
+// Mode's intentional double-mount from creating two simultaneous connections.
 
 let stompClient: Client | null = null;
 let connectingPromise: Promise<void> | null = null;
-let mountCount = 0; // track concurrent mounts to avoid premature disconnect
 
 async function ensureConnected(): Promise<void> {
   // Already active — nothing to do
   if (stompClient?.active) return;
 
-  // Connection already in progress — wait for it
+  // Connection already in progress — piggyback on it
   if (connectingPromise) return connectingPromise;
 
   connectingPromise = (async () => {
@@ -31,18 +28,21 @@ async function ensureConnected(): Promise<void> {
 
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
 
-    stompClient = new Client({
+    // Keep a reference to THIS client instance so onDisconnect can compare it
+    // against the singleton before clearing — avoiding a race condition where
+    // the old client's onDisconnect fires after a new client has already been
+    // assigned to `stompClient`, which would wipe out the new live connection.
+    const client = new Client({
       brokerURL: wsUrl,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      // 10 s reconnect delay — short enough to recover quickly, long enough to
-      // avoid hammering the server after a backend restart or deployment.
+      // 10 s reconnect delay — recovers quickly without hammering the server.
       reconnectDelay: 10000,
-      // Heartbeat: 25 s matches the nginx/server idle timeout expectations.
-      // 4 s was too aggressive through a TLS+nginx proxy and caused spurious drops.
+      // 25 s heartbeats are more tolerant of TLS + nginx proxy latency than
+      // the previous 4 s setting, which caused spurious connection drops.
       heartbeatIncoming: 25000,
       heartbeatOutgoing: 25000,
       onConnect: () => {
-        stompClient!.subscribe("/user/queue/notifications", (message) => {
+        client.subscribe("/user/queue/notifications", (message) => {
           const notification = JSON.parse(message.body);
           useNotificationStore.getState().addNotification(notification);
           toast.info(notification.title, {
@@ -54,16 +54,18 @@ async function ensureConnected(): Promise<void> {
       onStompError: (frame) => {
         console.error("[STOMP] Broker error:", frame.headers["message"]);
       },
-      onWebSocketError: () => {
-        // Suppress the noisy browser console error on expected reconnects.
-        // The client handles reconnection automatically via reconnectDelay.
-      },
       onDisconnect: () => {
-        stompClient = null;
+        // Only clear the singleton if THIS client is still the active one.
+        // If disconnect() was called and a new client was already created
+        // before onDisconnect fires, we must NOT overwrite that new reference.
+        if (stompClient === client) {
+          stompClient = null;
+        }
       },
     });
 
-    stompClient.activate();
+    stompClient = client;
+    client.activate();
   })().finally(() => {
     connectingPromise = null;
   });
@@ -71,33 +73,22 @@ async function ensureConnected(): Promise<void> {
   return connectingPromise;
 }
 
-async function disconnect(): Promise<void> {
+function disconnect(): void {
   const client = stompClient;
+  // Clear the singleton immediately so ensureConnected() can create a fresh
+  // client if the component remounts before deactivate() completes.
   stompClient = null;
-  if (client) {
-    try {
-      await client.deactivate();
-    } catch {
-      // "WebSocket is closed before the connection is established" is expected
-      // when the component unmounts while a reconnection attempt is in flight.
-      // Safe to ignore — the client is being torn down intentionally.
-    }
-  }
+  // deactivate() is async internally; errors here are expected when the
+  // component unmounts while a reconnection attempt is still in flight.
+  client?.deactivate().catch(() => { /* intentional unmount — safe to ignore */ });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function GlobalNotificationListener() {
   useEffect(() => {
-    mountCount++;
     ensureConnected();
-
-    return () => {
-      mountCount--;
-      if (mountCount === 0) {
-        disconnect();
-      }
-    };
+    return () => { disconnect(); };
   }, []);
 
   return null;
