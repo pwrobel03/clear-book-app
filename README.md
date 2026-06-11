@@ -14,6 +14,10 @@
 Poniedziałek, 16:45, tygodnie parzyste
 Gr. 21
 
+Dostępne pod adresem: https://clearbook.wrobeldev.cloud/
+
+> Szcze©óły dotyczące testowania aplikacji można znaleźć w dalszej część dokumentu
+
 ---
 
 ## Cel projektu
